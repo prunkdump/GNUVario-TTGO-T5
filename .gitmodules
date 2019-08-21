@@ -1,0 +1,3 @@
+[submodule "Sources/Test Code/Test CJMCU 117/libraries/ESP32WebServer"]
+	path = Sources/Test Code/Test CJMCU 117/libraries/ESP32WebServer
+	url = ../../Pedroalbuquerque/ESP32WebServer
