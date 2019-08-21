@@ -1,0 +1,28 @@
+Gnuvario-E
+
+Version 1.10
+
+Liste des composant :
+
+- une carte TTGO-T5 version 1.2 avec écran 1.54
+[AE] ttgo-T5 v1.2
+
+- CJMCU_117 MPU-9250+MS5611 Haute précision 9-Axes 10DOF
+[AE] CJMCU 117
+[EB] CJMCU 117
+
+- GPS ATGM336H
+[AE] ATGM336H
+{EB] ATGM336H
+
+- Batterie lipo 3.7V 1100mAH 30x70x4.3
+[AE] lipo 3.7V 1100mAH 4.3
+https://fr.aliexpress.com/item/32662685911.html?spm=a2g0s.9042311.0.0.e0e06c37J9dtAU
+
+- Transistor S8050 ou equivalent (2N2222)
+- R1 : 270k
+- R2 : 1M
+- R3 : 4.7k
+- R4 : 4.7k
+- R5 : 1k
+Option connecteur 2 x 12 pins

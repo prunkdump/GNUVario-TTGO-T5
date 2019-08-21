@@ -1,0 +1,313 @@
+/* variometer -- The GNUVario embedded code
+ *
+ * Copyright 2016-2019 Baptiste PELLEGRIN
+ * Update    2018-2019 Jean-Philippe GOI
+ * 
+ * This file is part of GNUVario.
+ *
+ * GNUVario is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * GNUVario is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+ 
+#include <Arduino.h>
+#include <SPI.h>
+
+#include <DebugConfig.h>
+#include <HardwareConfig.h>
+#include <VarioSettings.h>
+
+#include <IntTW.h>
+#include <ms5611.h>
+#include <vertaccel.h>
+
+#include <eepromHAL.h>
+#include <LightInvensense.h>
+#include <TwoWireScheduler.h>
+#include <kalmanvert.h>
+
+//#include <avr/pgmspace.h>
+
+#include <toneHAL.h>
+#include <beeper.h>
+
+/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+/*!!            !!! WARNING  !!!              !!*/
+/*!! Before building check :                  !!*/
+/*!! libraries/VarioSettings/VarioSettings.h  !!*/
+/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+
+/*******************/
+/* Version         */
+/*******************/
+
+#define VERSION 0
+#define SUB_VERSION 1
+
+/*******************/
+/*    Historique   */
+/*******************/
+/* v 0.1      Beta
+ * 
+ *******************
+ * Compilation :
+ * 
+ *            ESP32 Dev Module
+ *            
+ *            
+ *******************/
+ 
+
+ 
+/*******************/
+/* General objects */
+/*******************/
+#define VARIOMETER_STATE_INITIAL 0
+#define VARIOMETER_STATE_DATE_RECORDED 1
+#define VARIOMETER_STATE_CALIBRATED 2
+#define VARIOMETER_STATE_FLIGHT_STARTED 3
+
+#ifdef HAVE_GPS
+uint8_t variometerState = VARIOMETER_STATE_INITIAL;
+#else
+uint8_t variometerState = VARIOMETER_STATE_CALIBRATED;
+#endif //HAVE_GPS
+
+/***************/
+/* IMU objects */
+/***************/
+#ifdef HAVE_BMP280
+Bmp280 TWScheduler::bmp280;
+#else
+Ms5611 TWScheduler::ms5611;
+#endif
+#ifdef HAVE_ACCELEROMETER
+Vertaccel TWScheduler::vertaccel;
+#endif //HAVE_ACCELEROMETER
+
+/**********************/
+/* alti/vario objects */
+/**********************/
+#define POSITION_MEASURE_STANDARD_DEVIATION 0.1
+#ifdef HAVE_ACCELEROMETER 
+#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.3
+#else
+#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.6
+#endif //HAVE_ACCELEROMETER 
+
+kalmanvert kalmanvert;
+
+#ifdef HAVE_SPEAKER
+
+#define volumeDefault 5
+
+#include <beeper.h>
+
+Beeper beeper(volumeDefault);
+
+#define BEEP_FREQ 800
+#endif
+
+
+/********************/
+/*  SDCARD Object   */
+/********************/
+
+#ifdef HAVE_SDCARD
+
+VarioSettings GnuSettings;
+
+#define SDCARD_STATE_INITIAL 0
+#define SDCARD_STATE_INITIALIZED 1
+#define SDCARD_STATE_READY 2
+#define SDCARD_STATE_ERROR -1
+int8_t sdcardState = SDCARD_STATE_INITIAL;
+
+#endif //HAVE_SDCARD
+
+unsigned long lastDisplayTimestamp;
+unsigned long count = 0;
+double alti;
+
+/*-----------------*/
+/*      SETUP      */
+/*-----------------*/
+void setup() {
+
+ #ifdef PROG_DEBUG
+  char tmpbuffer[50];
+
+  SerialPort.begin(115200);
+///  while (!SerialPort) { ;}
+  sprintf(tmpbuffer,"SAMD21 MPU9250 MS5611 VARIO compiled on %s at %s", __DATE__, __TIME__);
+  SerialPort.println(tmpbuffer);
+  SerialPort.flush();
+#endif //PRO_DEBBUG
+
+  /*****************************/
+  /* wait for devices power on */
+  /*****************************/
+  delay(VARIOMETER_POWER_ON_DELAY);
+
+  /******************/
+  /* Init Speaker   */
+  /******************/
+  
+#if defined( HAVE_SPEAKER)
+  toneHAL.init();
+#endif
+
+  /**********************/
+  /* init Two Wires devices */
+  /**********************/
+  intTW.begin();
+  twScheduler.init();
+
+  /****************/
+  /* init SD Card */
+  /****************/
+
+  if (GnuSettings.initSettings()) {
+#ifdef PROG_DEBUG
+    SerialPort.println("initialization done.");
+#endif //PROG_DEBUG
+    GnuSettings.readSDSettings();
+    sdcardState = SDCARD_STATE_INITIALIZED;  //useless to set error
+
+#ifdef PROG_DEBUG
+    //Debuuging Printing
+    SerialPort.print("Pilot Name = ");
+    SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME);
+#endif //PROG_DEBUG
+
+    sdcardState = SDCARD_STATE_INITIALIZED;  //useless to set error
+  }
+  else
+  {
+#ifdef HAVE_SPEAKER
+    if (GnuSettings.ALARM_SDCARD) {
+#ifdef PROG_DEBUG
+      SerialPort.println("initialization failed!");
+#endif //PROG_DEBUG
+
+//      indicateFaultSDCARD();
+    }
+#endif //HAVE_SPEAKER 
+  }  
+
+  /****************/
+  /* Alarm SD Card */
+  /****************/
+
+  if (sdcardState == VARIOMETER_STATE_INITIAL) {
+#if defined( HAVE_SPEAKER) && defined (ALARM_SDCARD)
+    for( int i = 0; i<4; i++) {
+      toneHAL.tone(900);
+      delay(1000);
+      toneHAL.tone(0);
+    }       
+#endif //HAVE_SPEAKER && ALARM_SDCARD
+  }  
+ 
+  /******************/
+  /* get first data */
+  /******************/
+  
+  /* wait for first alti and acceleration */
+  while( ! twScheduler.havePressure() ) { }
+
+#ifdef PROG_DEBUG
+    SerialPort.println("première mesure");
+#endif //PROG_DEBUG
+
+  /* init kalman filter with 0.0 accel*/
+  double firstAlti = twScheduler.getAlti();
+#ifdef PROG_DEBUG
+    SerialPort.print("firstAlti : ");
+    SerialPort.println(firstAlti);
+#endif //PROG_DEBUG
+
+  kalmanvert.init(firstAlti,
+                  0.0,
+                  POSITION_MEASURE_STANDARD_DEVIATION,
+                  ACCELERATION_MEASURE_STANDARD_DEVIATION,
+                  millis());
+
+#ifdef PROG_DEBUG
+    SerialPort.println("kalman init");
+#endif //PROG_DEBUG
+
+  delay(2000);
+#ifdef PROG_DEBUG
+    SerialPort.println("delay");
+#endif //PROG_DEBUG
+
+ lastDisplayTimestamp = millis();
+
+}
+
+
+
+/*----------------*/
+/*      LOOP      */
+/*----------------*/
+void loop() {
+
+#ifdef PROG_DEBUG
+    SerialPort.println("loop");
+#endif //PROG_DEBUG
+
+/*
+#ifdef HAVE_ACCELEROMETER
+  if( twScheduler.havePressure() && twScheduler.haveAccel() ) {
+    
+#ifdef PROG_DEBUG
+    SerialPort.println("havePressure && haveAccel");
+#endif //PROG_DEBUG
+
+    kalmanvert.update( twScheduler.getAlti(),
+                       twScheduler.getAccel(NULL),
+                       millis() );
+#else
+  if( twScheduler.havePressure() ) {
+    
+#ifdef PROG_DEBUG
+    SerialPort.println("havePressure");
+#endif //PROG_DEBUG
+
+    kalmanvert.update( twScheduler.getAlti(),
+                       0.0,
+                       millis() );
+#endif //HAVE_ACCELEROMETER
+
+//           set beeper 
+#ifdef HAVE_SPEAKER
+
+#ifdef PROG_DEBUG
+    SerialPort.print("Vario : ");
+    SerialPort.println(kalmanvert.getVelocity());
+#endif //PROG_DEBUG
+
+    beeper.setVelocity( kalmanvert.getVelocity() );
+//*****************
+//* update beeper *
+//*****************
+
+  beeper.update();
+#ifdef PROG_DEBUG
+    SerialPort.println("beeper update");
+#endif //PROG_DEBUG
+
+#endif //HAVE_SPEAKER
+
+}*/
+}

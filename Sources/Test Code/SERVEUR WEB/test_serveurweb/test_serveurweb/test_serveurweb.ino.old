@@ -1,0 +1,78 @@
+#include <wifiServer.h>
+
+#include <VarioSettings.h>
+#include <sdcardHAL.h>
+
+#include <DebugConfig.h>
+
+//VarioSettings GnuSettings;
+
+/*******************/
+/* Version         */
+/*******************/
+
+#define VERSION      0
+#define SUB_VERSION  4
+#define BETA_CODE    6
+#define DEVNAME      "JPG63"
+#define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void setup(void){
+  /****************/
+  /* init SD Card */
+  /****************/
+
+  
+#ifdef PROG_DEBUG
+  // Open serial communications and wait for port to open:
+  SerialPort.begin(115200);
+/*  while (!SerialPort) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }*/
+  delay(5000);
+
+  SerialPort.println("Initializing SD card...");
+#endif //PRO_DEBBUG
+
+  if (GnuSettings.initSettings()) {
+#ifdef PROG_DEBUG
+    SerialPort.println("initialization done.");
+#endif //PROG_DEBUG
+    wifiServer.SD_IsPresent(true); 
+
+    GnuSettings.readSDSettings();
+ 
+#ifdef PROG_DEBUG
+   //Debuuging Printing
+    SerialPort.print("Pilot Name = ");
+    SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME);
+#endif //PROG_DEBUG
+  }
+  else
+  {
+#ifdef HAVE_SPEAKER
+    if (GnuSettings.ALARM_SDCARD) {
+#ifdef PROG_DEBUG
+      SerialPort.println("initialization failed!");
+#endif //PROG_DEBUG
+      wifiServer.SD_IsPresent(false); 
+//      indicateFaultSDCARD();
+    }
+#endif //HAVE_SPEAKER 
+  }  
+
+  char tmpbuffer[30];
+  sprintf(tmpbuffer,"v %i.%i - %s\0", VERSION,SUB_VERSION,DEVNAME); 
+
+  wifiServer.begin(tmpbuffer);
+
+  wifiServer.wifiConnect();
+  
+  wifiServer.start();
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void loop(void){
+  wifiServer.handleClient();
+}

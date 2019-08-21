@@ -1,0 +1,66 @@
+###################################################################################
+#
+#   MS5xxx.h - Library for accessing MS5xxx sensors via I2C
+#   Copyright (c) 2012 Roman Schmitz
+#
+#   This file is part of arduino-ms5xxx.
+#
+#   arduino-ms5xxx is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   arduino-ms5xxx is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with arduino-ms5xxx.  If not, see <http://www.gnu.org/licenses/>.
+#
+###################################################################################
+
+#######################################
+# Syntax Coloring Map For MS5xxx
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+    MS5xxx	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+    setI2Caddr	KEYWORD2
+    connect	KEYWORD2
+    
+    ReadProm	KEYWORD2
+    Readout	KEYWORD2
+    
+    GetTemp	KEYWORD2
+    GetPres	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+    I2C_MS5607		LITERAL1
+    MS5xxx_CMD_RESET	LITERAL1
+    MS5xxx_CMD_ADC_READ	LITERAL1
+    MS5xxx_CMD_ADC_CONV	LITERAL1
+    MS5xxx_CMD_ADC_D1	LITERAL1	
+    MS5xxx_CMD_ADC_D2	LITERAL1
+    MS5xxx_CMD_ADC_256	LITERAL1
+    MS5xxx_CMD_ADC_512	LITERAL1
+    MS5xxx_CMD_ADC_1024	LITERAL1
+    MS5xxx_CMD_ADC_2048	LITERAL1
+    MS5xxx_CMD_ADC_4096	LITERAL1
+    MS5xxx_CMD_PROM_RD	LITERAL1
+

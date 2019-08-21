@@ -1,0 +1,13 @@
+{
+  "name": "MS5xxx by Schm1tz1",
+  "keywords": "MS5611, MS5607, MS5611, Measurement Specialties, MEAS, pressure, sensor",
+  "description": "Library for digital pressure sensors MS5xxx by Measurement Specialties (MEAS). Tested with Arduino Uno/Nano/Mico and ESP8266. Long-term tests with MS5607 have been performed, working implementation for MS5611 chipset.",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/Schm1tz1/arduino-ms5xxx"
+  },
+  "frameworks": "arduino",
+  "platforms": "*"
+}
+

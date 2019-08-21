@@ -1,0 +1,7 @@
+TTGO-T5
+
+Arduino IDE
+
+https://dl.espressif.com/dl/package_esp32_index.json
+
+Type de carte : ESP32 DEV Module

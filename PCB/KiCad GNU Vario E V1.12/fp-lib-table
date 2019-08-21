@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name GNU_Vario_E)(type KiCad)(uri "${TEST}/GNU vario ESP32/Gnuvario_for_TTGO-T5/GNU vario for TTGO T5/PCB/KiCad GNU Vario E V1.10/GNU_Vario_E.pretty")(options "")(descr ""))
+)

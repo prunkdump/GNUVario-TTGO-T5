@@ -1,0 +1,1086 @@
+// CJMCU-117 MPU9250+MS5611 circuit interface
+//
+// VCC  VCC
+// GND  GND
+//
+// MS5611 - MPU9250     WIRE/I2C (SERCOM0)
+// SCL    D12           SCL     WIRE/I2C - SERCOM0
+// SDA    D11           SDA     MS5611 / MPU9250
+//
+// SWITCHS
+//        A1,A2         Switch
+//        D5            Switch Droite - Power
+//
+// RST    A4            Reset
+//
+// E-Ink                SPI (SERCOM1)
+// CS     D4
+// BUSY   D3
+// RST    A3
+// DC     D7
+// DIN    MOSI/D8
+// CLK    SCK/D9
+//
+// GPS  FGPMMOPA6C, construite autour du jeu de puces MTK3339   Serial1 (SERCOM5)
+// TX     D14           serial1  
+// RX     D13           Serial1     
+//
+// Bluetooth / Microship RN4871   SERIAL (SERCOM3)
+// TX     D0            sercom3
+// RX     D1            sercom3
+//        A5            RN4871:RST
+//        A6            RN4871:INT    sleep / wake manager
+// 
+// SD-CARD    SPI (SERCOM2)
+// MOSI   MOSI          SD SPI
+// SCL    SCK           SD SPI
+// SS     SS            SD SPI  
+// MISO   MISO          SD SPI
+// CD     CD            SD SPI
+//
+// Sound
+//        D2            PWM
+//
+//        A0/DAC0       DAC0
+//        D6            Mute Max
+//
+// ADC_BATTERY          Battery voltage
+// LED_BUILTIN          LED
+
+//SERCOM 0 WIRE / I2C - SDA/SCL     - MPU / MS5611
+//SERCOM 1 SPI  - MISO-MOSI-SCK     - SCREEN
+//SERCOM 2 SPI SD                   - SDCARD
+//SERCOM 3 UART                     - BT
+//SERCOM 4 
+//SERCOM 5 UART   - SERIAL1         - GPS
+
+// Timer
+// TC1    Ms5611
+// TC3    bouton
+// TC5    ToneDac / ToneAC
+
+//Zone Memoire
+//VERTACCEL_GYRO_CAL_EEPROM_ADDR 				0x00
+//VERTACCEL_ACCEL_CAL_EEPROM_ADDR 			0x0C
+//VERTACCEL_MAG_CAL_EEPROM_ADDR 				0x14
+//VERTACCEL_MAG_PROJ_EEPROM_ADDR 				0x1C
+//SOUND_EEPROM_ADDR 										0x30
+
+#include <SDU.h>    //FIRMWARE Update
+
+#include <Arduino.h>
+#include <SPI.h>
+#include <Param.h>
+#include <Debug.h>
+#include <VarioSettings.h>
+#include <GenClock_zero.h>
+//#include <Wire.h>
+#include <ms5611_zero.h>
+#include <vertaccel.h>
+#include <LightInvensense.h>
+#include <kalmanvert.h>
+
+#include <avr/pgmspace.h>
+#include <digit.h>
+#include "SdFat.h"
+
+//#include <accelcalibrator.h>
+
+#include <Utility.h>
+
+#include <LxnavSentence.h>
+#include <LK8Sentence.h>
+#include <IGCSentence.h>
+
+/*******************/
+/* Version         */
+/*******************/
+
+#define VERSION 0
+#define SUB_VERSION 1
+
+/******************************************/
+/*                  VERSION               */
+/*                 M0/SAMD21              */
+/*                                        */
+/*                 Historique             */
+/******************************************/
+/* v 0.1   20/01/19      beta 1 version   *
+ *                                        *
+ ******************************************/
+
+/*****************/
+/* screen        */
+/*****************/
+#ifdef HAVE_SCREEN
+
+// include library, include base class, make path known
+#include <GxEPD.h>
+
+// select the display class to use, only one
+#include <GxGDEP015OC1/GxGDEP015OC1NL.h>    // 1.54" b/w
+//#include <GxGDEP015OC1/GxGDEP015OC1.h>    // 1.54" b/w
+//#include <GxGDEW0154Z04/GxGDEW0154Z04.h>  // 1.54" b/w/r 200x200
+//#include <GxGDEW0154Z17/GxGDEW0154Z17.h>  // 1.54" b/w/r 152x152
+//#include <GxGDEW0213I5F/GxGDEW0213I5F.h>  // 2.13" b/w 104x212 flexible
+//#include <GxGDE0213B1/GxGDE0213B1.h>      // 2.13" b/w
+//#include <GxGDEW0213Z16/GxGDEW0213Z16.h>  // 2.13" b/w/r
+//#include <GxGDEH029A1/GxGDEH029A1.h>      // 2.9" b/w
+//#include <GxGDEW029Z10/GxGDEW029Z10.h>    // 2.9" b/w/r
+//#include <GxGDEW027C44/GxGDEW027C44.h>    // 2.7" b/w/r
+//#include <GxGDEW027W3/GxGDEW027W3.h>      // 2.7" b/w
+//#include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
+//#include <GxGDEW042Z15/GxGDEW042Z15.h>    // 4.2" b/w/r
+//#include <GxGDEW0583T7/GxGDEW0583T7.h>    // 5.83" b/w
+//#include <GxGDEW075T8/GxGDEW075T8.h>      // 7.5" b/w
+//#include <GxGDEW075Z09/GxGDEW075Z09.h>    // 7.5" b/w/r
+
+#include <GxIO/GxIO_SPI/GxIO_SPI.h>
+#include <GxIO/GxIO.h>
+
+// FreeFonts from Adafruit_GFX
+/*#include <Fonts/FreeSansBold9pt7b.h>
+#include <Fonts/FreeSansBold12pt7b.h>
+#include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSansBold24pt7b.h>
+
+#include GxEPD_BitmapExamples*/
+
+#include <gnuvario.h>
+
+#include <varioscreen.h>
+
+#if defined(VARIOSCREEN_BUSY_PIN)
+
+GxIO_Class io(SPI, /*CS=D4*/ VARIOSCREEN_CS_PIN, /*DC=D7*/ VARIOSCREEN_DC_PIN, /*RST=A3*/ VARIOSCREEN_RST_PIN);
+//GxEPD_Class display(io, VARIOSCREEN_RST_PIN, VARIOSCREEN_BUSY_PIN);
+//VarioScreen display(io, VARIOSCREEN_RST_PIN, VARIOSCREEN_BUSY_PIN);
+VarioScreen screen(io, /*RST=A3*/ VARIOSCREEN_RST_PIN, /*BUSY=D3*/ VARIOSCREEN_BUSY_PIN);
+#else
+GxIO_Class io(SPI, VARIOSCREEN_CS_PIN, VARIOSCREEN_DC_PIN, VARIOSCREEN_RST_PIN);
+//GxEPD_Class display(io);
+//VarioScreen display(io);
+VarioScreen screen(io);
+#endif //VARIOSCREEN_BUSY_PIN
+
+#endif //HAVESCREEN
+
+#define ColorScreen    GxEPD_WHITE
+#define ColorText      GxEPD_BLACK
+
+/*******************/
+/* General objects */
+/*******************/
+#define VARIOMETER_POWER_ON_DELAY 2000 
+
+#define VARIOMETER_STATE_INITIAL 0
+#define VARIOMETER_STATE_DATE_RECORDED 1
+#define VARIOMETER_STATE_CALIBRATED 2
+#define VARIOMETER_STATE_FLIGHT_STARTED 3
+
+#define GPS_STATE_KO 0
+#define GPS_STATE_RECEIVED 1
+#define GPS_STATE_LASTNMEA 2
+#define GPS_STATE_FIX 3
+
+#ifdef HAVE_GPS
+uint8_t variometerState = VARIOMETER_STATE_INITIAL;
+uint8_t gpsState        = GPS_STATE_KO;
+#else
+uint8_t variometerState = VARIOMETER_STATE_CALIBRATED;
+uint8_t gpsState        = GPS_STATE_KO;
+#endif //HAVE_GPS
+
+/*****************/
+/* screen objets */
+/*****************/
+#ifdef HAVE_SCREEN
+
+unsigned long lastLowFreqUpdate = 0;
+
+#define RATIO_MAX_VALUE 30.0
+#define RATIO_MIN_SPEED 10.0
+
+#define VARIOSCREEN_ALTI_ANCHOR_X 110
+#define VARIOSCREEN_ALTI_ANCHOR_Y 80
+#define VARIOSCREEN_ALTI_UNIT_ANCHOR_X    120
+#define VARIOSCREEN_VARIO_ANCHOR_X 90
+#define VARIOSCREEN_VARIO_ANCHOR_Y 135
+#define VARIOSCREEN_VARIO_UNIT_ANCHOR_X   95
+#define VARIOSCREEN_VARIO_UNIT_ANCHOR_Y   110
+#define VARIOSCREEN_SPEED_ANCHOR_X 50
+#define VARIOSCREEN_SPEED_ANCHOR_Y 190
+#define VARIOSCREEN_SPEED_UNIT_ANCHOR_X 53
+#define VARIOSCREEN_SPEED_UNIT_ANCHOR_Y 165
+#define VARIOSCREEN_GR_ANCHOR_X 144
+#define VARIOSCREEN_GR_ANCHOR_Y 135
+#define VARIOSCREEN_INFO_ANCHOR_X 4
+#define VARIOSCREEN_INFO_ANCHOR_Y 0
+#define VARIOSCREEN_VOL_ANCHOR_X 44
+#define VARIOSCREEN_VOL_ANCHOR_Y 0
+#define VARIOSCREEN_RECCORD_ANCHOR_X 84
+#define VARIOSCREEN_RECCORD_ANCHOR_Y 0
+#define VARIOSCREEN_BAT_ANCHOR_X 124
+#define VARIOSCREEN_BAT_ANCHOR_Y 0
+#define VARIOSCREEN_SAT_ANCHOR_X 164
+#define VARIOSCREEN_SAT_ANCHOR_Y 0
+#define VARIOSCREEN_SAT_FIX_ANCHOR_X 176
+#define VARIOSCREEN_SAT_FIX_ANCHOR_Y 40
+#define VARIOSCREEN_TIME_ANCHOR_X 195
+#define VARIOSCREEN_TIME_ANCHOR_Y 190
+#define VARIOSCREEN_ELAPSED_TIME_ANCHOR_X 197
+#define VARIOSCREEN_ELAPSED_TIME_ANCHOR_Y 190
+#define VARIOSCREEN_BT_ANCHOR_X 152
+#define VARIOSCREEN_BT_ANCHOR_Y 40
+#define VARIOSCREEN_TREND_ANCHOR_X 120
+#define VARIOSCREEN_TREND_ANCHOR_Y 111
+
+ScreenDigit altiDigit(screen, VARIOSCREEN_ALTI_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y, 4, 0, false, ALIGNNONE);
+MUnit munit(screen, VARIOSCREEN_ALTI_UNIT_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y);
+ScreenDigit varioDigit(screen, VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, ALIGNNONE);
+MSUnit msunit(screen, VARIOSCREEN_VARIO_UNIT_ANCHOR_X, VARIOSCREEN_VARIO_UNIT_ANCHOR_Y);
+KMHUnit kmhunit(screen, VARIOSCREEN_SPEED_UNIT_ANCHOR_X, VARIOSCREEN_SPEED_UNIT_ANCHOR_Y);
+ScreenDigit speedDigit(screen, VARIOSCREEN_SPEED_ANCHOR_X, VARIOSCREEN_SPEED_ANCHOR_Y, 2, 0, false, ALIGNNONE);
+ScreenDigit ratioDigit(screen, VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 2, 0, false, ALIGNZERO,true);
+
+INFOLevel infoLevel(screen, VARIOSCREEN_INFO_ANCHOR_X, VARIOSCREEN_INFO_ANCHOR_Y);
+VOLLevel  volLevel(screen, VARIOSCREEN_VOL_ANCHOR_X, VARIOSCREEN_VOL_ANCHOR_Y);
+RECORDIndicator recordIndicator(screen, VARIOSCREEN_RECCORD_ANCHOR_X, VARIOSCREEN_RECCORD_ANCHOR_Y);
+TRENDLevel trendLevel(screen, VARIOSCREEN_TREND_ANCHOR_X, VARIOSCREEN_TREND_ANCHOR_Y);
+
+BATLevel batLevel(screen, VARIOSCREEN_BAT_ANCHOR_X, VARIOSCREEN_BAT_ANCHOR_Y, VOLTAGE_DIVISOR_VALUE, VOLTAGE_DIVISOR_REF_VOLTAGE);
+int maxVoltage = 0;
+SATLevel satLevel(screen, VARIOSCREEN_SAT_ANCHOR_X, VARIOSCREEN_SAT_ANCHOR_Y);
+
+ScreenDigit timeMDigit(screen, VARIOSCREEN_TIME_ANCHOR_X, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, ALIGNZERO);
+ScreenDigit timeHDigit(screen, VARIOSCREEN_TIME_ANCHOR_X-68, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, ALIGNZERO);
+
+ScreenTime screenTime(screen, VARIOSCREEN_TIME_ANCHOR_X, VARIOSCREEN_TIME_ANCHOR_Y, timeHDigit, timeMDigit);
+ScreenElapsedTime screenElapsedTime(screen, VARIOSCREEN_ELAPSED_TIME_ANCHOR_X, VARIOSCREEN_ELAPSED_TIME_ANCHOR_Y, timeHDigit, timeMDigit);
+
+FIXGPSInfo fixgpsinfo(screen, VARIOSCREEN_SAT_FIX_ANCHOR_X, VARIOSCREEN_SAT_FIX_ANCHOR_Y);
+BTInfo btinfo(screen, VARIOSCREEN_BT_ANCHOR_X, VARIOSCREEN_BT_ANCHOR_Y);
+
+
+ScreenSchedulerObject displayList[] = { {&msunit, 0,true}, {&munit, 0,true}, {&altiDigit, 0,true}, {&varioDigit, 0,true}
+                       ,{&kmhunit, 0, true}, {&speedDigit, 0,true}, {&ratioDigit, 0,true}, {&satLevel, 0,true}, {&screenTime, 0,true}
+                       ,{&screenElapsedTime, 0,false}, {&recordIndicator, 0,true} , {&trendLevel, 0,true}, {&batLevel, 0,true}
+                       ,{&btinfo, 0,true}, {&fixgpsinfo, 0,true} , {&satLevel, 0,true}, {&volLevel, 0,true}, {&infoLevel,0,true}
+};
+
+ScreenScheduler varioScreen(screen, displayList, sizeof(displayList)/sizeof(ScreenSchedulerObject), 0, 0);
+
+int8_t objectList[] = {8,9};
+MultiDisplayObject multiDisplayList[] = {{objectList,sizeof(objectList)/sizeof(int8_t),0,0,2,2}};
+MultiDisplay multiDisplay(displayList, sizeof(displayList)/sizeof(ScreenSchedulerObject), multiDisplayList, sizeof(multiDisplayList)/sizeof(MultiDisplayObject));
+
+#endif //HAVE_SCREEN
+
+/**********************/
+/* alti/vario objects */
+/**********************/
+#define POSITION_MEASURE_STANDARD_DEVIATION 0.1
+#ifdef HAVE_ACCELEROMETER 
+#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.3
+
+#define HIGH_BEEP_FREQ 1000.0
+#define LOW_BEEP_FREQ 100.0
+#define BASE_BEEP_DURATION 100.0
+
+#define MEASURE_DELAY 3000 
+
+//AccelCalibrator calibrator;
+#else
+#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.6
+#endif //HAVE_ACCELEROMETER 
+
+kalmanvert kalmanvert;
+
+#ifdef HAVE_SPEAKER
+
+#include "toneHAL.h"
+#if defined(ESP8266) 
+#elif defined(ESP32)
+#elif defined(ARDUINO_AVR_PRO)
+#include "toneHAL_PRO.h"
+#elif defined(ARDUINO_ARCH_SAMD)
+#include "toneHAL_M0.h"
+#endif
+
+#define HIGH_BEEP_FREQ 1000.0
+#define LOW_BEEP_FREQ 100.0
+#define BASE_BEEP_DURATION 100.0
+
+#define volumeDefault 5
+
+ToneHAL toneHAL;
+
+#include <beeper.h>
+
+Beeper beeper(volumeDefault);
+
+/*  uint8_t VARIOMETER_BEEP_VOLUME = 10;
+  float VARIOMETER_SINKING_THRESHOLD =-2.0;
+  float VARIOMETER_CLIMBING_THRESHOLD=0.2;
+  float VARIOMETER_NEAR_CLIMBING_SENSITIVITY=0.5; */
+
+#endif //HAVE_SPEAKER
+
+/***************/
+/* gps objects */
+/***************/
+#ifdef HAVE_GPS
+
+#include <Adafruit_GPS.h>
+
+// what's the name of the hardware serial port?
+#define GPSSerial Serial1
+
+// Connect to the GPS on the hardware port
+Adafruit_GPS GPS(&GPSSerial);
+
+#define GPSECHO false
+
+uint32_t timer = millis();
+uint32_t timer2 = millis();
+
+
+#ifdef HAVE_BLUETOOTH
+boolean lastSentence = false;
+#endif //HAVE_BLUETOOTH
+
+unsigned long RMCSentenceTimestamp; //for the speed filter
+double RMCSentenceCurrentAlti; //for the speed filter
+unsigned long speedFilterTimestamps[VARIOMETER_SPEED_FILTER_SIZE];
+double speedFilterSpeedValues[VARIOMETER_SPEED_FILTER_SIZE];
+double speedFilterAltiValues[VARIOMETER_SPEED_FILTER_SIZE];
+int8_t speedFilterPos = 0;
+
+#endif //HAVE_GPS
+
+/*********************/
+/* bluetooth objects */
+/*********************/
+#ifdef HAVE_BLUETOOTH
+#if defined(VARIOMETER_SENT_LXNAV_SENTENCE)
+LxnavSentence bluetoothNMEA;
+#elif defined(VARIOMETER_SENT_LK8000_SENTENCE)
+LK8Sentence bluetoothNMEA;
+#else
+#error No bluetooth sentence type specified !
+#endif
+
+#ifndef HAVE_GPS
+unsigned long lastVarioSentenceTimestamp = 0;
+#endif // !HAVE_GPS
+#endif //HAVE_BLUETOOTH
+
+/********************/
+/*  SDCARD Object   */
+/********************/
+
+#ifdef HAVE_SDCARD
+SdFat SD;
+
+File file;
+
+#ifdef HAVE_GPS
+IGCHeader header;
+IGCSentence igc;
+#endif //HAVE_GPS
+
+VarioSettings GnuSettings;
+
+#define SDCARD_STATE_INITIAL 0
+#define SDCARD_STATE_INITIALIZED 1
+#define SDCARD_STATE_READY 2
+#define SDCARD_STATE_ERROR -1
+int8_t sdcardState = SDCARD_STATE_INITIAL;
+
+#endif //HAVE_SDCARD
+
+/*-----------------*/
+/*                 */
+/*  displayboot    */
+/*                 */
+/*-----------------*/
+
+void displayBoot(void) {
+  char tmpbuffer[50];
+  String tmpstring;
+
+#ifdef HAVE_SCREEN
+
+#ifdef PROG_DEBUG
+  SerialPort.println("Display boot");
+#endif //PRO_DEBBUG
+
+  screen.fillScreen(GxEPD_WHITE);
+
+  screen.drawBitmap(logo_gnuvario, 0, 10, 102, 74, GxEPD_BLACK); //94
+
+  screen.setFont(&FreeSansBold12pt7b);
+  screen.setTextSize(1);
+
+  screen.setCursor(100, 30);
+  screen.println("Version");
+  screen.setCursor(105, 50);
+  screen.println(" Beta 2");
+  sprintf(tmpbuffer,"%02d.%02d", VERSION, SUB_VERSION);
+  screen.setCursor(125, 70);
+  screen.println(tmpbuffer);
+  sprintf(tmpbuffer,"%s", __DATE__);
+  screen.setCursor(25, 110);
+  screen.println(tmpbuffer);
+
+  SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME);
+
+  tmpstring = GnuSettings.VARIOMETER_PILOT_NAME;
+  screen.setCursor(1, 150);
+  screen.println(tmpstring);
+
+  SerialPort.println(GnuSettings.VARIOMETER_GLIDER_NAME);
+
+  tmpstring = GnuSettings.VARIOMETER_GLIDER_NAME;
+  screen.setCursor(1, 170);
+  screen.println(tmpstring);
+
+//  screen.update();
+  screen.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+  while (screen.GetState() != STATE_OK) {
+    screen.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+#ifdef PROG_DEBUG
+    SerialPort.print("update screen");
+#endif //PRO_DEBBUG
+  }
+
+#endif //HAVE_SCREEN
+
+}
+
+/*-----------------*/
+/*      SETUP      */
+/*-----------------*/
+void setup() {
+
+/************************/
+/*        Init Power    */
+/************************/
+
+ #ifdef PROG_DEBUG
+  char tmpbuffer[50];
+
+  SerialPort.begin(115200);
+///  while (!SerialPort) { ;}
+  sprintf(tmpbuffer,"SAMD21 MPU9250 MS5611 VARIO compiled on %s at %s", __DATE__, __TIME__);
+  SerialPort.println(tmpbuffer);
+  SerialPort.flush();
+#endif //PRO_DEBBUG
+
+  /**********************/
+  /* init accelerometer */
+  /**********************/
+#ifdef PROG_DEBUG
+  SerialPort.println("Initializing vertaccel");
+#endif //PRO_DEBBUG
+  
+  Wire.begin();
+#ifdef HAVE_ACCELEROMETER
+  vertaccel_init();
+#endif //HAVE_ACCELEROMETER
+
+
+/******************/
+/*    init Audio  */
+/******************/
+#ifdef HAVE_SPEAKER
+
+  //activation de l'ampli D
+  digitalWrite(6, LOW);
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH);
+  
+  toneHAL.init();
+  
+#endif //HAVE_SPEAKER  
+
+  /****************/
+  /* init SD Card */
+  /****************/
+  
+#ifdef HAVE_SDCARD
+#ifdef PROG_DEBUG
+  Serial.println("Initializing SD card...");
+#endif //PRO_DEBBUG
+
+  if (GnuSettings.initSettings()) {
+#ifdef PROG_DEBUG
+   Serial.println("initialization done.");
+#endif //PROG_DEBUG
+
+   GnuSettings.readSDSettings();
+ 
+#ifdef PROG_DEBUG
+   //Debuuging Printing
+ Serial.print("Pilot Name = ");
+ Serial.println(GnuSettings.VARIOMETER_PILOT_NAME);
+#endif //PROG_DEBUG
+
+    sdcardState = SDCARD_STATE_INITIALIZED;  //useless to set error
+  }
+  else
+  {
+#ifdef HAVE_SPEAKER
+    if (GnuSettings.ALARM_SDCARD) {
+#ifdef PROG_DEBUG
+      Serial.println("initialization failed!");
+#endif //PROG_DEBUG
+
+//      indicateFaultSDCARD();
+    }
+#endif //HAVE_SPEAKER 
+  }  
+#endif //HAVE_SDCARD
+
+/******************/
+/*    init Audio  */
+/******************/
+#ifdef HAVE_SPEAKER
+  
+  beeper.init(GnuSettings.VARIOMETER_SINKING_THRESHOLD, GnuSettings.VARIOMETER_CLIMBING_THRESHOLD, GnuSettings.VARIOMETER_NEAR_CLIMBING_SENSITIVITY, GnuSettings.VARIOMETER_BEEP_VOLUME);
+
+#ifdef PROG_DEBUG
+  sprintf(tmpbuffer,"Volume : %i", GnuSettings.VARIOMETER_BEEP_VOLUME);
+  Serial.println(tmpbuffer);
+  Serial.flush();
+#endif //PROG_DEBUG
+
+  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+
+/*  int tmpvolume = beeper.getVolume();
+  beeper.setVolume(volumeDefault);
+
+  beeper.generateTone(GnuSettings.CALIB_TONE_FREQHZ, 3000);
+    // allow 10 seconds for the unit to be placed in calibration position with the 
+    // accelerometer +z pointing downwards. Indicate this delay with a series of short beeps
+  for (int inx = 0; inx < 10; inx++) {
+    delay(200); 
+    beeper.generateTone(GnuSettings.CALIB_TONE_FREQHZ,50);
+  }*/
+#endif //HAVE_SPEAKER  
+
+
+  /***************/
+  /* init screen */
+  /***************/
+#ifdef PROG_DEBUG
+      SerialPort.println("initialization screen");
+#endif //IMU_DEBUG
+
+#ifdef HAVE_SCREEN
+  screen.begin();
+
+/*----------------------------------------*/
+/*                                        */
+/*             DISPLAY BOOT               */
+/*                                        */
+/*----------------------------------------*/
+
+   displayBoot(); 
+   
+#endif //HAVE_SCREEN
+
+  /******************/
+  /* init barometer */
+  /******************/
+#ifdef PROG_DEBUG
+      Serial.println("initialization ms5611");
+#endif //IMU_DEBUG
+ ms5611_init();
+
+ /********************/
+ /*      Init GPS    */
+ /********************/
+
+#ifdef HAVE_GPS
+  GPS.begin(9600);
+  // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  // uncomment this line to turn on only the "minimum recommended" data
+  //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
+  // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
+  // the parser doesn't care about other sentences at this time
+  // Set the update rate
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ); // 1 Hz update rate
+  // For the parsing code to work nicely and have time to sort thru the data, and
+  // print it out we don't suggest using anything higher than 1 Hz
+     
+  // Request updates on antenna status, comment out to keep quiet
+  GPS.sendCommand(PGCMD_ANTENNA);
+
+  delay(1000);
+  
+  // Ask for firmware version
+  GPSSerial.println(PMTK_Q_RELEASE);
+
+
+  /******************/
+  /* get first data */
+  /******************/
+
+delay(1000);
+
+#endif //HAVE_GPS
+
+  /* wait for first alti and acceleration */
+#ifdef PROG_DEBUG
+      Serial.println("first alti");
+#endif //IMU_DEBUG
+  
+  while( ! (ms5611_dataReady()
+#ifdef HAVE_ACCELEROMETER
+            && vertaccel_dataReady()
+#endif //HAVE_ACCELEROMETER
+            ) ) {
+  }
+  
+  /* get first data */
+  ms5611_updateData();
+#ifdef HAVE_ACCELEROMETER
+  vertaccel_updateData();
+#endif //HAVE_ACCELEROMETER
+
+#ifdef MS6311_DEBUG
+    double alti = ms5611_getAltitude();
+    double pressure = ms5611_getPressure();
+    double temperature = ms5611_getTemperature();
+
+    /* print */
+    SerialPort.print("Altitude : ");
+    SerialPort.println(alti, 2);
+    SerialPort.print("Pression : ");
+    SerialPort.println(pressure, 2);
+    SerialPort.print("Temperature : ");
+    SerialPort.println(temperature, 2);
+#endif //MS5611_DEBUG
+
+#ifdef ACCEL_DEBUG
+    double accel = vertaccel_getValue();
+    /* print */
+    SerialPort.print("Accel : ");
+    SerialPort.println(accel, 2);
+#endif
+  /* init kalman filter */
+#ifdef PROG_DEBUG
+      Serial.println("initialization kalman");
+#endif //IMU_DEBUG
+
+  kalmanvert.init(ms5611_getAltitude(),
+#ifdef HAVE_ACCELEROMETER
+                  vertaccel_getValue(),
+#else
+                  0.0,
+#endif
+                  POSITION_MEASURE_STANDARD_DEVIATION,
+                  ACCELERATION_MEASURE_STANDARD_DEVIATION,
+                  millis());
+
+#ifdef HAVE_SPEAKER
+  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+
+#ifdef HAVE_SCREEN
+  volLevel.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+#endif //HAVE_SCREEN
+#else
+  volLevel.setVolume(0);
+#endif //HAVE_SPEAKER
+
+beeper.tone(2000);
+delay(1000);
+beeper.noTone();  
+  
+delay(3000);
+
+/*----------------------------------------*/
+/*                                        */
+/*           CLEAR DISPLAY BOOT           */
+/*                                        */
+/*----------------------------------------*/
+#ifdef IMU_DEBUG
+    Serial.println("Clear Screen");
+#endif IMU_DEBUG
+  
+//  delay(2000);
+#ifdef HAVE_SCREEN
+  screen.fillScreen(GxEPD_WHITE);
+#endif //HAVE_SCREEN
+
+}
+
+/*----------------*/
+/*      LOOP      */
+/*----------------*/
+void loop() {
+
+ /*****************************/
+  /* compute vertical velocity */
+  /*****************************/
+#ifdef HAVE_ACCELEROMETER
+  if( ms5611_dataReady() && vertaccel_dataReady() ) {
+    ms5611_updateData();
+    vertaccel_updateData();
+
+#ifdef MS6311_DEBUG
+    double alti = ms5611_getAltitude();
+    double pressure = ms5611_getPressure();
+    double temperature = ms5611_getTemperature();
+
+    /* print */
+    SerialPort.print("Altitude : ");
+    SerialPort.println(alti, 2);
+    SerialPort.print("Pression : ");
+    SerialPort.println(pressure, 2);
+    SerialPort.print("Temperature : ");
+    SerialPort.println(temperature, 2);
+#endif //MS5611_DEBUG
+
+#ifdef ACCEL_DEBUG
+    double accel = vertaccel_getValue();
+    /* print */
+    SerialPort.print("Accel : ");
+    SerialPort.println(accel, 2);
+#endif
+
+    kalmanvert.update( ms5611_getAltitude(),
+                       vertaccel_getValue(),
+                       millis() );
+#else
+  if( ms5611_dataReady() ) {
+    ms5611_updateData();
+
+#ifdef MS6311_DEBUG
+    double alti = ms5611_getAltitude();
+    double pressure = ms5611_getPressure();
+    double temperature = ms5611_getTemperature();
+
+    /* print */
+    SerialPort.print("Altitude : ");
+    SerialPort.println(alti, 2);
+    SerialPort.print("Pression : ");
+    SerialPort.println(pressure, 2);
+    SerialPort.print("Temperature : ");
+    SerialPort.println(temperature, 2);
+#endif //MS5611_DEBUG
+
+    kalmanvert.update( ms5611_getAltitude(),
+                       0.0,
+                       millis() );
+#endif //HAVE_ACCELEROMETER
+
+    /* set beeper */
+#ifdef HAVE_SPEAKER
+    beeper.setVelocity( kalmanvert.getVelocity() );
+#endif //HAVE_SPEAKER
+
+    /* set screen */
+#ifdef HAVE_SCREEN
+    altiDigit.setValue(kalmanvert.getCalibratedPosition());
+    varioDigit.setValue(kalmanvert.getVelocity() );
+
+#endif //HAVE_SCREEN
+   
+#ifdef KALMAN_DEBUG
+    SerialPort.println(kalmanvert.getCalibratedPosition());
+    SerialPort.println(kalmanvert.getVelocity() );
+#endif //KALMAN_DEBUG
+    
+  }
+
+  /*****************/
+  /* update beeper */
+  /*****************/
+#ifdef HAVE_SPEAKER
+  beeper.update();
+#endif //HAVE_SPEAKER
+  
+
+  /**************/
+  /* update GPS */
+  /**************/
+#ifdef HAVE_GPS
+
+  char c = GPS.read();
+  while (c != 0) {
+  // if you want to debug, this is a good time to do it!
+    if (GPSECHO)
+      if (c) SerialUSB.print(c);
+    c = GPS.read();
+  }    
+
+  if (GPS.newNMEAreceived()) {
+/*
+#define GPS_STATE_KO 0
+#define GPS_STATE_RECEIVED 1
+#define GPS_STATE_LASTNMEA 2
+#define GPS_STATE_FIX 3
+*/
+    gpsState = GPS_STATE_RECEIVED;
+    // a tricky thing here is if we print the NMEA sentence, or data
+    // we end up not listening and catching other sentences!
+    // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+#ifdef GPS_DEBUG
+    SerialPort.println(GPS.lastNMEA()); // this also sets the newNMEAreceived() flag to false
+#endif //GPS_DEBUG
+
+    if (GPS.parse(GPS.lastNMEA())) {// this also sets the newNMEAreceived() flag to false
+#ifdef GPS_DEBUG
+      SerialPort.println("GPS Last nmea"); 
+
+      // if millis() or timer wraps around, we'll just reset it
+      if (timer > millis()) timer = millis();
+     
+      // approximately every 2 seconds or so, print out the current stats
+      if (millis() - timer > 2000) {
+        timer = millis(); // reset the timer
+        SerialUSB.print("\nTime: ");
+        SerialUSB.print(GPS.hour, DEC); SerialUSB.print(':');
+        SerialUSB.print(GPS.minute, DEC); SerialUSB.print(':');
+        SerialUSB.print(GPS.seconds, DEC); SerialUSB.print('.');
+        SerialUSB.println(GPS.milliseconds);
+        SerialUSB.print("Date: ");
+        SerialUSB.print(GPS.day, DEC); SerialUSB.print('/');
+        SerialUSB.print(GPS.month, DEC); SerialUSB.print("/20");
+        SerialUSB.println(GPS.year, DEC);
+        SerialUSB.print("Fix: "); SerialUSB.print((int)GPS.fix);
+        SerialUSB.print(" quality: "); SerialUSB.println((int)GPS.fixquality);
+        if (GPS.fix) {
+          SerialUSB.print("Location: ");
+          SerialUSB.print(GPS.latitude, 4); SerialUSB.print(GPS.lat);
+          SerialUSB.print(", ");
+          SerialUSB.print(GPS.longitude, 4); SerialUSB.println(GPS.lon);
+          SerialUSB.print("Speed (knots): "); SerialUSB.println(GPS.speed);
+          SerialUSB.print("Angle: "); SerialUSB.println(GPS.angle);
+          SerialUSB.print("Altitude: "); SerialUSB.println(GPS.altitude);
+          SerialUSB.print("Satellites: "); SerialUSB.println((int)GPS.satellites);
+        }
+      }
+      
+#endif //GPS_DEBUG
+
+      gpsState = GPS_STATE_LASTNMEA;
+    } else {
+      gpsState = GPS_STATE_KO;      
+    }
+  } 
+    /***************************/
+    /* update variometer state */
+    /*    (after parsing)      */
+    /***************************/
+  if( variometerState < VARIOMETER_STATE_FLIGHT_STARTED ) {
+
+      /* if initial state check if date is recorded  */
+    if( variometerState == VARIOMETER_STATE_INITIAL ) {
+
+      if (gpsState == GPS_STATE_LASTNMEA) {
+        variometerState = VARIOMETER_STATE_DATE_RECORDED;
+      }
+    }
+      
+      /* check if we need to calibrate the altimeter */
+    else if( variometerState == VARIOMETER_STATE_DATE_RECORDED ) {
+        
+        /* we need a good quality value */
+      if (GPS.fix) {
+          
+          /* calibrate */
+ #ifdef HAVE_SPEAKER 
+        if (GnuSettings.ALARM_GPSFIX) {
+          beeper.generateTone(GnuSettings.BEEP_FREQ, 200);
+        }
+ #endif //defined(HAVE_SPEAKER) 
+ 
+#ifdef HAVE_SCREEN
+        recordIndicator.setActifGPSFIX();
+        fixgpsinfo.setFixGps();
+#endif //HAVE_SCREEN                    
+       
+        double gpsAlti = GPS.altitude;
+//        kalmanvert.calibratePosition(gpsAlti);
+        variometerState = VARIOMETER_STATE_CALIBRATED;
+/*#if defined(HAVE_SDCARD) && ! defined(VARIOMETER_RECORD_WHEN_FLIGHT_START)
+          createSDCardTrackFile();
+#endif //defined(HAVE_SDCARD) && ! defined(VARIOMETER_RECORD_WHEN_FLIGHT_START)*/
+#ifdef HAVE_SDCARD 
+         if (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) {
+//             createSDCardTrackFile();
+         }
+#endif //HAVE_SDCARD
+       }
+    }
+      
+    else {  //variometerState == VARIOMETER_STATE_CALIBRATED
+        
+        /* check flight start condition *
+        if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
+            ((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&   
+             (kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD)) ||
+             (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)
+     
+  //        && (kalmanvert.getVelocity() < FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > FLIGHT_START_VARIO_HIGH_THRESHOLD) &&
+#ifdef HAVE_GPS
+            &&(nmeaParser.getSpeed() > GnuSettings.FLIGHT_START_MIN_SPEED) 
+#endif //HAVE_GPS
+          ) {
+          variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
+          enableflightStartComponents();
+        }*/
+      }
+    }
+#endif //HAVE_GPS
+
+#if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR) 
+  double tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
+
+#ifdef PROG_DEBUG
+    SerialPort.print("voltage : ");
+    SerialPort.println(tmpVoltage); // this also sets the newNMEAreceived() flag to false
+#endif //GPS_DEBUG
+
+/*  tmpVoltage = tmpVoltage * 4.2/1023.0;
+
+#ifdef PROG_DEBUG
+    SerialPort.print("voltage : ");
+    SerialPort.println(tmpVoltage); // this also sets the newNMEAreceived() flag to false
+#endif //GPS_DEBUG*/
+  
+  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
+#endif //HAVE_VOLTAGE_DIVISOR
+
+  /**********************************/
+  /* update low freq screen objects */
+  /**********************************/
+#ifdef HAVE_SCREEN
+
+/************************************/
+/* Update Time, duration            */
+/* Voltage, SatLevel                */
+/************************************/
+
+#ifdef HAVE_GPS
+      /* set time */
+  if( variometerState >= VARIOMETER_STATE_DATE_RECORDED ) {
+
+#ifdef PROG_DEBUG
+      if (timer2 > millis()) timer2 = millis();
+     
+      // approximately every 2 seconds or so, print out the current stats
+      if (millis() - timer2 > 2000) {
+        timer2 = millis(); // reset the timer
+        SerialPort.print("Time : ");
+        SerialPort.print(GPS.hour, DEC); SerialPort.print(':');
+        SerialPort.print(GPS.minute, DEC); SerialPort.print(':');
+        SerialPort.println(GPS.seconds, DEC); 
+      }
+    #endif //IMU_DEBUG
+
+      String tmpString = "";
+      uint32_t tmpTime = 0;
+      tmpString = GPS.hour;
+      tmpTime = tmpString.toInt();
+      tmpString = GPS.minute;
+      tmpTime = (tmpTime * 100) + tmpString.toInt();
+      tmpString = GPS.seconds;
+      tmpTime = (tmpTime * 100) + tmpString.toInt();
+      screenTime.setTime( tmpTime );
+      screenTime.correctTimeZone( GnuSettings.VARIOMETER_TIME_ZONE );
+      screenElapsedTime.setCurrentTime( screenTime.getTime() );
+  }      
+#endif //HAVE_GPS  
+
+#ifdef HAVE_VOLTAGE_DIVISOR
+      /* update battery level */
+//      batLevel.setVoltage( analogRead(VOLTAGE_DIVISOR_PIN) );
+  batLevel.setVoltage( maxVoltage );
+  maxVoltage = 0;
+#endif //HAVE_VOLTAGE_DIVISOR
+   
+  /*****************/
+  /* update screen */
+  /*****************/
+#ifdef HAVE_GPS
+  /* when getting speed from gps, display speed and ratio */
+  if ( GPS.fix &&  (gpsState == GPS_STATE_LASTNMEA )) {
+
+      /* update satelite count */
+    satLevel.setSatelliteCount( (int)GPS.satellites );
+#ifdef PROG_DEBUG
+    SerialPort.print("Sat : ");
+    SerialPort.println((int)GPS.satellites);
+#endif //IMU_DEBUG
+
+    /* get new values */
+    double deltaAlti = GPS.altitude; //computed later
+
+    double currentSpeed = GPS.speed * KNOTS_TO_KMH;
+
+    /* display speed and ratio */    
+#ifdef PROG_DEBUG
+      SerialPort.print("Speed : ");
+      SerialPort.println(currentSpeed);
+#endif //IMU_DEBUG
+    speedDigit.setValue( currentSpeed );
+  }
+#endif //HAVE_GPS
+
+    recordIndicator.stateRECORD();
+
+
+  /* screen update */
+     multiDisplay.displayStep();
+     varioScreen.displayStep();
+     screen.updateScreen();
+
+#endif //HAVE_SCREEN 
+ }
+
+
+
+
+ /*
+  
+  SERCOM sercom0( SERCOM0 ) __attribute__((weak));
+
+In the case of arduino:
+Code: [Select]
+void UART_Handler(void) __attribute__((weak));
+
+
+To add a new sercom to samd you can start reading:
+https://www.arduino.cc/en/Tutorial/SamdSercom
+https://learn.adafruit.com/using-atsamd21-sercom-to-add-more-spi-i2c-serial-ports?view=all
+
+After adding the weak attribute you have to link the sercom you want to use in your main code and override the interrupt service routine (ISR) by using:
+Code: [Select]
+extern SERCOM sercom0; //put your sercom here to use it in your main code
+
+Then override the ISR:
+Code: [Select]
+void SERCOM0_Handler()
+{
+  if (sercom0.availableDataUART())
+  {
+      sercom0.readDataUART(); //here you get the new char from uart, use your handler here
+  }
+}
+
+As an example, I'm using the TinyGPS++ Library and I wanted to updates the GPS using an interrupt to prevent character loss so in my ISR I have:
+Code: [Select]
+void SERCOM0_Handler()
+{
+  if (sercom0.availableDataUART())
+  {
+    gps.encode(sercom0.readDataUART());
+  }
+}
+ 
+  */

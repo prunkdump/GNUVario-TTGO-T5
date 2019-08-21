@@ -1,0 +1,4 @@
+version 1.4	ajout trous pour le HP
+		modification passage de la suspente de sécuritée
+version 1.5	ajout de support pour le GPS et le HP.
+		ajout d'un 4ème support pour la carte TTGO
