@@ -41,7 +41,42 @@
                                     Correction bug statistique         
                                     Raffraichissement de l'ensemle de  
                                     l'écran toutes les 30sec           
-
+ v 0.5     beta 1    10/08/19       Ajout Gestionnaire d'erreur ESP32                                
+                                    Mise à jour via SDCARD /update.bin                               
+                                    Ajout Serveur Web update/download                                
+                                    Ajout HAVE_WIFI                                                  
+                                    Ajout BT                                                         
+ v 0.5     beta 2    20/08/19       Ajout dans hardwareConfig32 de la  version du PCB et de la TTGO  
+                                    Ajout lecture de la temperature                                  
+                                    MAJ OTA Web serveur                                              
+                                    Ajout changement de page                                         
+                                    Ajout 2ème ecran                                                 
+ v 0.5     beta 3  25/08/19         Ajout LOW/HIGH level cmd ampli                                   
+                                    Ajout ecran reglage volume du son                                
+                                    Correction Bug bouton                                            
+ v 0.5     beta 4  28/08/19         Ajout écran stat                                                                                    
+                                    Modification librairie ToneHAL                                   
+                                    Correction bug d'affichage mineurs                               
+ v 0.5     beta 5  31/08/19         Correction bg reglage volume                                     
+                                    Ajout commande ampli dans loop pour test                         
+ v 0.5     beta 6  04/09/19         Changement librairies MS5611 et MPU9250                                                             
+                                    Modifié la calibration de l'altitude par le GPS                  
+                                    Ajout d'un coeficiant de compensation de temperature             
+                                    Modification la séquence de démarrage de l'enregistrement        
+ v 0.5     beta 7  10/09/19         Ajout de SDA_Pin et SCL_Pin                                                                                                       
+                                    Modification des librairies du MPU9250 / ajout fonctions de                                                                                   
+                                    Calibration                                                      
+                                    Ajout Son de monté variable                                      
+                                    Modification de la sequence de démarrage -                       
+                                    allongement du temps de l'écran de stat à 6 sec                  
+                                    init MS5611 avant ecran stat, ajout acquisition durant ecran     
+                                    stat et init kalman après                                        
+                                    Ajout d'un paramettre de nombre d'acquisition du GPS avant        
+                                    la mise à jour de Altitude Barametrique                          
+                                    Modification librairie EEPROM                                    
+                                    Ajout de la lecture de l'alti baro durant l'attente de l'écran   
+                                    de stat                                                          
+                                                                                                      
                    Developpement à venir                               
                                                                                                                                     
  V0.4                                                                                                                                        
@@ -49,14 +84,23 @@
  bug affichage finesse  
  
  V0.5                                                                  
- Recupération vol via USB                                              
- Recuperation vol via Wifi                                             
- Calibration MPU																												
- porter best-fit-calibration sur l'ESP32                               
- porter gps-time-analysis sur l'ESP32                                  
-                                                                                                                                              
- VX.X                                                                  
- Refaire gestion du son                                                
+ Recupération vol via USB                                                                                                                                                                    
+ Calibration MPU                                                                                                                      
+ Mise à jour ESP32 via USB                                                                            
+ revoir volume du son ToneESP32                                                                      
+ verifier effacement du m (altitude)                                                                 
+ bug d'affichage des fleches                                                                         
+ voir réactivité des données GPS                                                                     
+ Ajouter ecran d'arrêt puis de l'écran de stat si appuie 3 sec sur bouton au centre                  
+                                                                                                     
+ VX.X                                                                                               
+ Refaire gestion du son                                                                              
+ Paramètrage des écrans                                                                              
+ Gérer le son via le DAC                                                                             
+ Afficher la boussole                                                                                
+ Sens et vitesse du vent                                                                             
+ Carnet de vol (10 derniers vols)                                                                    
+ BT verifier fonctionnement                                                                          
 
                     Fonctionalitées   
 		
@@ -77,5 +121,24 @@
     taux de chute et finesse                                           
     indicateur de monte/descente 
     Désactiver l'enregistrement des vols		
-                                                                       
+  
+  Version 0.5                                                            
+    Mise à jour via la carte SD - /update.bin                          
+    Récupération des vol via Wifi                                      
+    Mise à jour via Wifi                                               
+    Upload des fichiers de configuration via Wifi                      
+    Ajout Bluetooth                                                    
+    Multi-écran (ajout 2ème page / gestion des bouton droit et gauche) 
+    Affichage de la température                                        
+    Page de configuration du volume sonore                             
+    Page de statistique accéssible via les boutons                     
+	
  
+               Fichiers de configuration                               
+                                                                       
+ SETTINGS.TXT             parametres utilisateur                       
+ HardwareConfig.h         parametres matériels communs                 
+ HardwareConfigESP32.h    parametre spécifique à l'ESP32               
+ DebugConfig.h            parametre de debuggage                       
+ VarioSettings.h          parametres par defaut (utilisé si il n'y a   
+                          pas de SDcard ou de fichier SETTINGS.TXT     
