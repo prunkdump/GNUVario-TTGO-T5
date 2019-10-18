@@ -1,0 +1,20 @@
+DebugConfig							Gestion de l'affichage des messages de débuggage 
+												#define ENABLE_DEBUG permet de desactiver l'ensemble des messages
+								
+HardwareConfig					Gestion des paramettres matériels commun
+HardwareConfigESP32			Gestion des paramettres matériels lié à l'ESP32
+HardwareConfigMK0       Gestion des paramettres matériels lié au MKRZERO
+HardwareConfigPRO       des paramettres matériels lié au Pro-Mini
+
+VarioSetting						Gestion des paramettres utilisateur
+
+EepromHAL								Gestion de la mémoire flash
+EepromHAL_ESP32					Gestion de la mémoire flash pour l'ESP32
+EepromHAL_8266 					Gestion de la mémoire flash pour l'ESP8266
+EepromHAL_M0            Gestion de la mémoire flash pour le MKRZERO
+EepromHAL_PRO						Gestion de la mémoire flash pour le PRO-MINI
+
+Adafruit_GFX_Library    Librairie utilisée pour la gestion de l'écran
+GxEPD2									Librairie de gestion de l'écran E-Paper
+
+sdcardHAL								Gestion de la SDCard
