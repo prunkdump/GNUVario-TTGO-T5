@@ -1,7 +1,7 @@
 # Gnuvario_for_TTGO-T5
-# GNUVARIO-E     Stable version 0.3
-# GNUVARIO-E     Developement version 0.5 beta 6
-# PCB            version 1.12
+# GNUVARIO-E     Stable version ---
+# GNUVARIO-E     Developpement version 0.5 beta 6
+# PCB            version 2.1
 # 3D CASE        version 1.05
 
 
