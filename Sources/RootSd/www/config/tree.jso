@@ -1,0 +1,100 @@
+[
+  {
+    "type": "directory",
+    "name": "/",
+    "contents": [
+      {
+        "type": "file",
+        "name": "SETTINGS.TXT"
+      },
+      {
+        "type": "directory",
+        "name": "VOLS",
+        "contents": [
+          {
+            "type": "file",
+            "name": "19102000.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102100.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19022402.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102101.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102300.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102400.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102401.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102402.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102500.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102501.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102502.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102503.IGC"
+          },
+          {
+            "type": "file",
+            "name": "19102504.IGC"
+          }
+        ]
+      },
+      {
+        "type": "directory",
+        "name": "WWW",
+        "contents": [
+          {
+            "type": "file",
+            "name": "FAVI.ICO"
+          },
+          {
+            "type": "file",
+            "name": "INDEX.HTM"
+          },
+          {
+            "type": "file",
+            "name": "INDEXB.JS"
+          },
+          {
+            "type": "file",
+            "name": "INDEXB~1.MAP"
+          }
+        ]
+      },
+      {
+        "type": "file",
+        "name": "RECORD00.CAL"
+      },
+      {
+        "type": "file",
+        "name": "FR5758~1.JSO"
+      }
+    ]
+  }
+]

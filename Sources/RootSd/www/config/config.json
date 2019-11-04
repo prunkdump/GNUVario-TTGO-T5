@@ -1,0 +1,190 @@
+[
+    {
+        "@id": "1",
+        "info": [
+            {
+                "type": "Vario",
+                "unit": "mps",
+                "posX": "100",
+                "posY": "70",
+                "size": "0",
+                "id": "2"
+            },
+            {
+                "type": "Speed",
+                "unit": "kmh",
+                "posX": "48",
+                "posY": "45",
+                "size": "1",
+                "id": "0"
+            },
+            {
+                "type": "LocalTime",
+                "unit": "m",
+                "posX": "75",
+                "posY": "20",
+                "size": "1",
+                "id": "6"
+            },
+            {
+                "type": "FlightTime",
+                "unit": "m",
+                "posX": "114",
+                "posY": "104",
+                "size": "1",
+                "id": "7"
+            },
+            {
+                "type": "WindInfo",
+                "unit": "kmh",
+                "posX": "103",
+                "posY": "44",
+                "size": "2",
+                "id": "19"
+            }
+        ]
+    },
+    {
+        "@id": "2",
+        "info": [
+            {
+                "type": "Vario",
+                "unit": "mps",
+                "posX": "100",
+                "posY": "93",
+                "size": "0",
+                "id": "2"
+            },
+            {
+                "type": "Altitude",
+                "unit": "m",
+                "posX": "115",
+                "posY": "73",
+                "size": "2",
+                "id": "1"
+            },
+            {
+                "type": "BackToThermal",
+                "unit": "m",
+                "posX": "99",
+                "posY": "44",
+                "size": "2",
+                "id": "29"
+            },
+            {
+                "type": "CenterThermal",
+                "unit": "m",
+                "posX": "35",
+                "posY": "55",
+                "size": "3",
+                "id": "31"
+            }
+        ]
+    },
+    {
+        "@id": "3",
+        "info": [
+            {
+                "type": "Altitude",
+                "unit": "m",
+                "posX": "67",
+                "posY": "20",
+                "size": "1",
+                "id": "1"
+            },
+            {
+                "type": "FloorHeight",
+                "unit": "m",
+                "posX": "67",
+                "posY": "45",
+                "size": "1",
+                "id": "8"
+            },
+            {
+                "type": "Speed",
+                "unit": "kmh",
+                "posX": "92",
+                "posY": "96",
+                "size": "1",
+                "id": "0"
+            },
+            {
+                "type": "Vario",
+                "unit": "mps",
+                "posX": "45",
+                "posY": "73",
+                "size": "2",
+                "id": "2"
+            },
+            {
+                "type": "WindInfo",
+                "unit": "kmh",
+                "posX": "103",
+                "posY": "44",
+                "size": "2",
+                "id": "19"
+            },
+            {
+                "type": "WindSpeed",
+                "unit": "kmh",
+                "posX": "95",
+                "posY": "73",
+                "size": "2",
+                "id": "20"
+            }
+        ]
+    },
+    {
+        "@id": "4",
+        "info": [
+            {
+                "type": "GraphicalHeading",
+                "unit": "m",
+                "posX": "19",
+                "posY": "28",
+                "size": "0",
+                "id": "11"
+            },
+            {
+                "type": "VZA",
+                "unit": "m",
+                "posX": "67",
+                "posY": "60",
+                "size": "1",
+                "id": "24"
+            },
+            {
+                "type": "HZA",
+                "unit": "m",
+                "posX": "67",
+                "posY": "35",
+                "size": "1",
+                "id": "25"
+            },
+            {
+                "type": "FloorHeight",
+                "unit": "m",
+                "posX": "93",
+                "posY": "85",
+                "size": "1",
+                "id": "8"
+            },
+            {
+                "type": "WindInfo",
+                "unit": "kmh",
+                "posX": "103",
+                "posY": "60",
+                "size": "2",
+                "id": "19"
+            },
+            {
+                "type": "AirspaceName",
+                "unit": "kmh",
+                "posX": "22",
+                "posY": "112",
+                "size": "3",
+                "id": "26"
+            }
+        ]
+    }
+]
