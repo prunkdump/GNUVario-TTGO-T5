@@ -2,7 +2,7 @@
 # GNUVARIO-E     Stable version ---
 # GNUVARIO-E     Developpement version 0.5 beta 6
 # PCB            version 2.1
-# 3D CASE        version 1.05
+# 3D CASE        version 2.01
 
 
  v 0.1                              beta 1 version                     
