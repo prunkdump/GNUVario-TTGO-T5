@@ -36,6 +36,13 @@
  *                      Augmentation debounce time                               *
  *                      Ajout _state button																			 *
  *    1.0.7  31/08/19		Correction bug reglage son															 *
+ *    1.0.8  25/09/19   Ajout appuie 3 sec bouton central                        * 
+ *    1.0.9  29/09/19	  Ajout gestion page de calibration                        *
+ *    1.0.10 03/10/19   Ajout HAVE_SDCARD                                        *
+ *    1.0.11 28/10/19		Ajout bip de control lors de la configuration du volume  *
+ *    1.0.12 01/11/19   Modification de la configuration du volume               *
+ *    1.0.13 03/01/19   Déplacement de la validation de la mise en veille sur le *
+ *                      bouton gauche                                            *
  *                                                                               *
  *********************************************************************************/
  
@@ -47,7 +54,10 @@
 #include <DebugConfig.h>
 #include "HardwareConfig.h"
 #include "Button.h"
+
+#ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
+#endif //HAVE_SDCARD
 
 #define DEBOUNCE_MS 30
 
@@ -77,6 +87,9 @@ class VARIOButton {
 #define STATE_PAGE_GPSCAL  				4
 #define STATE_PAGE_WEBSERV 				5
 #define STATE_PAGE_CONFIG_SOUND		6
+#define STATE_PAGE_DEEP_SLEEP			7
+#define STATE_PAGE_CALIBRATION    8
+#define STATE_PAGE_CALIBRATE			9
 
 class VARIOButtonScheduleur {
 	public:
@@ -92,10 +105,16 @@ class VARIOButtonScheduleur {
 		void treatmentBtnA(bool Debounce);
 		void treatmentBtnB(bool Debounce);
 		void treatmentBtnC(bool Debounce);
+		
+		void treatmentBtnB3S(bool Debounce);
+		
 #ifdef HAVE_WIFI
 		void WifiServeur(void);
 #endif //HAVE_WIFI
+
+#ifdef HAVE_SDCARD
 		void printDirectory(File dir, int numTabs);
+#endif //HAVE_SDCARD
 		
 };
 

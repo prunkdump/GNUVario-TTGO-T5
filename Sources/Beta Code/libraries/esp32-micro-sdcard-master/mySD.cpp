@@ -567,6 +567,17 @@ boolean SDClass::remove(char *filepath) {
   return walkPath(filepath, root, callback_remove);
 }
 
+boolean SDClass::rename(const char* pathFrom, const char* pathTo) {
+ /*   if (!_file) {
+        return false;
+    }
+    return _file->rename(pathFrom, pathTo);*/
+}
+
+boolean SDClass::rename(const String& pathFrom, const String& pathTo) {
+    return rename(pathFrom.c_str(), pathTo.c_str());
+}
+
 void SDClass::enableCRC(boolean mode) {
   card.enableCRC(mode);
 }

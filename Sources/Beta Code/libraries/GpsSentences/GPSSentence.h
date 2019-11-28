@@ -26,6 +26,8 @@
 /*    1.0      06/07/19                                                          */
 /*    1.0.1    22/07/19     Modification CreateIgcFile                           */
 /*    1.0.2    25/07/19     Ajout noRecord                                       */
+/*    1.0.3    03/10/19     Ajout gestion HAVE_SDCARD 													 */
+/*    1.0.4    12/10/19     Ajout gestion du dossier de stockage des VOLs        */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -37,8 +39,17 @@
 #include <HardwareConfig.h>
 #include <IGCSentence.h>
 #include <NmeaParser.h>
+
+#ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
+#endif
+
 #include <kalmanvert.h>
+
+#define SDCARD_STATE_INITIAL 0
+#define SDCARD_STATE_INITIALIZED 1
+#define SDCARD_STATE_READY 2
+#define SDCARD_STATE_ERROR -1
 
 
 /*!!! the first character of begin() is part of the sentence !!!*/
@@ -56,11 +67,6 @@ class GPSSentence {
   
 #ifdef HAVE_SDCARD
 	
-#define SDCARD_STATE_INITIAL 0
-#define SDCARD_STATE_INITIALIZED 1
-#define SDCARD_STATE_READY 2
-#define SDCARD_STATE_ERROR -1
-
 extern int8_t sdcardState;
 extern File fileIgc;
 extern IGCHeader   header;

@@ -32,28 +32,58 @@
 /*    1.0.4  25/07/19   Ajout default settings                           				 */ 
 /*                      Ajout NO_RECORD                                          */
 /*    1.0.5  05/08/19   Ajout paramettres Wifi                                   */
+/*    1.0.6	 01/10/19		Ajout paramettres calibration                            */
+/*    1.0.7  08/10/19   Ajout EnableBT																					 */
+/*		1.0.8	 21/10/19   Ajout Compensation alti gps et température et enable bip */
+/*                      au démarrage                                             */
+/*    1.0.9  11/11/19   Ajout gestion params.jso                                 */
+/*                      suppression statistique                                  */
+/*											Modification applySetting																 */
+/*                      Modification readSDSettings															 */
+/*                      ajout  SLEEP_TIMEOUT_MINUTES														 */
+/*														 SLEEP_THRESHOLD_CPS															 */
+/*														 ALTERNATE_DATA_DURATION													 */
+/*											Ajout saveConfigurationVario / loadConfigurationVario		 */
+/* 		1.1.0	13/11/19		Modification soundSettingRead / soundSettingWrite        */
+/*                      Ajout lecture et sauvegarde fichier wifi.cfg 						 */
+/*										  Ajout gestion automatique des version fichier params.jso */
+/*										  Modif ALTERNATE_DATA_DURATION - MULTIDISPLAY_DURATION	   */
+/*                      ajout gestion de plusieurs voiles                        */
+/*    1.1.1 24/11/19		Modification SLEEP_THRESHOLD_CPS en float								 */
 /*                                                                               */
 /*********************************************************************************/
 
-#include <VarioSettings.h>
 #include <Arduino.h>
-//#include <FlashAsEEPROM.h>
-#include <eepromHAL.h>
-#include <sdcardHAL.h>
 
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
+#include <VarioSettings.h>
+
+//#include <FlashAsEEPROM.h>
+#include <eepromHAL.h>
+
+#ifdef HAVE_SDCARD
+#include <sdcardHAL.h>
+#endif
+
+#include <ArduinoJson.h>
+
 //SdFat SD;
 
-boolean VarioSettings::initSettings() {
+boolean VarioSettings::initSettings(bool initSD) {
+
+#ifdef HAVE_SDCARD
+	if (initSD) {
     if (!SDHAL.begin()) {
 #ifdef SDCARD_DEBUG
       SerialPort.println("initialization failed!");
 #endif //SDCARD_DEBUG
       return false;
     }
-		
+	}
+#endif
+	
 	EEPROMHAL.init(1024);
   if (!EEPROMHAL.isValid()) {
 #ifdef EEPROM_DEBUG
@@ -65,7 +95,8 @@ boolean VarioSettings::initSettings() {
   return true;
 }
 
-boolean VarioSettings::readSDSettings(){
+#ifdef HAVE_SDCARD
+boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
   char character;
   String settingName;
   String settingValue;
@@ -99,7 +130,7 @@ boolean VarioSettings::readSDSettings(){
 #endif //SDCARD_DEBUG
 
         // Apply the value to the parameter
-        applySetting(settingName,settingValue);
+        if (applySetting(settingName,settingValue)) *ModifiedValue = true;
         // Reset Strings
         settingName = "";
         settingValue = "";
@@ -117,6 +148,7 @@ boolean VarioSettings::readSDSettings(){
    return false;
   }
 }
+#endif 
  
  /* Apply the value to the parameter by searching for the parameter name
  Using String.toInt(); for Integers
@@ -124,7 +156,9 @@ boolean VarioSettings::readSDSettings(){
  toBoolean(string); for Boolean
  toLong(string); for Long
  */
- void VarioSettings::applySetting(String settingName, String settingValue) {
+ boolean VarioSettings::applySetting(String settingName, String settingValue) {
+ 
+	boolean	ValeurDifferente = false;
  
    if (settingName == "VARIOMETER_PILOT_NAME") {
 #ifdef SDCARD_DEBUG
@@ -154,8 +188,11 @@ boolean VarioSettings::readSDSettings(){
   /* the duration of the two screen pages in milliseconds */
      VARIOMETER_BASE_PAGE_DURATION = settingValue.toInt();
    }
-   else if(settingName == "VARIOMETER_ALTERNATE_PAGE_DURATION") {
-	 VARIOMETER_ALTERNATE_PAGE_DURATION=settingValue.toInt();
+   else if(settingName == "VARIOMETER_MULTIDISPLAY_DURATION") {
+	 VARIOMETER_MULTIDISPLAY_DURATION=settingValue.toInt();
+   }
+   else if(settingName == "VARIOMETER_TIME_ZONE") {
+	   VARIOMETER_TIME_ZONE=toFloat(settingValue);
    }
    else if(settingName == "VARIOMETER_BEEP_VOLUME") {
 //	 VARIOMETER_BEEP_VOLUME=settingValue.toInt();
@@ -190,22 +227,22 @@ boolean VarioSettings::readSDSettings(){
    else if(settingName == "FLIGHT_START_MIN_TIMESTAMP") {
 	     /* Flight start detection conditions :                      */
         /* -> Minimum time after poweron in milliseconds            */
-     FLIGHT_START_MIN_TIMESTAMP=toFloat(settingValue);
+    FLIGHT_START_MIN_TIMESTAMP=toFloat(settingValue);
    }
     else if(settingName == "FLIGHT_START_VARIO_LOW_THRESHOLD") {
 		  /* Flight start detection conditions :                      */
 		  /* -> Minimum vertical velocity in m/s (low/high threshold) */
-     FLIGHT_START_VARIO_LOW_THRESHOLD=toFloat(settingValue);
+    FLIGHT_START_VARIO_LOW_THRESHOLD=toFloat(settingValue);
    }
    else if(settingName == "FLIGHT_START_VARIO_HIGH_THRESHOLD") {
 	     /* Flight start detection conditions :                      */
   /* -> Minimum vertical velocity in m/s (low/high threshold) */
-     FLIGHT_START_VARIO_HIGH_THRESHOLD=toFloat(settingValue);
+    FLIGHT_START_VARIO_HIGH_THRESHOLD=toFloat(settingValue);
    }
    else if(settingName == "FLIGHT_START_MIN_SPEED") {
   /* Flight start detection conditions :                      */
  /* -> Minimum ground speed in km/h                          */
-	 FLIGHT_START_MIN_SPEED=toFloat(settingValue);
+		FLIGHT_START_MIN_SPEED=toFloat(settingValue);
    }
    else if(settingName == "VARIOMETER_RECORD_WHEN_FLIGHT_START") {
   /* GPS track recording on SD card starting condition :  */ 
@@ -218,44 +255,48 @@ boolean VarioSettings::readSDSettings(){
   /* Possible values are :                                  */
   /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
   /*  - VARIOMETER_SENT_LK8000_SENTENCE                     *
-     VARIOMETER_SENT_LXNAV_SENTENCE=toBoolean(settingValue);
+    VARIOMETER_SENT_LXNAV_SENTENCE=toBoolean(settingValue);
    }*/
    else if(settingName == "ALARM_SDCARD") {
      /* Alarm */
      /* Alarm SDCARD not insert */
-     ALARM_SDCARD=toBoolean(settingValue);
+    ALARM_SDCARD=toBoolean(settingValue);
    }
    else if(settingName == "ALARM_GPSFIX") {
-	 /* Alarm GPS Fix */
-     ALARM_GPSFIX=toBoolean(settingValue);
+	 /* Nip when GPS Fix */
+    ALARM_GPSFIX=toBoolean(settingValue);
    }
    else if(settingName == "ALARM_FLYBEGIN") {
-	 /* Alarm Fly begin */
-     ALARM_FLYBEGIN=toBoolean(settingValue);
+	 /* Bip when Fly begin */
+    ALARM_FLYBEGIN=toBoolean(settingValue);
+   }
+   else if(settingName == "ALARM_VARIOBEGIN") {
+	 /* Bip when vario begin */
+    ALARM_VARIOBEGIN=toBoolean(settingValue);
    }
     else if(settingName == "KF_ZMEAS_VARIANCE") {
 	 // Kalman filter configuration
-	 KF_ZMEAS_VARIANCE=toFloat(settingValue);
+		KF_ZMEAS_VARIANCE=toFloat(settingValue);
    }
    else if(settingName == "KF_ZACCEL_VARIANCE") {
 	   // Kalman filter configuration
-     KF_ZACCEL_VARIANCE=toFloat(settingValue);
+    KF_ZACCEL_VARIANCE=toFloat(settingValue);
    }
    else if(settingName == "KF_ACCELBIAS_VARIANCE") {
 	   // Kalman filter configuration
      KF_ACCELBIAS_VARIANCE=toFloat(settingValue);
    }
-    else if(settingName == "SLEEP_TIMEOUT_SECONDS") {
+    else if(settingName == "SLEEP_TIMEOUT_MINUTES") {
 		// Power-down timeout. Here we power down if the
 		// vario does not see any climb or sink rate more than
 		// 50cm/sec, for 20 minutes.
-     SLEEP_TIMEOUT_SECONDS=settingValue.toInt(); // 20 minutes
+     SLEEP_TIMEOUT_MINUTES=settingValue.toInt(); // 20 minutes
    }
    else if(settingName == "SLEEP_THRESHOLD_CPS") {
 	    // Power-down timeout. Here we power down if the
 		// vario does not see any climb or sink rate more than
 		// 50cm/sec, for 20 minutes.
-     SLEEP_THRESHOLD_CPS=settingValue.toInt();
+     SLEEP_THRESHOLD_CPS=toFloat(settingValue);
    }
    // vario thresholds in cm/sec for generating different
 // audio tones. Between the sink threshold and the zero threshold,
@@ -337,31 +378,120 @@ boolean VarioSettings::readSDSettings(){
     NO_RECORD = toBoolean(settingValue);
     }  
    else if(settingName == "SSID_1") {
+		 if (VARIOMETER_SSID_1 != settingValue) ValeurDifferente = true;
      VARIOMETER_SSID_1 = settingValue;
    }
    else if(settingName == "PASSWORD_1") {
-     VARIOMETER_PASSWORD_1 = settingValue;
+ 		if (VARIOMETER_PASSWORD_1 != settingValue) ValeurDifferente = true;
+    VARIOMETER_PASSWORD_1 = settingValue;
    }
    else if(settingName == "SSID_2") {
+		 if (VARIOMETER_SSID_2 != settingValue) ValeurDifferente = true;
      VARIOMETER_SSID_2 = settingValue;
    }
    else if(settingName == "PASSWORD_2") {
+ 		 if (VARIOMETER_PASSWORD_2 != settingValue) ValeurDifferente = true;
      VARIOMETER_PASSWORD_2 = settingValue;
    }
    else if(settingName == "SSID_3") {
+		 if (VARIOMETER_SSID_3 != settingValue) ValeurDifferente = true;
      VARIOMETER_SSID_3 = settingValue;
    }
    else if(settingName == "PASSWORD_3") {
+ 		 if (VARIOMETER_PASSWORD_3 != settingValue) ValeurDifferente = true;
      VARIOMETER_PASSWORD_3 = settingValue;
    }
    else if(settingName == "SSID_4") {
+		 if (VARIOMETER_SSID_4 != settingValue) ValeurDifferente = true;
      VARIOMETER_SSID_4 = settingValue;
    }
    else if(settingName == "PASSWORD_4") {
+ 		 if (VARIOMETER_PASSWORD_4 != settingValue) ValeurDifferente = true;
      VARIOMETER_PASSWORD_4 = settingValue;
    }		
-   else {       
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_00") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_00=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_01") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_01=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_02") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_02=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_03") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_03=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_04") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_04=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_05") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_05=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_06") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_06=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_07") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_07=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_08") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_08=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_09") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_09=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_10") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_10=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_GYRO_CAL_BIAS_11") {
+	   VARIO_VERTACCEL_GYRO_CAL_BIAS_11=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_ACCEL_CAL_BIAS_00") {
+	   VARIO_VERTACCEL_ACCEL_CAL_BIAS_00=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_ACCEL_CAL_BIAS_01") {
+	   VARIO_VERTACCEL_ACCEL_CAL_BIAS_01=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_ACCEL_CAL_BIAS_02") {
+	   VARIO_VERTACCEL_ACCEL_CAL_BIAS_02=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_ACCEL_CAL_SCALE") {
+	   VARIO_VERTACCEL_ACCEL_CAL_SCALE=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_BIAS_00") {
+	   VARIO_VERTACCEL_MAG_CAL_BIAS_00=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_BIAS_01") {
+	   VARIO_VERTACCEL_MAG_CAL_BIAS_01=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_BIAS_02") {
+	   VARIO_VERTACCEL_MAG_CAL_BIAS_02=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_PROJ_SCALE") {
+	   VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER") {
+	   VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_BIAS_MULTIPLIER") {
+	   VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER=settingValue.toInt();
+	 }
+   else if(settingName == "VERTACCEL_MAG_CAL_BIAS_MULTIPLIER") {
+	   VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER=settingValue.toInt();
+	 }
+   else if(settingName == "BT_ENABLE") {
+	   VARIOMETER_ENABLE_BT=toBoolean(settingValue);
+	 }
+   else if(settingName == "COMPENSATION_TEMP") {
+	   // Kalman filter configuration
+     COMPENSATION_TEMP=toFloat(settingValue);
+   }
+   else if(settingName == "COMPENSATION_GPSALTI") {
+	   // Kalman filter configuration
+     COMPENSATION_GPSALTI=toFloat(settingValue);
+   }	 
+  else {       
    }  
+	return ValeurDifferente;
 }
  
  // converting string to Float
@@ -392,6 +522,8 @@ boolean VarioSettings::toBoolean(String settingValue) {
 }
  
  // Writes A Configuration file DEBBUG
+#ifdef HAVE_SDCARD
+
 void VarioSettings::writeFlashSDSettings() {
 		
 File myFile2;
@@ -482,7 +614,87 @@ File myFile2;
 #endif //SDCARD_DEBUG   
   }
 }
+#endif
 
+ // Writes A Configuration file DEBBUG
+#ifdef HAVE_SDCARD
+
+//**********************************************************
+void VarioSettings::writeWifiSDSettings(char *filename) {
+//**********************************************************
+		
+File myFile2;
+  
+  // Delete the old One
+  SDHAL.remove(filename);
+  // Create new one
+  myFile2 = SDHAL.open(filename, FILE_WRITE);
+  if (myFile2) {
+	  
+#ifdef SDCARD_DEBUG
+        //Debuuging Printing
+    SerialPort.println("Write File SD");
+#endif //SDCARD_DEBUG
+
+     // writing in the file works just like regular print()/println() function
+    myFile2.print("[");
+    myFile2.print("SSID_1=");
+    myFile2.print(VARIOMETER_SSID_1);
+    myFile2.println("]");
+    myFile2.print("[");
+    myFile2.print("PASSWORD_1=");
+    myFile2.print( VARIOMETER_PASSWORD_1);
+    myFile2.println("]");
+		myFile2.println("");
+    myFile2.print("[");
+    myFile2.print("SSID_2=");
+    myFile2.print(VARIOMETER_SSID_2);
+    myFile2.println("]");
+    myFile2.print("[");
+    myFile2.print("PASSWORD_2=");
+    myFile2.print( VARIOMETER_PASSWORD_2);
+    myFile2.println("]");
+		myFile2.println("");
+    myFile2.print("[");
+    myFile2.print("SSID_3=");
+    myFile2.print(VARIOMETER_SSID_3);
+    myFile2.println("]");
+    myFile2.print("[");
+    myFile2.print("PASSWORD_3=");
+    myFile2.print( VARIOMETER_PASSWORD_3);
+    myFile2.println("]");
+		myFile2.println("");
+    myFile2.print("[");
+    myFile2.print("SSID_4=");
+    myFile2.print(VARIOMETER_SSID_4);
+    myFile2.println("]");
+    myFile2.print("[");
+    myFile2.print("PASSWORD_4=");
+    myFile2.print( VARIOMETER_PASSWORD_4);
+    myFile2.println("]");
+		myFile2.println("");
+  
+
+  // close the file:
+    myFile2.flush();
+    myFile2.close();
+	
+#ifdef SDCARD_DEBUG
+        //Debuuging Printing
+ 	SerialPort.println("Writing done.");
+#endif //SDCARD_DEBUG
+
+  } else {
+   // if the file didn't open, print an error:
+#ifdef SDCARD_DEBUG
+   SerialPort.print("error opening : ");
+   SerialPort.println(filename);
+#endif //SDCARD_DEBUG   
+  }
+}
+#endif
+
+#ifdef HAVE_SDCARD
 boolean VarioSettings::readFlashSDSettings(){
   char character;
   String settingName;
@@ -544,7 +756,6 @@ boolean VarioSettings::readFlashSDSettings(){
    return false;
   }
 
-
 /*File myFile2;
 
   SDHAL.remove("FLASH.TXT");
@@ -579,6 +790,7 @@ boolean VarioSettings::readFlashSDSettings(){
   }*/
 
 }
+#endif
  
  /* Apply the value to the parameter by searching for the parameter name
  Using String.toInt(); for Integers
@@ -612,6 +824,7 @@ uint8_t VarioSettings::soundSettingRead(void) {
   uint8_t tmpValue=0;
   
   if (!EEPROMHAL.isValid()) {
+/*#ifdef HAVE_SDCARD		
     SerialPort.println("EEPROM is empty, writing some example data:");
 	  if (!readFlashSDSettings()) {
 	    VARIOMETER_BEEP_VOLUME=5;
@@ -620,6 +833,9 @@ uint8_t VarioSettings::soundSettingRead(void) {
 	  else {
 	    tmpValue = VARIOMETER_BEEP_VOLUME;	
 	  }
+#endif*/
+		//Erreur Memoire 
+		tmpValue = DEFAULT_VARIOMETER_BEEP_VOLUME;	
   } else {
 	  
     eepromTag = EEPROMHAL.read(SOUND_EEPROM_ADDR);
@@ -628,6 +844,7 @@ uint8_t VarioSettings::soundSettingRead(void) {
   
     uint8_t TmpValue;
     if( eepromTag != SOUND_EEPROM_TAG ) { 
+/*#ifdef HAVE_SDCARD
 	    if (!readFlashSDSettings()) {
 	      VARIOMETER_BEEP_VOLUME=5;
 	      tmpValue = 5; 
@@ -635,28 +852,36 @@ uint8_t VarioSettings::soundSettingRead(void) {
 	    else {
 	      tmpValue = VARIOMETER_BEEP_VOLUME;	
 	    }
+#endif*/
+		//Memoire vide
+			tmpValue = DEFAULT_VARIOMETER_BEEP_VOLUME;	
+			soundSettingWrite(tmpValue);
+#ifdef SOUND_DEBUG
+      SerialPort.print("Memoire vide - sound value : ");
+      SerialPort.println(tmpValue);
+#endif //SOUND_DEBUG
     } else {
       /* read calibration settings */
       tmpValue =  EEPROMHAL.read(SOUND_EEPROM_ADDR + 0x02);
-#ifdef SDCARD_DEBUG
+#ifdef SOUND_DEBUG
       SerialPort.print("Read sound value : ");
       SerialPort.println(tmpValue);
-#endif //SDCARD_DEBUG
+#endif //SOUND_DEBUG
 
     }
   }
 
-#ifdef SDCARD_DEBUG
+#ifdef SOUND_DEBUG
   SerialPort.print("Sound value : ");
   SerialPort.println(tmpValue);
-#endif //SDCARD_DEBUG
+#endif //SOUND_DEBUG
 
   if ((tmpValue<0) || (tmpValue>10)) {tmpValue=5;}
   return tmpValue;
 }
 
 void VarioSettings::soundSettingWrite(uint8_t volume) {
-#ifdef SDCARD_DEBUG
+#ifdef SOUND_DEBUG
   SerialPort.print("Write sound volume : ");
   SerialPort.println(volume);
 #endif //SDCARD_DEBUG
@@ -674,6 +899,736 @@ void VarioSettings::soundSettingWrite(uint8_t volume) {
  // writeFlashSDSettings();
 }
 
+//**********************************************************
+void VarioSettings::loadConfigurationVario(char *filename) {
+//**********************************************************
+  // Open file for reading
+  File file = SDHAL.open(filename);
+	boolean MajFileParams = false;
+
+  if (!file) {
+    SerialPort.println(F("Failed to read file"));
+    return;
+  }
+
+//	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
+	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 1040;
+  DynamicJsonDocument doc(capacity);
+
+  SerialPort.println("deserialisation");
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, file);
+  if (error)
+    SerialPort.println(F("Failed to read file, using default configuration"));
+
+  int    tmpValue;
+  float  tmpValueFloat;
+  long   tmpValueLong;
+	String tmpValueString;
+
+  SerialPort.println("Paramètres : ");
+
+	const char* GnuvarioE_version = doc["gnuvarioe"]["version"]; // "1.0"
+	if (strcmp(GnuvarioE_version, PARAMS_VERSION) != 0) MajFileParams = true;
+
+	//*****    SYSTEME *****
+
+  SerialPort.println("****** Systeme *******");
+
+  JsonObject Systeme = doc["systeme"];
+	
+	if (Systeme.containsKey("BT_ENABLE")) {
+	     tmpValue = Systeme["BT_ENABLE"];
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_ENABLE_BT;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_ENABLE_BT = true;
+  else               VARIOMETER_ENABLE_BT = false;
+  SerialPort.print("BT_ENABLE : ");
+  SerialPort.println(VARIOMETER_ENABLE_BT);
+    
+	if (Systeme.containsKey("NO_RECORD")) {
+		   tmpValue = Systeme["NO_RECORD"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_NO_RECORD;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) NO_RECORD = true;
+  else               NO_RECORD = false;
+  SerialPort.print("NO_RECORD : ");
+  SerialPort.println(NO_RECORD);
+
+	if (Systeme.containsKey("ALARM_SDCARD")) {
+		   tmpValue = Systeme["ALARM_SDCARD"];
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_ALARM_SDCARD;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) ALARM_SDCARD = true;
+  else               ALARM_SDCARD = false;
+  SerialPort.print("ALARM_SDCARD : ");
+  SerialPort.println(ALARM_SDCARD);
+
+	if (Systeme.containsKey("BEEP_GPSFIX")) {	
+		   tmpValue = Systeme["BEEP_GPSFIX"]; 
+		SerialPort.print("Json Recup - ");
+	}	else {
+		tmpValue = DEFAULT_ALARM_GPSFIX;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) ALARM_GPSFIX = true;
+  else               ALARM_GPSFIX = false;
+  SerialPort.print("BEEP_GPSFIX : ");
+  SerialPort.println(ALARM_GPSFIX);
+
+  if (Systeme.containsKey("BEEP_FLYBEGIN")) {	
+	   	 tmpValue = Systeme["BEEP_FLYBEGIN"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_ALARM_FLYBEGIN;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) ALARM_FLYBEGIN = true;
+  else               ALARM_FLYBEGIN = false;
+  SerialPort.print("BEEP_FLYBEGIN : ");
+  SerialPort.println(ALARM_FLYBEGIN);
+
+  if (Systeme.containsKey("BEEP_FLYBEGIN")) {	
+		   tmpValue = Systeme["BEEP_VARIOBEGIN"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_ALARM_VARIOBEGIN;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) ALARM_VARIOBEGIN = true;
+  else               ALARM_VARIOBEGIN = false;
+  SerialPort.print("BEEP_VARIOBEGIN : ");
+  SerialPort.println(ALARM_VARIOBEGIN);
+
+  if (Systeme.containsKey("COMPENSATION_TEMP")) {	
+	 tmpValueFloat = Systeme["COMPENSATION_TEMP"]; 
+	 SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_COMPENSATION_TEMP;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  COMPENSATION_TEMP = tmpValueFloat;
+  SerialPort.print("COMPENSATION_TEMP : ");
+  SerialPort.println(COMPENSATION_TEMP);
+
+  if (Systeme.containsKey("COMPENSATION_GPSALTI")) {	
+		   tmpValue = Systeme["COMPENSATION_GPSALTI"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_COMPENSATION_GPSALTI;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  COMPENSATION_GPSALTI = tmpValue;
+  SerialPort.print("COMPENSATION_GPSALTI : ");
+  SerialPort.println(COMPENSATION_GPSALTI);
+
+  if (Systeme.containsKey("SLEEP_TIMEOUT_MINUTES")) {	
+		   tmpValue = Systeme["SLEEP_TIMEOUT_MINUTES"];
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_SLEEP_TIMEOUT_MINUTES;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+	SLEEP_TIMEOUT_MINUTES = tmpValue;
+  SerialPort.print("SLEEP_TIMEOUT_MINUTES : ");
+  SerialPort.println(SLEEP_TIMEOUT_MINUTES);
+	
+  if (Systeme.containsKey("SLEEP_THRESHOLD_CPS")) {	
+		   tmpValueFloat = Systeme["SLEEP_THRESHOLD_CPS"];
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_SLEEP_THRESHOLD_CPS;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+	SLEEP_THRESHOLD_CPS = tmpValueFloat;
+  SerialPort.print("SLEEP_THRESHOLD_CPS : ");
+  SerialPort.println(SLEEP_THRESHOLD_CPS);
+	
+	if (Systeme.containsKey("MULTIDISPLAY_DURATION")) {
+	     tmpValue = Systeme["MULTIDISPLAY_DURATION"];
+		SerialPort.print("Json Recup - ");
+	}
+	else {
+		tmpValue = VARIOMETER_MULTIDISPLAY_DURATION;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_MULTIDISPLAY_DURATION = tmpValue; 
+  SerialPort.print("MULTIDISPLAY_DURATION : ");
+  SerialPort.println(VARIOMETER_MULTIDISPLAY_DURATION);
+
+	//*****    GENERAL *****
+
+  SerialPort.println("****** General *******");
+
+  JsonObject General = doc["general"];
+	
+	if (General.containsKey("PILOT_NAME")) {
+		String General_PILOT_NAME = General["PILOT_NAME"]; // "Magali"
+		tmpValueString = General_PILOT_NAME;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = DEFAULT_VARIOMETER_PILOT_NAME;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_PILOT_NAME = tmpValueString;
+  SerialPort.print("Pilot Name : ");
+  SerialPort.println(VARIOMETER_PILOT_NAME);
+  
+	JsonObject General_GLIDER = General["GLIDER"];
+
+	if (General_GLIDER.containsKey("GLIDER_SELECT")) {
+			 tmpValue = General_GLIDER["GLIDER_SELECT"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_GLIDER_SELECT; 
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_GLIDER_SELECT = tmpValue;
+  SerialPort.print("Time Zone : ");
+  SerialPort.println(VARIOMETER_GLIDER_SELECT);  
+	
+	if (General_GLIDER.containsKey("GLIDER_NAME1")) {
+		String General_GLIDER_GLIDER_NAME = General_GLIDER["GLIDER_NAME1"]; // "MAC-PARA Muse 3"
+		tmpValueString = General_GLIDER_GLIDER_NAME;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = DEFAULT_VARIOMETER_GLIDER_NAME;
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_GLIDER_TAB[0] = tmpValueString;
+  SerialPort.print("Glider Name 1 : ");
+  SerialPort.println(VARIOMETER_GLIDER_TAB[0]);
+
+	if (General_GLIDER.containsKey("GLIDER_NAME2")) {
+		String General_GLIDER_GLIDER_NAME2 = General_GLIDER["GLIDER_NAME2"]; // "MAC-PARA Muse 3"
+		tmpValueString = General_GLIDER_GLIDER_NAME2;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = "";
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_GLIDER_TAB[1] = tmpValueString;
+  SerialPort.print("Glider Name 2 : ");
+  SerialPort.println(VARIOMETER_GLIDER_TAB[1]);
+	
+	if (General_GLIDER.containsKey("GLIDER_NAME3")) {
+		String General_GLIDER_GLIDER_NAME3 = General_GLIDER["GLIDER_NAME3"]; // "MAC-PARA Muse 3"
+		tmpValueString = General_GLIDER_GLIDER_NAME3;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = "";
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_GLIDER_TAB[2] = tmpValueString;
+  SerialPort.print("Glider Name 3 : ");
+  SerialPort.println(VARIOMETER_GLIDER_TAB[2]);
+	
+	if (General_GLIDER.containsKey("GLIDER_NAME4")) {
+		String General_GLIDER_GLIDER_NAME4 = General_GLIDER["GLIDER_NAME4"]; // "MAC-PARA Muse 3"
+		tmpValueString = General_GLIDER_GLIDER_NAME4;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = "";
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_GLIDER_TAB[3] = tmpValueString;
+  SerialPort.print("Glider Name 4 : ");
+  SerialPort.println(VARIOMETER_GLIDER_TAB[3]);
+	
+	VARIOMETER_GLIDER_NAME = VARIOMETER_GLIDER_TAB[VARIOMETER_GLIDER_SELECT];
+  SerialPort.print("Glider Name : ");
+  SerialPort.println(VARIOMETER_GLIDER_NAME);
+
+	if (General.containsKey("TIME_ZONE")) {
+			 tmpValue = General["TIME_ZONE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_TIME_ZONE; 
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_TIME_ZONE = tmpValue;
+  SerialPort.print("Time Zone : ");
+  SerialPort.println(VARIOMETER_TIME_ZONE);  
+
+	//*****  VARIO *****
+
+  SerialPort.println("****** Vario *******");
+
+  JsonObject Vario = doc["vario"];
+  
+	if (Vario.containsKey("SINKING_THRESHOLD")) {
+    tmpValueFloat = Vario["SINKING_THRESHOLD"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_VARIOMETER_SINKING_THRESHOLD;
+		MajFileParams = true;				
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_SINKING_THRESHOLD = tmpValueFloat;
+  SerialPort.print("VARIOMETER_SINKING_THRESHOLD : ");
+  SerialPort.println(VARIOMETER_SINKING_THRESHOLD);
+
+	if (Vario.containsKey("CLIMBING_THRESHOLD")) {
+    tmpValueFloat = Vario["CLIMBING_THRESHOLD"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_VARIOMETER_CLIMBING_THRESHOLD;
+		MajFileParams = true;				
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_CLIMBING_THRESHOLD = tmpValueFloat;
+  SerialPort.print("VARIOMETER_CLIMBING_THRESHOLD : ");
+  SerialPort.println(VARIOMETER_CLIMBING_THRESHOLD);
+
+	if (Vario.containsKey("NEAR_CLIMBING_SENSITIVITY")) {
+		tmpValueFloat = Vario["NEAR_CLIMBING_SENSITIVITY"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_VARIOMETER_NEAR_CLIMBING_SENSITIVITY;
+		MajFileParams = true;						
+		SerialPort.print("Defaut Recup - ");
+	}
+  VARIOMETER_NEAR_CLIMBING_SENSITIVITY = tmpValueFloat;
+  SerialPort.print("NEAR_CLIMBING_SENSITIVITY : ");
+  SerialPort.println(VARIOMETER_NEAR_CLIMBING_SENSITIVITY);
+
+	if (Vario.containsKey("ENABLE_NEAR_CLIMBING_ALARM")) {
+				 tmpValue = Vario["ENABLE_NEAR_CLIMBING_ALARM"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM;
+		MajFileParams = true;								
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM = true;
+  else              VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM = false;
+  SerialPort.print("ENABLE_NEAR_CLIMBING_ALARM : ");
+  SerialPort.println(VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM);
+
+	if (Vario.containsKey("ENABLE_NEAR_CLIMBING_BEEP")) {
+			   tmpValue = Vario["ENABLE_NEAR_CLIMBING_BEEP"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP;
+		MajFileParams = true;										
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP = true;
+  else              VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP = false;
+  SerialPort.print("ENABLE_NEAR_CLIMBING_BEEP : ");
+  SerialPort.println(VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP);
+
+	if (Vario.containsKey("DISPLAY_INTEGRATED_CLIMB_RATE")) {
+		     tmpValue = Vario["DISPLAY_INTEGRATED_CLIMB_RATE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE;
+		MajFileParams = true;												
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE = true;
+  else              VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE = false;
+  SerialPort.print("DISPLAY_INTEGRATED_CLIMB_RATE : ");
+  SerialPort.println(VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE);
+
+	if (Vario.containsKey("RATIO_CLIMB_RATE")) {
+		     tmpValue = Vario["RATIO_CLIMB_RATE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_RATIO_CLIMB_RATE;
+		MajFileParams = true;																
+		SerialPort.print("Defaut Recup - ");
+	}
+  RATIO_CLIMB_RATE = tmpValue;
+  SerialPort.print("RATIO_CLIMB_RATE : ");
+  SerialPort.println(RATIO_CLIMB_RATE);
+
+	if (Vario.containsKey("CLIMB_PERIOD_COUNT")) {
+		     tmpValue = Vario["CLIMB_PERIOD_COUNT"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_SETTINGS_CLIMB_PERIOD_COUNT;
+		MajFileParams = true;																		
+		SerialPort.print("Defaut Recup - ");
+	}
+  SETTINGS_CLIMB_PERIOD_COUNT = tmpValue;
+  SerialPort.print("CLIMB_PERIOD_COUNT : ");
+  SerialPort.println(SETTINGS_CLIMB_PERIOD_COUNT);
+
+	if (Vario.containsKey("SETTINGS_GLIDE_RATIO_PERIOD_COUNT")) {
+		     tmpValue = Vario["SETTINGS_GLIDE_RATIO_PERIOD_COUNT"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_SETTINGS_GLIDE_RATIO_PERIOD_COUNT;
+		MajFileParams = true;																		
+		SerialPort.print("Defaut Recup - ");
+	}
+  SETTINGS_GLIDE_RATIO_PERIOD_COUNT = tmpValue;
+  SerialPort.print("SETTINGS_GLIDE_RATIO_PERIOD_COUNT : ");
+  SerialPort.println(SETTINGS_GLIDE_RATIO_PERIOD_COUNT);
+
+	if (Vario.containsKey("RATIO_MAX_VALUE")) {
+		tmpValueFloat = Vario["RATIO_MAX_VALUE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_RATIO_MAX_VALUE;
+		MajFileParams = true;																				
+		SerialPort.print("Defaut Recup - ");
+	}
+  RATIO_MAX_VALUE = tmpValueFloat;
+  SerialPort.print("RATIO_MAX_VALUE : ");
+  SerialPort.println(RATIO_MAX_VALUE);
+
+	if (Vario.containsKey("RATIO_MIN_SPEED")) {
+		tmpValueFloat = Vario["RATIO_MIN_SPEED"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_RATIO_MIN_SPEED;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  RATIO_MIN_SPEED = tmpValueFloat;
+  SerialPort.print("RATIO_MIN_SPEED : ");
+  SerialPort.println(RATIO_MIN_SPEED);
+
+/*  tmpValue = Systeme["SENT_LXNAV_SENTENCE"]; 
+  if (tmpValue = 1) VARIOMETER_SENT_LXNAV_SENTENCE = true;
+  else              VARIOMETER_SENT_LXNAV_SENTENCE = false;
+  SerialPort.print("SENT_LXNAV_SENTENCE : ");
+  SerialPort.println(VARIOMETER_SENT_LXNAV_SENTENCE);*/
+
+	//*****  FLIGHT START *****
+
+  SerialPort.println("****** Flight start *******");
+
+  JsonObject Flight_start = doc["flightstart"];
+
+	if  (Flight_start.containsKey("FLIGHT_START_MIN_TIMESTAMP")) {
+		tmpValueLong = Flight_start["FLIGHT_START_MIN_TIMESTAMP"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueLong = DEFAULT_FLIGHT_START_MIN_TIMESTAMP;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  FLIGHT_START_MIN_TIMESTAMP = tmpValueLong;
+  SerialPort.print("FLIGHT_START_MIN_TIMESTAMP : ");
+  SerialPort.println(FLIGHT_START_MIN_TIMESTAMP);
+
+	if   (Flight_start.containsKey("FLIGHT_START_VARIO_LOW_THRESHOLD")) {
+		tmpValueFloat = Flight_start["FLIGHT_START_VARIO_LOW_THRESHOLD"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_FLIGHT_START_VARIO_LOW_THRESHOLD;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  FLIGHT_START_VARIO_LOW_THRESHOLD = tmpValueFloat;
+  SerialPort.print("FLIGHT_START_VARIO_LOW_THRESHOLD : ");
+  SerialPort.println(FLIGHT_START_VARIO_LOW_THRESHOLD);
+
+	if   (Flight_start.containsKey("FLIGHT_START_VARIO_HIGH_THRESHOLD")) {
+		tmpValueFloat = Flight_start["FLIGHT_START_VARIO_HIGH_THRESHOLD"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_FLIGHT_START_VARIO_HIGH_THRESHOLD;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  FLIGHT_START_VARIO_HIGH_THRESHOLD = tmpValueFloat;
+  SerialPort.print("FLIGHT_START_VARIO_HIGH_THRESHOLD : ");
+  SerialPort.println(FLIGHT_START_VARIO_HIGH_THRESHOLD);
+
+	if   (Flight_start.containsKey("FLIGHT_START_MIN_SPEED")) {
+		tmpValueFloat = Flight_start["FLIGHT_START_MIN_SPEED"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_FLIGHT_START_MIN_SPEED;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  FLIGHT_START_MIN_SPEED = tmpValueFloat;
+  SerialPort.print("FLIGHT_START_MIN_SPEED : ");
+  SerialPort.println(FLIGHT_START_MIN_SPEED);
+
+	if (Flight_start.containsKey("RECORD_WHEN_FLIGHT_START")) {
+		   tmpValue = Flight_start["RECORD_WHEN_FLIGHT_START"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_RECORD_WHEN_FLIGHT_START;
+		MajFileParams = true;																						
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_RECORD_WHEN_FLIGHT_START = true;
+  else              VARIOMETER_RECORD_WHEN_FLIGHT_START = false;
+  SerialPort.print("RECORD_WHEN_FLIGHT_START : ");
+  SerialPort.println(VARIOMETER_RECORD_WHEN_FLIGHT_START);
+
+/*  SerialPort.println("****** Wifi *******");
+
+  JsonObject Wifi = doc["Wifi"];
+
+  String Wifi_WIFI_1_SSID = Wifi["WIFI_1"]["SSID"]; // "MAC-PARA Muse 3"
+  VARIOMETER_SSID_1 = Wifi_WIFI_1_SSID;
+  SerialPort.print("Wifi SSID 1 : ");
+  SerialPort.println(VARIOMETER_SSID_1);
+
+  String Wifi_WIFI_1_PASSWORD = Wifi["WIFI_1"]["PASSWORD"]; 
+  VARIOMETER_PASSWORD_1 = Wifi_WIFI_1_PASSWORD;
+  SerialPort.print("Wifi Password 1 : ");
+  SerialPort.println(VARIOMETER_PASSWORD_1);
+
+  String Wifi_WIFI_2_SSID = Wifi["WIFI_2"]["SSID"]; 
+  VARIOMETER_SSID_2 = Wifi_WIFI_2_SSID;
+  SerialPort.print("Wifi SSID 2 : ");
+  SerialPort.println(VARIOMETER_SSID_2);
+
+  String Wifi_WIFI_2_PASSWORD = Wifi["WIFI_2"]["PASSWORD"]; 
+  VARIOMETER_PASSWORD_2 = Wifi_WIFI_2_PASSWORD;
+  SerialPort.print("Wifi Password 2 : ");
+  SerialPort.println(VARIOMETER_PASSWORD_2);
+
+  String Wifi_WIFI_3_SSID = Wifi["WIFI_3"]["SSID"];
+  VARIOMETER_SSID_3 = Wifi_WIFI_3_SSID;
+  SerialPort.print("Wifi SSID 3 : ");
+  SerialPort.println(VARIOMETER_SSID_3);
+
+  String Wifi_WIFI_3_PASSWORD = Wifi["WIFI_3"]["PASSWORD"]; 
+  VARIOMETER_PASSWORD_3 = Wifi_WIFI_3_PASSWORD;
+  SerialPort.print("Wifi Password 3 : ");
+  SerialPort.println(VARIOMETER_PASSWORD_3);
+
+  String Wifi_WIFI_4_SSID = Wifi["WIFI_4"]["SSID"]; 
+  VARIOMETER_SSID_4 = Wifi_WIFI_4_SSID;
+  SerialPort.print("Wifi SSID 4 : ");
+  SerialPort.println(VARIOMETER_SSID_4);
+
+  String Wifi_WIFI_4_PASSWORD = Wifi["WIFI_4"]["PASSWORD"]; 
+  VARIOMETER_PASSWORD_4 = Wifi_WIFI_4_PASSWORD;
+  SerialPort.print("Wifi Password 4 : ");
+  SerialPort.println(VARIOMETER_PASSWORD_4);*/
+
+  // Close the file (Curiously, File's destructor doesn't close the file)
+  file.close();
+	
+	//Mise à jour du fichier params.jso
+	if (MajFileParams) {
+		SerialPort.println("Sauvegarde de nouveaux paramètres");
+		saveConfigurationVario(filename);
+	}
+
+}
+
+
+// Saves the configuration to a file
+//**********************************************************
+void VarioSettings::saveConfigurationVario(char *filename) {
+//**********************************************************
+  // Delete existing file, otherwise the configuration is appended to the file
+  SDHAL.remove(filename);
+
+  // Open file for writing
+  File file = SDHAL.open(filename, FILE_WRITE);
+  if (!file) {
+    SerialPort.println(F("Failed to create file"));
+    return;
+  }
+
+  SerialPort.println("****** SAUVEGARDE params.jso *******");
+
+  // Allocate a temporary JsonDocument
+  // Don't forget to change the capacity to match your requirements.
+  // Use arduinojson.org/assistant to compute the capacity.
+//	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
+	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 1040;
+	DynamicJsonDocument doc(capacity);
+
+  SerialPort.println("****** GnuvarioE *******");
+
+  // Set the values in the document
+	JsonObject GnuvarioE = doc.createNestedObject("gnuvarioe");
+	GnuvarioE["version"] = PARAMS_VERSION;
+
+	//*****    SYSTEME *****
+
+  SerialPort.println("****** Systeme *******");
+
+	JsonObject Systeme = doc.createNestedObject("systeme");
+	 
+	if (VARIOMETER_ENABLE_BT) Systeme["BT_ENABLE"] = 1;
+	else 											Systeme["BT_ENABLE"] = 0;
+	
+  if (NO_RECORD) Systeme["NO_RECORD"] = 1;
+  else           Systeme["NO_RECORD"] = 0;
+
+  if (ALARM_SDCARD) Systeme["ALARM_SDCARD"] = 1; 
+  else              Systeme["ALARM_SDCARD"] = 0; 
+
+  if (ALARM_GPSFIX) Systeme["BEEP_GPSFIX"] = 1;
+  else              Systeme["BEEP_GPSFIX"] = 0;
+
+  if (ALARM_FLYBEGIN) Systeme["BEEP_FLYBEGIN"] = 1;
+  else                Systeme["BEEP_FLYBEGIN"] = 0;
+
+  if (ALARM_VARIOBEGIN) Systeme["BEEP_VARIOBEGIN"] = 1;
+  else                  Systeme["BEEP_VARIOBEGIN"] = 0;
+
+	
+	Systeme["COMPENSATION_TEMP"] = COMPENSATION_TEMP;
+
+  Systeme["COMPENSATION_GPSALTI"] = COMPENSATION_GPSALTI;
+	
+	Systeme["SLEEP_TIMEOUT_MINUTES"] = SLEEP_TIMEOUT_MINUTES;
+	
+	Systeme["SLEEP_THRESHOLD_CPS"] = SLEEP_THRESHOLD_CPS;
+	
+	Systeme["MULTIDISPLAY_DURATION"] = VARIOMETER_MULTIDISPLAY_DURATION;
+	
+	
+	//*****    GENERAL *****
+
+  SerialPort.println("****** General *******");
+
+	JsonObject General = doc.createNestedObject("general");
+	
+	General["PILOT_NAME"] = VARIOMETER_PILOT_NAME;
+  
+//  General["GLIDER_NAME"] = VARIOMETER_GLIDER_NAME;
+
+	JsonObject General_GLIDER = General.createNestedObject("GLIDER");
+	General_GLIDER["GLIDER_SELECT"] = VARIOMETER_GLIDER_SELECT;
+	General_GLIDER["GLIDER_NAME1"] = VARIOMETER_GLIDER_TAB[0];
+	General_GLIDER["GLIDER_NAME2"] = VARIOMETER_GLIDER_TAB[1];
+	General_GLIDER["GLIDER_NAME3"] = VARIOMETER_GLIDER_TAB[2];
+	General_GLIDER["GLIDER_NAME4"] = VARIOMETER_GLIDER_TAB[3];
+
+
+  General["TIME_ZONE"] = VARIOMETER_TIME_ZONE;
+
+	//*****    VARIO *****
+
+  SerialPort.println("****** Vario *******");
+
+	JsonObject Vario = doc.createNestedObject("vario");
+	
+	Vario["SINKING_THRESHOLD"] =  VARIOMETER_SINKING_THRESHOLD;
+
+  Vario["CLIMBING_THRESHOLD"] = VARIOMETER_CLIMBING_THRESHOLD;
+
+  Vario["NEAR_CLIMBING_SENSITIVITY"] = VARIOMETER_NEAR_CLIMBING_SENSITIVITY;
+
+  if (VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM) Vario["ENABLE_NEAR_CLIMBING_ALARM"] = 1;
+  else              												 Vario["ENABLE_NEAR_CLIMBING_ALARM"] = 0;
+
+  if (VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP) Vario["ENABLE_NEAR_CLIMBING_BEEP"] = 1;
+  else              												Vario["ENABLE_NEAR_CLIMBING_BEEP"] = 0;
+
+  if (VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) Vario["DISPLAY_INTEGRATED_CLIMB_RATE"] = 1;
+  else              														Vario["DISPLAY_INTEGRATED_CLIMB_RATE"] = 0;
+
+  Vario["RATIO_CLIMB_RATE"] = RATIO_CLIMB_RATE;
+
+  Vario["CLIMB_PERIOD_COUNT"] = SETTINGS_CLIMB_PERIOD_COUNT;
+
+  Vario["SETTINGS_GLIDE_RATIO_PERIOD_COUNT"] = SETTINGS_GLIDE_RATIO_PERIOD_COUNT;
+
+  Vario["RATIO_MAX_VALUE"] = RATIO_MAX_VALUE;
+
+  Vario["RATIO_MIN_SPEED"] = RATIO_MIN_SPEED;
+
+/*  
+  if (VARIOMETER_SENT_LXNAV_SENTENCE) Systeme["SENT_LXNAV_SENTENCE"] = 1;
+  else              									Systeme["SENT_LXNAV_SENTENCE"] = 0;
+*/
+	
+	//*****    Flight_Start *****
+
+  SerialPort.println("****** Flight start *******");
+	
+	JsonObject Flight_start = doc.createNestedObject("flightstart");
+	
+	
+  Flight_start["FLIGHT_START_MIN_TIMESTAMP"] = FLIGHT_START_MIN_TIMESTAMP;
+ /* SerialPort.print("FLIGHT_START_MIN_TIMESTAMP : ");
+  SerialPort.println(Flight_start["FLIGHT_START_MIN_TIMESTAMP"]);*/
+
+  Flight_start["FLIGHT_START_VARIO_LOW_THRESHOLD"] = FLIGHT_START_VARIO_LOW_THRESHOLD;
+/*  SerialPort.print("FLIGHT_START_VARIO_LOW_THRESHOLD : ");
+  SerialPort.println(FLIGHT_START_VARIO_LOW_THRESHOLD);*/
+
+  Flight_start["FLIGHT_START_VARIO_HIGH_THRESHOLD"] = FLIGHT_START_VARIO_HIGH_THRESHOLD;
+/*  SerialPort.print("FLIGHT_START_VARIO_HIGH_THRESHOLD : ");
+  SerialPort.println(FLIGHT_START_VARIO_HIGH_THRESHOLD);*/
+
+  Flight_start["FLIGHT_START_MIN_SPEED"] = FLIGHT_START_MIN_SPEED;
+/*  SerialPort.print("FLIGHT_START_MIN_SPEED : ");
+  SerialPort.println(FLIGHT_START_MIN_SPEED);	*/
+	
+  if (VARIOMETER_RECORD_WHEN_FLIGHT_START) Flight_start["RECORD_WHEN_FLIGHT_START"] = 1;
+  else              											 Flight_start["RECORD_WHEN_FLIGHT_START"] = 0;
+/*  SerialPort.print("RECORD_WHEN_FLIGHT_START : ");
+  SerialPort.println(VARIOMETER_RECORD_WHEN_FLIGHT_START);*/
+	
+/*	JsonObject Wifi = doc.createNestedObject("Wifi");
+
+	JsonObject Wifi_WIFI_1 = Wifi.createNestedObject("WIFI_1");
+	Wifi_WIFI_1["SSID"] = VARIOMETER_SSID_1;
+	Wifi_WIFI_1["PASSWORD"] = VARIOMETER_PASSWORD_1;
+
+	JsonObject Wifi_WIFI_2 = Wifi.createNestedObject("WIFI_2");
+	Wifi_WIFI_2["SSID"] = VARIOMETER_SSID_2;
+	Wifi_WIFI_2["PASSWORD"] = VARIOMETER_PASSWORD_2;
+
+	JsonObject Wifi_WIFI_3 = Wifi.createNestedObject("WIFI_3");
+	Wifi_WIFI_3["SSID"] = VARIOMETER_SSID_3;
+	Wifi_WIFI_3["PASSWORD"] = VARIOMETER_PASSWORD_3;
+
+	JsonObject Wifi_WIFI_4 = Wifi.createNestedObject("WIFI_4");
+	Wifi_WIFI_4["SSID"] = VARIOMETER_SSID_4;
+	Wifi_WIFI_4["PASSWORD"] = VARIOMETER_PASSWORD_4;*/
+	
+  // Serialize JSON to file
+  if (serializeJson(doc, file) == 0) {
+    SerialPort.println(F("Failed to write to file"));
+  }
+
+  // Close the file
+  file.close();
+}
+
+
+
+
+
+/*
 void Statistic::setTime(int8_t* timeValue) {
 
   for(uint8_t i = 0; i<3; i++) {
@@ -765,3 +1720,169 @@ double Statistic::getGain(void) {
   return maxAlti - currentAlti;	
 }
 
+*/
+
+/*
+{
+    "GnuvarioE": {
+        "version": "1.0"
+    },
+    "Systeme": {
+        "BT_ENABLE": 0,
+        "NO_RECORD": 0,
+        "ALARM_SDCARD": 1,
+        "BEEP_GPSFIX": 1,
+        "BEEP_FLYBEGIN": 1,
+	"BEEP_VARIOBEGIN": 0,
+	"COMPENSATION_TEMP": -6.1,
+	"COMPENSATION_GPSALTI": -70,
+	"SLEEP_TIMEOUT_MINUTES": 20,
+	"SLEEP_THRESHOLD_CPS": 50,
+	"ALTERNATE_DATA_DURATION": 2000
+    },
+    "General": {
+        "PILOT_NAME": "MagaliXXXXXXXXXXXXXX",
+	"GLIDER": {
+			"GLIDER_SELECT": 0,
+			"GLIDER_NAME": "MAC-PARA Muse 3XXXXX",
+			"GLIDER_NAME2": "MAC-PARA Muse 3XXXXX",
+			"GLIDER_NAME3": "MAC-PARA Muse 3XXXXX",
+			"GLIDER_NAME4": "MAC-PARA Muse 3XXXXX"
+	},
+        "TIME_ZONE": 1
+    },
+    "Vario": {
+        "SINKING_THRESHOLD": -2.1,
+        "CLIMBING_THRESHOLD": 0.2,
+        "NEAR_CLIMBING_SENSITIVITY": 0.5,
+        "ENABLE_NEAR_CLIMBING_ALARM": 0,
+        "ENABLE_NEAR_CLIMBING_BEEP": 0,
+        "DISPLAY_INTEGRATED_CLIMB_RATE": 0,
+        "CLIMB_PERIOD_COUNT": 10,
+        "SETTINGS_GLIDE_RATIO_PERIOD_COUNT": 20,
+        "RATIO_MAX_VALUE": 30.1,
+        "RATIO_MIN_SPEED": 10.1,
+        "RATIO_CLIMB_RATE": 2,
+        "SENT_LXNAV_SENTENCE": 1
+   },
+    "Flight start": {
+        "FLIGHT_START_MIN_TIMESTAMP": 15000,
+        "FLIGHT_START_VARIO_LOW_THRESHOLD": -0.5,
+        "FLIGHT_START_VARIO_HIGH_THRESHOLD": 0.5,
+        "FLIGHT_START_MIN_SPEED": 8.1,
+        "RECORD_WHEN_FLIGHT_START": 1
+    }
+}
+PARSING
+
+const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 940;
+DynamicJsonDocument doc(capacity);
+
+const char* json = "{\"GnuvarioE\":{\"version\":\"1.0\"},\"Systeme\":{\"BT_ENABLE\":0,\"NO_RECORD\":0,\"ALARM_SDCARD\":1,\"BEEP_GPSFIX\":1,\"BEEP_FLYBEGIN\":1,\"BEEP_VARIOBEGIN\":0,\"COMPENSATION_TEMP\":-6.1,\"COMPENSATION_GPSALTI\":-70,\"SLEEP_TIMEOUT_MINUTES\":20,\"SLEEP_THRESHOLD_CPS\":50,\"ALTERNATE_DATA_DURATION\":2000},\"General\":{\"PILOT_NAME\":\"MagaliXXXXXXXXXXXXXX\",\"GLIDER\":{\"GLIDER_SELECT\":0,\"GLIDER_NAME\":\"MAC-PARA Muse 3XXXXX\",\"GLIDER_NAME2\":\"MAC-PARA Muse 3XXXXX\",\"GLIDER_NAME3\":\"MAC-PARA Muse 3XXXXX\",\"GLIDER_NAME4\":\"MAC-PARA Muse 3XXXXX\"},\"TIME_ZONE\":1},\"Vario\":{\"SINKING_THRESHOLD\":-2.1,\"CLIMBING_THRESHOLD\":0.2,\"NEAR_CLIMBING_SENSITIVITY\":0.5,\"ENABLE_NEAR_CLIMBING_ALARM\":0,\"ENABLE_NEAR_CLIMBING_BEEP\":0,\"DISPLAY_INTEGRATED_CLIMB_RATE\":0,\"CLIMB_PERIOD_COUNT\":10,\"SETTINGS_GLIDE_RATIO_PERIOD_COUNT\":20,\"RATIO_MAX_VALUE\":30.1,\"RATIO_MIN_SPEED\":10.1,\"RATIO_CLIMB_RATE\":2,\"SENT_LXNAV_SENTENCE\":1},\"Flight start\":{\"FLIGHT_START_MIN_TIMESTAMP\":15000,\"FLIGHT_START_VARIO_LOW_THRESHOLD\":-0.5,\"FLIGHT_START_VARIO_HIGH_THRESHOLD\":0.5,\"FLIGHT_START_MIN_SPEED\":8.1,\"RECORD_WHEN_FLIGHT_START\":1}}";
+
+deserializeJson(doc, json);
+
+const char* GnuvarioE_version = doc["GnuvarioE"]["version"]; // "1.0"
+
+JsonObject Systeme = doc["Systeme"];
+int Systeme_BT_ENABLE = Systeme["BT_ENABLE"]; // 0
+int Systeme_NO_RECORD = Systeme["NO_RECORD"]; // 0
+int Systeme_ALARM_SDCARD = Systeme["ALARM_SDCARD"]; // 1
+int Systeme_BEEP_GPSFIX = Systeme["BEEP_GPSFIX"]; // 1
+int Systeme_BEEP_FLYBEGIN = Systeme["BEEP_FLYBEGIN"]; // 1
+int Systeme_BEEP_VARIOBEGIN = Systeme["BEEP_VARIOBEGIN"]; // 0
+float Systeme_COMPENSATION_TEMP = Systeme["COMPENSATION_TEMP"]; // -6.1
+int Systeme_COMPENSATION_GPSALTI = Systeme["COMPENSATION_GPSALTI"]; // -70
+int Systeme_SLEEP_TIMEOUT_MINUTES = Systeme["SLEEP_TIMEOUT_MINUTES"]; // 20
+int Systeme_SLEEP_THRESHOLD_CPS = Systeme["SLEEP_THRESHOLD_CPS"]; // 50
+int Systeme_ALTERNATE_DATA_DURATION = Systeme["ALTERNATE_DATA_DURATION"]; // 2000
+
+JsonObject General = doc["General"];
+const char* General_PILOT_NAME = General["PILOT_NAME"]; // "Magali"
+
+JsonObject General_GLIDER = General["GLIDER"];
+int General_GLIDER_GLIDER_SELECT = General_GLIDER["GLIDER_SELECT"]; // 0
+const char* General_GLIDER_GLIDER_NAME = General_GLIDER["GLIDER_NAME"]; // "MAC-PARA Muse 3"
+const char* General_GLIDER_GLIDER_NAME2 = General_GLIDER["GLIDER_NAME2"]; // ""
+const char* General_GLIDER_GLIDER_NAME3 = General_GLIDER["GLIDER_NAME3"]; // ""
+const char* General_GLIDER_GLIDER_NAME4 = General_GLIDER["GLIDER_NAME4"]; // ""
+
+int General_TIME_ZONE = General["TIME_ZONE"]; // 1
+
+JsonObject Vario = doc["Vario"];
+float Vario_SINKING_THRESHOLD = Vario["SINKING_THRESHOLD"]; // -2.1
+float Vario_CLIMBING_THRESHOLD = Vario["CLIMBING_THRESHOLD"]; // 0.2
+float Vario_NEAR_CLIMBING_SENSITIVITY = Vario["NEAR_CLIMBING_SENSITIVITY"]; // 0.5
+int Vario_ENABLE_NEAR_CLIMBING_ALARM = Vario["ENABLE_NEAR_CLIMBING_ALARM"]; // 0
+int Vario_ENABLE_NEAR_CLIMBING_BEEP = Vario["ENABLE_NEAR_CLIMBING_BEEP"]; // 0
+int Vario_DISPLAY_INTEGRATED_CLIMB_RATE = Vario["DISPLAY_INTEGRATED_CLIMB_RATE"]; // 0
+int Vario_CLIMB_PERIOD_COUNT = Vario["CLIMB_PERIOD_COUNT"]; // 10
+int Vario_SETTINGS_GLIDE_RATIO_PERIOD_COUNT = Vario["SETTINGS_GLIDE_RATIO_PERIOD_COUNT"]; // 20
+float Vario_RATIO_MAX_VALUE = Vario["RATIO_MAX_VALUE"]; // 30.1
+float Vario_RATIO_MIN_SPEED = Vario["RATIO_MIN_SPEED"]; // 10.1
+int Vario_RATIO_CLIMB_RATE = Vario["RATIO_CLIMB_RATE"]; // 2
+int Vario_SENT_LXNAV_SENTENCE = Vario["SENT_LXNAV_SENTENCE"]; // 1
+
+JsonObject Flight_start = doc["Flight start"];
+int Flight_start_FLIGHT_START_MIN_TIMESTAMP = Flight_start["FLIGHT_START_MIN_TIMESTAMP"]; // 15000
+float Flight_start_FLIGHT_START_VARIO_LOW_THRESHOLD = Flight_start["FLIGHT_START_VARIO_LOW_THRESHOLD"]; // -0.5
+float Flight_start_FLIGHT_START_VARIO_HIGH_THRESHOLD = Flight_start["FLIGHT_START_VARIO_HIGH_THRESHOLD"]; // 0.5
+float Flight_start_FLIGHT_START_MIN_SPEED = Flight_start["FLIGHT_START_MIN_SPEED"]; // 8.1
+int Flight_start_RECORD_WHEN_FLIGHT_START = Flight_start["RECORD_WHEN_FLIGHT_START"]; // 1
+
+SERIALIZING
+
+const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12);
+DynamicJsonDocument doc(capacity);
+
+JsonObject GnuvarioE = doc.createNestedObject("GnuvarioE");
+GnuvarioE["version"] = "1.0";
+
+JsonObject Systeme = doc.createNestedObject("Systeme");
+Systeme["BT_ENABLE"] = 0;
+Systeme["NO_RECORD"] = 0;
+Systeme["ALARM_SDCARD"] = 1;
+Systeme["BEEP_GPSFIX"] = 1;
+Systeme["BEEP_FLYBEGIN"] = 1;
+Systeme["BEEP_VARIOBEGIN"] = 0;
+Systeme["COMPENSATION_TEMP"] = -6.1;
+Systeme["COMPENSATION_GPSALTI"] = -70;
+Systeme["SLEEP_TIMEOUT_MINUTES"] = 20;
+Systeme["SLEEP_THRESHOLD_CPS"] = 50;
+Systeme["ALTERNATE_DATA_DURATION"] = 2000;
+
+JsonObject General = doc.createNestedObject("General");
+General["PILOT_NAME"] = "MagaliXXXXXXXXXXXXXX";
+
+JsonObject General_GLIDER = General.createNestedObject("GLIDER");
+General_GLIDER["GLIDER_SELECT"] = 0;
+General_GLIDER["GLIDER_NAME"] = "MAC-PARA Muse 3XXXXX";
+General_GLIDER["GLIDER_NAME2"] = "MAC-PARA Muse 3XXXXX";
+General_GLIDER["GLIDER_NAME3"] = "MAC-PARA Muse 3XXXXX";
+General_GLIDER["GLIDER_NAME4"] = "MAC-PARA Muse 3XXXXX";
+General["TIME_ZONE"] = 1;
+
+JsonObject Vario = doc.createNestedObject("Vario");
+Vario["SINKING_THRESHOLD"] = -2.1;
+Vario["CLIMBING_THRESHOLD"] = 0.2;
+Vario["NEAR_CLIMBING_SENSITIVITY"] = 0.5;
+Vario["ENABLE_NEAR_CLIMBING_ALARM"] = 0;
+Vario["ENABLE_NEAR_CLIMBING_BEEP"] = 0;
+Vario["DISPLAY_INTEGRATED_CLIMB_RATE"] = 0;
+Vario["CLIMB_PERIOD_COUNT"] = 10;
+Vario["SETTINGS_GLIDE_RATIO_PERIOD_COUNT"] = 20;
+Vario["RATIO_MAX_VALUE"] = 30.1;
+Vario["RATIO_MIN_SPEED"] = 10.1;
+Vario["RATIO_CLIMB_RATE"] = 2;
+Vario["SENT_LXNAV_SENTENCE"] = 1;
+
+JsonObject Flight_start = doc.createNestedObject("Flight start");
+Flight_start["FLIGHT_START_MIN_TIMESTAMP"] = 15000;
+Flight_start["FLIGHT_START_VARIO_LOW_THRESHOLD"] = -0.5;
+Flight_start["FLIGHT_START_VARIO_HIGH_THRESHOLD"] = 0.5;
+Flight_start["FLIGHT_START_MIN_SPEED"] = 8.1;
+Flight_start["RECORD_WHEN_FLIGHT_START"] = 1;
+
+serializeJson(doc, Serial);
+
+*/

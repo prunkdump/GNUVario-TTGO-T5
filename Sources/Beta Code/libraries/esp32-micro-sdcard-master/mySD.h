@@ -99,6 +99,9 @@ public:
   
   boolean rmdir(char *filepath);
   
+  boolean rename(const char* pathFrom, const char* pathTo);
+  boolean rename(const String& pathFrom, const String& pathTo);
+
   void enableCRC(boolean mode);
 
 private:

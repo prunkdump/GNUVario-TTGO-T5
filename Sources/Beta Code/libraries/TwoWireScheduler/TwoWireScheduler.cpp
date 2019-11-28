@@ -25,6 +25,7 @@
 /*  1.0                                                                                            */
 /*  1.1     21/08/19     Ajout getTempAlti(double& temp, double& alti)                             */
 /*  1.2     04/09/19		 Modification nom bibliothèque MS5611                                      */
+/*  1.3     15/11/19     modif delayMicroseconds(400);                                             */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -126,7 +127,6 @@ void TWScheduler::bmp280OutputCallback(void) {
   status |= (1 << HAVE_PRESSURE);
 }
 
-
 bool TWScheduler::havePressure(void) {
 
   return bisset(HAVE_PRESSURE);
@@ -155,6 +155,7 @@ double TWScheduler::getAlti(void) {
   return alti;
 }
 
+
 void TWScheduler::getTempAlti(double& temp, double& alti) {
 
   /* copy needed values */
@@ -173,9 +174,9 @@ void TWScheduler::getTempAlti(double& temp, double& alti) {
 
   /* get corresponding alti */
   alti = bmp280.computeAltitude(pressure);
-	temp = temperature;
-
+  temp = temperature;
 }
+
 
 #else //! HAVE_BMP280
 /***************/
@@ -288,7 +289,7 @@ void TWScheduler::getTempAlti(double& temp, double& alti) {
 
   /* get corresponding alti */
   alti = ms5611.computeAltitude(pressure);
-	temp = temperature;
+  temp = temperature;
 }
 #endif
 
@@ -331,6 +332,8 @@ void TWScheduler::imuCheckFifoCountCallBack(void) {
 
     /* we need to lock */
     intTW.setRxBuffer((uint8_t*)imuOutput);
+    //!!!
+    delayMicroseconds(400);   //200);
 
     xSemaphoreTake(imuMutex, portMAX_DELAY);
     intTW.start((uint8_t*)imuReadFifo, sizeof(imuReadFifo), INTTW_USE_PROGMEM, imuHaveFifoDataCallback);
@@ -580,7 +583,7 @@ void TWScheduler::mainInterrupt(void) {
   }
 #ifdef AK89xx_SECONDARY
   if( magCount == 0 ) {
-//    magInterrupt();
+    magInterrupt();
     magCount = TWO_WIRE_SCHEDULER_MAG_PERIOD;
   }
 #endif //AK89xx_SECONDARY

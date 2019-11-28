@@ -945,6 +945,16 @@ int fastMPUInit(bool startMPU) {
   intTW.writeBytes(INV_HW_ADDR, INV_REG_RATE_DIV, 1, data);
 
   /**************/
+	/* enable INT */
+	/**************/
+
+	data[0] = BIT_ANY_RD_CLR | BIT_LATCH_EN;
+	intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_PIN_CFG, 1, data);
+
+	data[0] = BIT_DMP_INT_EN;
+	intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_ENABLE, 1, data);
+
+  /**************/
   /* reset fifo */
   /**************/
   if( startMPU ) {

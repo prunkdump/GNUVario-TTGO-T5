@@ -1,3 +1,40 @@
+/* SD_Update -- 
+ *
+ * Copyright 2019 Jean-philippe GOI
+ * 
+ * This file is part of GnuVario-E.
+ *
+ * ToneHAL is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ToneHAL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*********************************************************************************/
+/*                                                                               */
+/*                           VarioCalibration                                    */
+/*                                                                               */
+/*  version    Date     Description                                              */
+/*    1.0                                                                        */
+/*                                                                               */
+/*********************************************************************************/
+
+
+#ifndef SD_UPDATE_H
+#define SD_UPDATE_H
+
+#include <Arduino.h>
+#include <HardwareConfig.h>
+#include <DebugConfig.h>
+
 // perform the actual update from a given stream
 void performUpdate(Stream &updateSource, size_t updateSize) {
    if (Update.begin(updateSize)) {      
@@ -29,6 +66,7 @@ void performUpdate(Stream &updateSource, size_t updateSize) {
 
 // check given FS for valid update.bin and perform update if available
 void updateFromSDCARD() {
+#ifdef HAVE_SDCARD
    File updateBin = SDHAL.open("/update.bin");
    if (updateBin) {
       if(updateBin.isDirectory()){
@@ -55,4 +93,7 @@ void updateFromSDCARD() {
    else {
       Serial.println("Could not load update.bin from sd root");
    }
+#endif
 }
+
+#endif

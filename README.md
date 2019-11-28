@@ -1,6 +1,6 @@
 # Gnuvario_for_TTGO-T5
 # GNUVARIO-E     Stable version ---
-# GNUVARIO-E     Developpement version 0.5 beta 6
+# GNUVARIO-E     Developpement version 0.6 beta 7
 # PCB            version 2.1
 # 3D CASE        version 2.01
 
@@ -88,22 +88,36 @@
  bug affichage finesse  
  
  V0.5                                                                  
- Recupération vol via USB                                                                                         
- Mise à jour ESP32 via USB sans IDE  
- Calibration du MPU																												
- revoir volume du son ToneESP32                                        
- verifier effacement du m (altitude)                                   
- bug d'affichage des fleches  
- Ajout d'un ecran d'arrêt suivi de l'écran de stat si appuie 3 sec sur bouton au centre                  
- Ajout page web de reglage des paramettres
-                                                                                                                                             
- VX.X                                                                  
- Refaire gestion du son                                                                              
- Paramètrage des écrans                                                                              
+ voir réactivité des données GPS                                                                     
+ Probleme consommasion - SDcard - deep slepp                                                         
+                                                                                                     
+ v0.6                                                                                                   
+ MODIF - Refaire gestion Eeprom avec preference                                                      
+ AJOUT - Calibration MPU                                                                                                              
+ AJOUT - gestion du MPU par Interruption                                                             
+ BUG   - reboot à l'init du MPU  - nan lors du first alti                                            
+ BUG   - blocage MPU - plus de valeur valide                                                         
+ BUG   - temperature                                                                                 
+ BUG   - DISPLAY_OBJECT_LINE object ligne ne fonctionne pas                                          
+ AJOUT - Créer une bibliothèque de log (debug)  avec fichier de log                                  
+ BUG   - Alti erreur deep sleep non validé                                                               
+ BUG   - Norcissement de l'écran                                                                     
+                                                                                                     
+ VX.X                                                                                                
+ Paramètrage des écrans                                                                             
  Gérer le son via le DAC                                                                             
- Afficher la boussole                                                                                
+ revoir volume du son ToneESP32                                                                      
+ Refaire gestion du son (parametrage via xctracer)                                                   
+ Ecran position afficher les coordonées GPS, la boussole, et l'altitude                                                                                                     
+ Création dynamique des objets screen                                                                
  Sens et vitesse du vent                                                                             
  Carnet de vol (10 derniers vols)                                                                    
+ verifier fonctionnement BT                                                                          
+ Recupération vol via USB                                                                                                                                                                    
+ Ecran 2.9'' en vertical                                                                             
+
+
+
 
                     Fonctionalitées   
 		
@@ -126,13 +140,29 @@
     Désactiver l'enregistrement des vols		
                                                                        
   Version 0.5                                                            
-    Mise à jour via la carte SD (update.bin)                          
-    Récupération des vol via Wifi                                      
-    Mise à jour via Wifi                                               
-    Upload des fichiers de configuration via Wifi                      
-    Ajout Bluetooth                                                    
-    Multi-écran (ajout 2ème page / gestion des bouton droit et gauche) 
-    Affichage de la température     
-		Page de configuration du volume sonore
-    Page de statistique accessible via les boutons	
-		Son de monté variable
+    Mise à jour via la carte SD (update.bin)                            
+    Récupération des vol via Wifi                                         
+    Mise à jour via Wifi                                                  
+    Upload des fichiers de configuration via Wifi                         
+    Ajout Bluetooth                                                       
+    Multi-écran (ajout 2ème page / gestion des bouton droit et gauche)    
+    Affichage de la température        
+		Page de configuration du volume sonore   
+    Page de statistique accessible via les boutons    	
+		Mise en veille automatique en cas de batterie trop faible               
+                                                                              
+  Version 0.6                                                              
+    Page de calibration                                                      
+    Mise en veille prolongée par bouton                                                  
+    Ajout gestion des écran 2.9'' et 2.13''                                  
+    Ajout du serveur Web sur SDCARD                                          
+    Activation du Bluetooth en parametre dans le fichier de configuration       
+    Ajout de titre au dessus des champs de données                          
+    Ajout de nouveau objects screen - ligne - rose des vents                
+    Modification de l'organisation des fichiers sur la carte SD                
+    Ajout compensation de température         
+    Ajout correction d'altitude GPS                     
+    Modification calibration alti GPS - 5 mesures puis moyenne de l'altitude sur 10 mesures avant de calibrer le barometre                   
+    3 fichiers de paramètrage params.jso, wifi.cfg, variocal.cfg               
+    Gestion automatique de la mise à jour du fichier params.jso en cas d'ajout ou de suppréssion de champs                                       
+    Mise en veille en cas d'inactivité, paramètrable - 0 infini                		

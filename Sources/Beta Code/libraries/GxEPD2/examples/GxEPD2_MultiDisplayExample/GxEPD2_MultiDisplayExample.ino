@@ -11,7 +11,7 @@
 
 // Supporting Arduino Forum Topics:
 // Waveshare e-paper displays with SPI: http://forum.arduino.cc/index.php?topic=487007.0
-// Good Dispay ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
+// Good Display ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
 
 // mapping suggestion from Waveshare SPI e-Paper to Wemos D1 mini
 // BUSY -> D2, RST -> D4, DC -> D3, CS -> D8, CLK -> D5, DIN -> D7, GND -> GND, 3.3V -> 3.3V
@@ -31,6 +31,10 @@
 
 // mapping suggestion for AVR, UNO, NANO etc.
 // BUSY -> 7, RST -> 9, DC -> 8, CS-> 10, CLK -> 13, DIN -> 11
+
+// base class GxEPD2_GFX can be used to pass references or pointers to the display instance as parameter
+// enable GxEPD2_GFX base class
+#define ENABLE_GxEPD2_GFX 1 
 
 #include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
@@ -110,30 +114,6 @@ GxEPD2_3C<GxEPD2_750c, GxEPD2_750c::HEIGHT> display4(GxEPD2_750c(/*CS=*/ CS_4, /
 #include "bitmaps/Bitmaps3c128x296.h" // 2.9"  b/w/r
 #include "bitmaps/Bitmaps3c176x264.h" // 2.7"  b/w/r
 #include "bitmaps/Bitmaps3c400x300.h" // 4.2"  b/w/r
-
-// Ok, I will learn how to use nested templates in my next life, maybe
-// Ok, this works at least, maybe I learned enough for a start
-
-// the compiler needs separate declarations for template functions 
-
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloWorld(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloFullScreenPartialMode(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloArduino(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloEpaper(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showBox(T<GxEPD2_Type, page_height>& display, uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool partial);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawCornerTest(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFXfont* f);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showPartialUpdate(T<GxEPD2_Type, page_height>& display);
 
 void setup()
 {
@@ -218,8 +198,8 @@ void loop()
 {
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloWorld(T<GxEPD2_Type, page_height>& display)
+
+void helloWorld(GxEPD2_GFX& display)
 {
   //Serial.println("helloWorld");
   display.setRotation(1);
@@ -239,8 +219,8 @@ void helloWorld(T<GxEPD2_Type, page_height>& display)
   //Serial.println("helloWorld done");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloFullScreenPartialMode(T<GxEPD2_Type, page_height>& display)
+
+void helloFullScreenPartialMode(GxEPD2_GFX& display)
 {
   //Serial.println("helloFullScreenPartialMode");
   display.setPartialWindow(0, 0, display.width(), display.height());
@@ -278,8 +258,8 @@ void helloFullScreenPartialMode(T<GxEPD2_Type, page_height>& display)
   //Serial.println("helloFullScreenPartialMode done");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloArduino(T<GxEPD2_Type, page_height>& display)
+
+void helloArduino(GxEPD2_GFX& display)
 {
   //Serial.println("helloArduino");
   display.setRotation(1);
@@ -300,8 +280,8 @@ void helloArduino(T<GxEPD2_Type, page_height>& display)
   //Serial.println("helloArduino done");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void helloEpaper(T<GxEPD2_Type, page_height>& display)
+
+void helloEpaper(GxEPD2_GFX& display)
 {
   //Serial.println("helloEpaper");
   display.setRotation(1);
@@ -321,8 +301,8 @@ void helloEpaper(T<GxEPD2_Type, page_height>& display)
   //Serial.println("helloEpaper done");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showBox(T<GxEPD2_Type, page_height>& display, uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool partial)
+
+void showBox(GxEPD2_GFX& display, uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool partial)
 {
   //Serial.println("showBox");
   display.setRotation(1);
@@ -344,8 +324,8 @@ void showBox(T<GxEPD2_Type, page_height>& display, uint16_t x, uint16_t y, uint1
   //Serial.println("showBox done");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawCornerTest(T<GxEPD2_Type, page_height>& display)
+
+void drawCornerTest(GxEPD2_GFX& display)
 {
   display.setFullWindow();
   display.setFont(&FreeMonoBold9pt7b);
@@ -369,8 +349,8 @@ void drawCornerTest(T<GxEPD2_Type, page_height>& display)
   }
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFXfont* f)
+
+void showFont(GxEPD2_GFX& display, const char name[], const GFXfont* f)
 {
   display.setFullWindow();
   display.setRotation(0);
@@ -383,11 +363,11 @@ void showFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFX
   while (display.nextPage());
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFXfont* f);
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFXfont* f)
+//void drawFont(GxEPD2_GFX& display, const char name[], const GFXfont* f);
+
+
+void drawFont(GxEPD2_GFX& display, const char name[], const GFXfont* f)
 {
   //display.setRotation(0);
   display.fillScreen(GxEPD_WHITE);
@@ -408,8 +388,8 @@ void drawFont(T<GxEPD2_Type, page_height>& display, const char name[], const GFX
   display.println("pqrstuvwxyz{|}~ ");
 }
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void showPartialUpdate(T<GxEPD2_Type, page_height>& display)
+
+void showPartialUpdate(GxEPD2_GFX& display)
 {
   // some useful background
   helloWorld(display);
@@ -475,10 +455,10 @@ void showPartialUpdate(T<GxEPD2_Type, page_height>& display)
 
 
 #ifdef _GxBitmaps200x200_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps200x200(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps200x200(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps200x200(GxEPD2_GFX& display);
+
+void drawBitmaps200x200(GxEPD2_GFX& display)
 {
 #if defined(__AVR)
   const unsigned char* bitmaps[] =
@@ -551,10 +531,10 @@ void drawBitmaps200x200(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps128x250_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps128x250(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps128x250(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps128x250(GxEPD2_GFX& display);
+
+void drawBitmaps128x250(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   const unsigned char* bitmaps[] =
@@ -587,10 +567,10 @@ void drawBitmaps128x250(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps128x296_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps128x296(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps128x296(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps128x296(GxEPD2_GFX& display);
+
+void drawBitmaps128x296(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   const unsigned char* bitmaps[] =
@@ -623,10 +603,10 @@ void drawBitmaps128x296(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps176x264_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps176x264(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps176x264(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps176x264(GxEPD2_GFX& display);
+
+void drawBitmaps176x264(GxEPD2_GFX& display)
 {
   const unsigned char* bitmaps[] =
   {
@@ -650,10 +630,10 @@ void drawBitmaps176x264(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps400x300_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps400x300(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps400x300(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps400x300(GxEPD2_GFX& display);
+
+void drawBitmaps400x300(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   const unsigned char* bitmaps[] =
@@ -681,10 +661,10 @@ void drawBitmaps400x300(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps640x384_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps640x384(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps640x384(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps640x384(GxEPD2_GFX& display);
+
+void drawBitmaps640x384(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   const unsigned char* bitmaps[] =
@@ -718,10 +698,10 @@ struct bitmap_pair
 };
 
 #ifdef _GxBitmaps3c200x200_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c200x200(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c200x200(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps3c200x200(GxEPD2_GFX& display);
+
+void drawBitmaps3c200x200(GxEPD2_GFX& display)
 {
   bitmap_pair bitmap_pairs[] =
   {
@@ -809,10 +789,10 @@ void drawBitmaps3c200x200(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps3c104x212_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c104x212(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c104x212(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps3c104x212(GxEPD2_GFX& display);
+
+void drawBitmaps3c104x212(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   bitmap_pair bitmap_pairs[] =
@@ -852,10 +832,10 @@ void drawBitmaps3c104x212(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps3c128x296_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c128x296(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c128x296(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps3c128x296(GxEPD2_GFX& display);
+
+void drawBitmaps3c128x296(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   bitmap_pair bitmap_pairs[] =
@@ -895,10 +875,10 @@ void drawBitmaps3c128x296(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps3c176x264_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c176x264(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c176x264(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps3c176x264(GxEPD2_GFX& display);
+
+void drawBitmaps3c176x264(GxEPD2_GFX& display)
 {
   bitmap_pair bitmap_pairs[] =
   {
@@ -923,10 +903,10 @@ void drawBitmaps3c176x264(T<GxEPD2_Type, page_height>& display)
 #endif
 
 #ifdef _GxBitmaps3c400x300_H_
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c400x300(T<GxEPD2_Type, page_height>& display);
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps3c400x300(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps3c400x300(GxEPD2_GFX& display);
+
+void drawBitmaps3c400x300(GxEPD2_GFX& display)
 {
 #if !defined(__AVR)
   bitmap_pair bitmap_pairs[] =
@@ -956,8 +936,8 @@ void drawBitmaps3c400x300(T<GxEPD2_Type, page_height>& display)
 }
 #endif
 
-template<typename GxEPD2_Type, const uint16_t page_height, template<typename, const uint16_t> class T>
-void drawBitmaps(T<GxEPD2_Type, page_height>& display)
+
+void drawBitmaps(GxEPD2_GFX& display)
 {
   display.setFullWindow();
   display.setRotation(0);
@@ -998,5 +978,3 @@ void drawBitmaps(T<GxEPD2_Type, page_height>& display)
   drawBitmaps3c200x200(display);
 #endif
 }
-
-

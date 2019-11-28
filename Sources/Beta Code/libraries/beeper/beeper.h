@@ -24,6 +24,8 @@
 /*  Ver     Date                                                                                   */
 /*  1.0                                                                                            */
 /*  1.1     30/08/19     Ajout message de debug                                                    */
+/*  1.2     01/11/19     Suppression de la gestion du volume dans beeper - le volume ne sera géré  */
+/*                       que dans toneHAL                                                          */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -151,8 +153,11 @@ class Beeper {
   void update();
 
 	void setFrequency(uint32_t freqHz);
+	void setFrequency(uint32_t freqHz, uint8_t volume);
   void generateTone( uint32_t freqHz, int ms);
+  void generateTone( uint32_t freqHz, int ms, uint8_t volume);
 	void tone(uint32_t freqHz);
+	void tone(uint32_t freqHz, uint8_t volume);
 	void noTone(void);
 
 
@@ -161,7 +166,7 @@ class Beeper {
   double 				beepSinkingThreshold;
   double 				beepGlidingThreshold;
   double 				beepClimbingThreshold;
-  uint8_t 			volume;
+//  uint8_t 			volume;
   unsigned long beepStartTime;
   double 				beepVelocity;
   double 				beepFreq;

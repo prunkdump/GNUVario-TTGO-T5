@@ -28,6 +28,9 @@
 /*    1.0.2  19/08/19   Correstions mineures                                     */
 /*    1.0.3  20/08/19   Ajout version PCB  PCB_VERSION                           */
 /*    1.0.4  30/08/19   Ajout AUDIO_AMP_MODE_LOW, AUDIO_AMPLI_LOWPOWER		  		 */
+/*    1.0.5  10/09/19   Ajout VARIO_SDA_PIN, VARIO_SCL_PIN 											 */
+/*		1.0.6	 19/09/19   Modification parametrage en fonction des PCBs            */
+/*    1.0.7  06/10/19   Deplacement resolution d'ecran dans hardwareConfig.h     */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -105,15 +108,13 @@ tension  IO35
 
             vbat
              |
-            270k
+            100k
              |
       IO35 ---
              |
-            1M
+            100k
              |
             GND
-
-V2.4 	100k / 100k interne
 
 EEprom
 
@@ -131,11 +132,10 @@ Fly stat        0xD0		26+2
 
 /* Version PCB 															*/
 /* 0 pas de PCB definit											*/
-/* 1 PCB V1 pour TTGO-T5 version 1.2, 1.6		*/
-/* 2 PCB V2 pour TTGO-T5 version 1.2 et 1.6 */
-/* 3 PCB V2 pour TTGO-T5 version 2.4        */
+/* 1 PCB V1 pour TTGO-T5 version 1.6     		*/
+/* 2 PCB V2 pour TTGO-T5 version 1.6 et 2.4 */
 
-#define PCB_VERSION 3
+#define PCB_VERSION 2
 
 
 /******************************/
@@ -144,11 +144,10 @@ Fly stat        0xD0		26+2
 
 /* Set the pins used for Screen modules */
 
-#define VARIOSCREEN_CS_PIN SS
+#define VARIOSCREEN_CS_PIN 5    //SS
 #define VARIOSCREEN_DC_PIN 17
 #define VARIOSCREEN_RST_PIN 16
 #define VARIOSCREEN_BUSY_PIN 4
-
 
 /****************************/
 /*           SDCARD         */
@@ -172,6 +171,7 @@ Fly stat        0xD0		26+2
 #ifndef LED_BUILTIN
 #define LED_BUILTIN pinLED
 #endif
+
 #endif
 
 /****************************/
@@ -193,6 +193,9 @@ Fly stat        0xD0		26+2
 #define BUTTON_B_PIN 37
 #define BUTTON_C_PIN 39
 
+#define BUTTON_DEEP_SLEEP GPIO_NUM_37
+#define GPIO_BUTTON_A GPIO_NUM_38
+#define GPIO_BUTTON_C GPIO_NUM_39
 
 /****************/
 /*     TENSION  */
@@ -202,23 +205,21 @@ Fly stat        0xD0		26+2
 
 #define VOLTAGE_DIVISOR_PIN 35  //ADC1_CH7 (GPIO 35)
 #define VOLTAGE_RESOLUTION  4096.0f
-#if (PCB_VERSION < 2)
-#define VOLTAGE_DIVISOR_VALUE 1.27  //270k et 1M
-#else
 #define VOLTAGE_DIVISOR_VALUE 2  //100k et 100k
-#endif
 
 /*************************/
 /*        GPS            */
 /*************************/
 
-#if (PCB_VERSION >= 2)
+#if (PCB_VERSION == 2)
 #define pinGpsRXD  (33)
 	
 /* GPS / bluetooth pins */
 #define SERIAL_NMEA_RX_PIN 33
 #define SERIAL_NMEA_TX_PIN 34
+
 #else
+	
 #define pinGpsRXD  (19)
 	
 /* GPS / bluetooth pins */
@@ -246,7 +247,7 @@ Fly stat        0xD0		26+2
 //#define AUDIO_AMP_MODE_LOW					//Ampli activable sur un niveau bas - sortie = 0
 //#define AUDIO_AMPLI_LOWPOWER				//Activation/desactivation de l'ampli à chaque tone/notone (economie d'énergie)
 
-#if (PCB_VERSION == 3)
+#if (PCB_VERSION == 2)
 
 #define PIN_AUDIO_AMP_ENA     19			//Enabled ampli class D
 #define HAVE_AUDIO_AMPLI	
@@ -254,7 +255,7 @@ Fly stat        0xD0		26+2
 
 #else
 
-#define PIN_AUDIO_AMP_ENA     34			//Enabled ampli class D
+#define PIN_AUDIO_AMP_ENA     12			//Enabled ampli class D
 	
 #endif
 
@@ -272,17 +273,39 @@ Fly stat        0xD0		26+2
 /* MPU 9250 / MS5611 */
 /*********************/
 
+#if (PCB_VERSION == 2)
 #define VARIO_TW_SDA_PIN 27
 #define VARIO_TW_SCL_PIN 32
+#else
+#define VARIO_TW_SDA_PIN 21
+#define VARIO_TW_SCL_PIN 22
+#endif
 
 /* Set the freq */
 #define VARIO_TW_FREQ 400000UL
+
+/*********************/
+/* MPU 9250 / MS5611 */
+/*********************/
+
+#if (PCB_VERSION == 2)
+#define VARIO_SDA_PIN 27
+#define VARIO_SCL_PIN 32	
+#define VARIO_MPUINT_PIN 26
+#else
+#define VARIO_SDA_PIN 21
+#define VARIO_SCL_PIN 22
+#endif
 
 /*************************/
 /*         POWER         */
 /*************************/
 
+#if (PCB_VERSION == 2)
 #define POWER_PIN 12
+#else
+#define POWER_PIN 27
+#endif
 #define POWER_PIN_STATE HIGH
 
 /* time needed to power on all the devices */
@@ -291,6 +314,10 @@ Fly stat        0xD0		26+2
 /*****************************/
 /*         EEPROM            */
 /*****************************/
+//  IGC Header			0x00		195		0xC8
+//  Sound volume		0xC8    1     0xD0
+//  Fly Stat        0xD0    48X10 0x2B0     
+//  Calibration     0x2C0   56 		0x2FA				(762)
 
 /*****************************/
 /*  IGC HEADER EEPROM        */
@@ -309,6 +336,11 @@ Fly stat        0xD0		26+2
 /*  EEPROM STAT              */
 /*****************************/
 #define FLY_STAT_HEADER_EEPROM_ADDRESS 0xD0
+
+/*****************************/
+/*  EEPROM CALIBRATION       */
+/*****************************/
+#define CAL_MPU_HEADER_EEPROM_ADDRESS 0x108 //0x2C0
 
 #endif
 #endif

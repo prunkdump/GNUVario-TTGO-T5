@@ -36,9 +36,19 @@
 /*    1.0.3  04/08/19   Ajout config Wifi                                        */
 /*    1.0.4  16/08/19   Ajout HAVE_WIFI                                          */
 /*		1.0.5	 05/09/19		Ajout MPU_COMP_TEMP																			 */
+/*    1.0.6  19/09/19   Ajout NB_ACQUISITION_FIX_GPS														 */
+/*    1.0.7  06/10/19   Ajout Résolution de l'ecran                              */
+/*    1.0.8  22/10/19   Ajout écran 2.13''                                       */
 /*                                                                               */
 /*********************************************************************************/
 
+/******************************/
+/*            SCREEN          */
+/******************************/
+
+#define VARIOSCREEN_SIZE 	154			//Ecran 1.54''
+//#define VARIOSCREEN_SIZE	29			//Ecran 2.9''
+//#define VARIOSCREEN_SIZE 	213			//Ecran 2.13''
 
 
 /***********************/
@@ -54,11 +64,12 @@
 #endif
 
 /*****************************/
-/*   EEPROM                  */
+/*         EEPROM            */
 /*****************************/
 //  IGC Header			0x00		195		0xC8
-//  Sound volume		0xC8    1     0xCA
-//  Fly Stat        0xCA     
+//  Sound volume		0xC8    1     0xD0
+//  Fly Stat        0xD0    48X10 0x2B0     
+//  Calibration     0x2C0   56 		0x2FA				(762)
 
 /*****************************/
 /*  IGC HEADER EEPROM        */
@@ -77,7 +88,7 @@
 
 /* eeprom sound setting adresses */
 #ifndef SOUND_EEPROM_ADDR
-#define SOUND_EEPROM_ADDR 0x210
+#define SOUND_EEPROM_ADDR 0x201
 #endif
 
 #define SOUND_EEPROM_TAG 9806
@@ -86,10 +97,19 @@
 /*  EEPROM STAT              */
 /*****************************/
 #ifndef FLY_STAT_HEADER_EEPROM_ADDRESS
-#define FLY_STAT_HEADER_EEPROM_ADDRESS 0x230
+#define FLY_STAT_HEADER_EEPROM_ADDRESS 0x210
 #endif
  
 #define FLY_STAT_EEPROM_TAG 2025
+
+/*****************************/
+/*  EEPROM CALIBRATION       */
+/*****************************/
+#ifndef CAL_MPU_HEADER_EEPROM_ADDRESS
+#define CAL_MPU_HEADER_EEPROM_ADDRESS 0x3F0
+#endif
+ 
+#define CAL_MPU_EEPROM_TAG 3030
 
 /*****************************/
 /* Baro parameters           */
@@ -108,6 +128,11 @@
 /**********************/
 /*  MPU parameters    */
 /**********************/
+
+/*****************************************************/
+/*    choix de la librairie MPU/MS5611               */
+/*****************************************************/
+#define TWOWIRESCHEDULER
 
 /* If you embed an accelerometer set the model here. */
 /* Possible values are :                             */
@@ -133,21 +158,29 @@
 // or by static value
 
 /* Parametre par defaut */
-//#define IMU_GYRO_CAL_BIAS {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-//#define IMU_ACCEL_CAL_BIAS {0, 0, 0}
-//#define IMU_ACCEL_CAL_SCALE 0
-//#define IMU_MAG_CAL_BIAS {0, 0, 0}
-//#define IMU_MAG_CAL_PROJ_SCALE -166
+#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+#define VERTACCEL_ACCEL_CAL_BIAS {0, 0, 0}
+#define VERTACCEL_ACCEL_CAL_SCALE 0
+#define VERTACCEL_MAG_CAL_BIAS {0, 0, 0}
+#define VERTACCEL_MAG_CAL_PROJ_SCALE -16689
+#define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 7
+#define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5
 
 #define VERTACCEL_STATIC_CALIBRATION
 
-#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x29, 0xdf, 0xff, 0xff, 0x9f, 0x4a, 0xff, 0xff, 0xb5, 0xe9}
+/*#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x29, 0xdf, 0xff, 0xff, 0x9f, 0x4a, 0xff, 0xff, 0xb5, 0xe9}
 #define VERTACCEL_ACCEL_CAL_BIAS {-3416, 9992, -31522}
 #define VERTACCEL_ACCEL_CAL_SCALE -165
 #define VERTACCEL_MAG_CAL_BIAS {-5097, 4319, 22227}
-#define VERTACCEL_MAG_CAL_PROJ_SCALE 9247
-#define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 7
-#define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5
+#define VERTACCEL_MAG_CAL_PROJ_SCALE 9247*/
+
+/*#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x53, 0x5a, 0xff, 0xff, 0x77, 0x56, 0xff, 0xff, 0xc1, 0x76}
+#define VERTACCEL_ACCEL_CAL_BIAS {-356, -293, -23473}
+#define VERTACCEL_ACCEL_CAL_SCALE -33169
+#define VERTACCEL_MAG_CAL_BIAS {260, 26368, -24674}
+#define VERTACCEL_MAG_CAL_PROJ_SCALE -32495
+#define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 5
+#define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5*/
 
 /*****************************/
 /* SDCard/Bluetooth behavior */
@@ -194,6 +227,8 @@
 /* Check the SD card ouput or bluetooth output of gps-time-analysis */
 #define NMEA_TAG_SIZE 5
 
+/* Nombre de mesure GPS avant la mise Ã  jour de l'altitude baro      */
+#define NB_ACQUISITION_FIX_GPS 20
 
 // GPS MODEL
 #define ATGM336H
@@ -246,6 +281,11 @@
 // #define AUDIO_AMPLI_LOWPOWER
 #endif //AUDIO_AMPLI_LOWPOWER
 
+/******************************/
+/*        SERVEUR WEB         */
+/******************************/
+#define WEBSERVER_SDCARD
+
 /*----------------------------*/
 /*          HARDWARE          */
 /*      Vario parameters      */
@@ -259,11 +299,11 @@
 #define HAVE_SCREEN
 #define HAVE_GPS
 #define HAVE_SDCARD
-//#define HAVE_BLUETOOTH
 #define HAVE_VOLTAGE_DIVISOR
 //#define HAVE_AUDIO_AMPLI	
 #define HAVE_POWER_ALIM	
 #define HAVE_BUTTON
 #define HAVE_WIFI
+#define HAVE_BLUETOOTH
 
 #endif

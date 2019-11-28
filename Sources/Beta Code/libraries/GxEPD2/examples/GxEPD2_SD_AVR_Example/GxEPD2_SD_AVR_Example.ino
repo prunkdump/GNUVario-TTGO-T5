@@ -13,7 +13,7 @@
 
 // Supporting Arduino Forum Topics:
 // Waveshare e-paper displays with SPI: http://forum.arduino.cc/index.php?topic=487007.0
-// Good Dispay ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
+// Good Display ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
 
 // mapping suggestion from Waveshare SPI e-Paper to Wemos D1 mini
 // BUSY -> D2, RST -> D4, DC -> D3, CS -> D8, CLK -> D5, DIN -> D7, GND -> GND, 3.3V -> 3.3V
@@ -65,6 +65,7 @@ SdFat SD;
 #define SD_CS 6  // adapt to your wiring
 #define EPD_CS SS // adapt to your wiring
 // select one and adapt to your mapping
+GxEPD2_154 display(/*CS=10*/ EPD_CS, /*DC=*/ 9, /*RST=*/ 8, /*BUSY=*/ 7);
 //GxEPD2_154 display(/*CS=10*/ EPD_CS, /*DC=*/ 8, /*RST=*/ 9, /*BUSY=*/ 7);
 //GxEPD2_213 display(/*CS=10*/ EPD_CS, /*DC=*/ 8, /*RST=*/ 9, /*BUSY=*/ 7);
 //GxEPD2_290 display(/*CS=10*/ EPD_CS, /*DC=*/ 8, /*RST=*/ 9, /*BUSY=*/ 7);
@@ -261,7 +262,8 @@ void drawBitmapFromSD(const char *filename, int16_t x, int16_t y, bool with_colo
         if (depth <= 8)
         {
           if (depth < 8) bitmask >>= depth;
-          file.seekSet(54); //palette is always @ 54
+          //file.seekSet(54); //palette is always @ 54
+          file.seekSet(imageOffset - (4 << depth)); // 54 for regular, diff for colorsimportant
           for (uint16_t pn = 0; pn < (1 << depth); pn++)
           {
             blue  = file.read();
@@ -403,4 +405,3 @@ uint32_t read32(SdFile& f)
   ((uint8_t *)&result)[3] = f.read(); // MSB
   return result;
 }
-

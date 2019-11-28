@@ -36,6 +36,14 @@
  *                      Augmentation debounce time                               *
  *                      Ajout _state button																			 *
  *    1.0.7  31/08/19		Correction bug reglage son															 *
+ *    1.0.8  25/09/19   Ajout appuie 3 sec bouton central                        * 
+ *    1.0.9  29/09/19	  Ajout gestion page de calibration                        *
+ *    1.0.9  29/09/19	  Ajout gestion page de calibration                        *
+ *    1.0.10 03/10/19   Ajout HAVE_SDCARD                                        *
+ *    1.0.11 28/10/19		Ajout bip de control lors de la configuration du volume  *
+ *    1.0.12 01/11/19   Modification de la configuration du volume               *
+ *    1.0.13 03/01/19   Déplacement de la validation de la mise en veille sur le *
+ *                      bouton gauche                                            *
  *                                                                               *
  *********************************************************************************/
  
@@ -44,13 +52,32 @@
 #include "esp_log.h"
 
 #include <HardwareConfig.h>
+
+#ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
+#endif
+
 #include <toneHAL.h>
 #include <beeper.h>
 #include <varioscreenGxEPD.h>
 #ifdef HAVE_WIFI
 #include <wifiServer.h>
 #endif //HAVE_WIFI
+
+#include <Utility.h>
+#include <VarioCalibration.h>
+
+#ifdef BUTTON_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
+//#include "myassert.h"
+
+uint8_t RegVolume;
 
 void VARIOButton::begin() {
     
@@ -68,7 +95,9 @@ void VARIOButton::begin() {
 #endif
 }
 
+/**********************************************************/
 void VARIOButton::update() {
+/**********************************************************/
 	//Button update
 	BtnA.read();
 	BtnB.read();
@@ -76,14 +105,18 @@ void VARIOButton::update() {
 }
 
 
+/**********************************************************/
 void VARIOButton::setWakeupButton(uint8_t button) {
+/**********************************************************/
   _wakeupPin = button;
 }
 
 VARIOButton VarioButton;
 
 
+/**********************************************************/
 void VARIOButtonScheduleur::update() {
+/**********************************************************/
 
   VarioButton.update();
 	
@@ -111,27 +144,44 @@ void VARIOButtonScheduleur::update() {
 #endif //BUTTON_DEBUG
   }
 
+  if(VarioButton.BtnB.pressedFor(3000)) {
+#ifdef BUTTON_DEBUG
+    SerialPort.println("*********************************************");
+    SerialPort.printf("pressedFor 3s B \r\n");
+    SerialPort.println("*********************************************");
+#endif //BUTTON_DEBUG
+
+		TRACE();
+		SDUMP("pressed For 3s B");
+/*		ASSERT_RE(SerialPort.log(),
+            "VarioButton.cpp:\\d+: void update\\(\\)\r\n"
+            "Button B 3s\\(\\)\r\n");*/
+
+		_stateBB = false;		
+		treatmentBtnB3S(false);
+  }
+
   if(VarioButton.BtnB.isPressed()) { //wasPressed()) {
 #ifdef BUTTON_DEBUG
     SerialPort.printf("isPressed B \r\n");
 #endif //BUTTON_DEBUG
-		if (_stateBB == false) {
+/*		if (_stateBB == false) {
 			treatmentBtnB(false);
 			_stateBB = true;
-		}
+		}*/
+	  _stateBB = true;
   }
 
   if(VarioButton.BtnB.wasReleased()) {
 #ifdef BUTTON_DEBUG
     SerialPort.printf("wasReleased B \r\n");
 #endif //BUTTON_DEBUG
-		_stateBB = false;
-  }
+//		_stateBB = false;
+		if (_stateBB == true) {
+			treatmentBtnB(false);
+			_stateBB = false;
+		}
 
-  if(VarioButton.BtnB.pressedFor(2000)) {
-#ifdef BUTTON_DEBUG
-    SerialPort.printf("pressedFor 2s B \r\n");
-#endif //BUTTON_DEBUG
   }
 
   if(VarioButton.BtnC.isPressed()) { //wasPressed()) {
@@ -158,17 +208,25 @@ void VARIOButtonScheduleur::update() {
   }
 }
 
+/**********************************************************/
 void VARIOButtonScheduleur::Set_StatePage(uint8_t state) {
+/**********************************************************/
 	StatePage = state;
 }
 
+/**********************************************************/
 uint8_t VARIOButtonScheduleur::Get_StatePage(void) {
+/**********************************************************/
 	return StatePage;
 }
 
+#ifdef HAVE_SDCARD
 File root;
+#endif
 		
+/**********************************************************/
 void VARIOButtonScheduleur::treatmentBtnA(bool Debounce) {
+/**********************************************************/
 #ifdef BUTTON_DEBUG
       SerialPort.println("Bouton A");
 #endif //BUTTON_DEBUG
@@ -191,23 +249,40 @@ void VARIOButtonScheduleur::treatmentBtnA(bool Debounce) {
 #endif //HAVE_WIFI		
 	if (StatePage == STATE_PAGE_CONFIG_SOUND) {
 		uint8_t tmpvol;
-		tmpvol = toneHAL.getVolume();
+		tmpvol = RegVolume; //toneHAL.getVolume();
 		if (tmpvol > 0) {
 			tmpvol--;
-			toneHAL.setVolume(tmpvol);
-			beeper.setVolume(tmpvol);
-			screen.ScreenViewSound(toneHAL.getVolume());
+//			toneHAL.setVolume(tmpvol);
+//			beeper.setVolume(tmpvol);
+			RegVolume = tmpvol;
+			beeper.generateTone(2000,300,RegVolume); 
+			screen.ScreenViewSound(RegVolume); //toneHAL.getVolume());
 		}
+	} 
+	else if (StatePage == STATE_PAGE_DEEP_SLEEP) {					  
+    indicatePowerDown(); 
+		deep_sleep();
+	}
+	else if (StatePage == STATE_PAGE_CALIBRATE) {		
+	  //sortie calibration
+		SerialPort.println("RESTART ESP32");
+		SerialPort.flush();
+		ESP_LOGI("GnuVario-E", "RESTART ESP32");
+		screen.ScreenViewReboot();
+		ESP.restart();		
 	}
 }
 
+/**********************************************************/
 void VARIOButtonScheduleur::treatmentBtnB(bool Debounce) {
+/***********************************************************/
 		
   if (StatePage == STATE_PAGE_VARIO) {
 		
 		if (screen.schedulerScreen->getPage() == screen.schedulerScreen->getMaxPage()+1) {
 			StatePage = STATE_PAGE_CONFIG_SOUND;
-			screen.ScreenViewSound(toneHAL.getVolume());
+			RegVolume = toneHAL.getVolume();
+			screen.ScreenViewSound(RegVolume);
 		} else {
 		
 #ifdef BUTTON_DEBUG
@@ -219,14 +294,22 @@ void VARIOButtonScheduleur::treatmentBtnB(bool Debounce) {
 		}
 	} else if (StatePage == STATE_PAGE_CONFIG_SOUND) {		
 		StatePage = STATE_PAGE_VARIO;	
-		screen.ScreenViewSound(toneHAL.getVolume());
-		GnuSettings.soundSettingWrite(toneHAL.getVolume());
-		screen.volLevel->setVolume(toneHAL.getVolume());
+		screen.ScreenViewSound(RegVolume);
+		toneHAL.setVolume(RegVolume); 
+		GnuSettings.soundSettingWrite(RegVolume);
+		screen.volLevel->setVolume(RegVolume);
 		screen.volLevel->mute(toneHAL.isMute());
+	} else if (StatePage == STATE_PAGE_CALIBRATION) {		
+	  //lancement de la calibration
+		StatePage = STATE_PAGE_CALIBRATE;
+		screen.ScreenViewMessage("en cours",0);
+		Calibration.Begin();
 	}
 }
 
+/************************************************************/
 void VARIOButtonScheduleur::treatmentBtnC(bool Debounce) {
+/************************************************************/	
 	
     /*SerialPort.println("Read test.txt");
 
@@ -248,15 +331,19 @@ void VARIOButtonScheduleur::treatmentBtnC(bool Debounce) {
   }
 	else if (StatePage == STATE_PAGE_CONFIG_SOUND) {
 		uint8_t tmpvol;
-		tmpvol = toneHAL.getVolume();
+		tmpvol = RegVolume; //toneHAL.getVolume();
 		if (tmpvol < 10) {
 			tmpvol++;
-			toneHAL.setVolume(tmpvol);
-			beeper.setVolume(tmpvol);
-			screen.ScreenViewSound(toneHAL.getVolume());
+//			toneHAL.setVolume(tmpvol);
+//			beeper.setVolume(tmpvol);
+			RegVolume = tmpvol;
+			beeper.generateTone(2000,300,RegVolume); 
+			screen.ScreenViewSound(RegVolume); //toneHAL.getVolume());
 		}
-	}
-		
+	} 
+	else if (StatePage == STATE_PAGE_INIT) {					  
+		StatePage = STATE_PAGE_CALIBRATION;
+	}	
 }
 
 #ifdef HAVE_WIFI
@@ -264,6 +351,8 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 #ifdef BUTTON_DEBUG
     SerialPort.println("liste des fichiers");
 #endif //BUTTON_DEBUG
+
+#ifdef HAVE_SDCARD
 
     /* Begin at the root "/" */
     root = SDHAL.open("/");
@@ -274,7 +363,8 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 #ifdef BUTTON_DEBUG
       SerialPort.println("error Sdcard directory");
 #endif //BUTTON_DEBUG
-    }    
+    } 
+#endif //HAVE_SDCARD		
 #ifdef BUTTON_DEBUG
     SerialPort.println("done!");
 #endif //BUTTON_DEBUG	
@@ -293,6 +383,8 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 		}
 }
 #endif //HAVE_WIFI
+
+#ifdef HAVE_SDCARD
 
 void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
   
@@ -321,5 +413,18 @@ void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
    }
 //#endif //BUTTON_DEBUG
 }	 
+#endif //HAVE_SDCARD
+
+
+void VARIOButtonScheduleur::treatmentBtnB3S(bool Debounce) {
+		
+  if (StatePage == STATE_PAGE_VARIO) {
+		StatePage = STATE_PAGE_DEEP_SLEEP;
+	  screen.ScreenViewMessage("ARRET", 5);
+		StatePage = STATE_PAGE_VARIO;
+		screen.ScreenViewPage(screen.schedulerScreen->getPage(),true);
+		screen.updateScreen ();
+	}
+}
 
 VARIOButtonScheduleur ButtonScheduleur;

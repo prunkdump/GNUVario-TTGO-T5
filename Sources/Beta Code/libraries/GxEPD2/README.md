@@ -14,6 +14,7 @@
 - do not forget to connect GND
 - the actual Waveshare display boards now have level converters and series regulator, safe for 5V
 - use 4k7 pull-down on SS for ESP8266 for boards with level converters
+- note that 7.5" e-paper displays don't work reliable if fed from 3.3V Arduino pin
 
 ### Paged Drawing, Picture Loop
  - This library uses paged drawing to limit RAM use and cope with missing single pixel update support
@@ -38,7 +39,7 @@
 ### Supporting Arduino Forum Topics:
 
 - Waveshare e-paper displays with SPI: http://forum.arduino.cc/index.php?topic=487007.0
-- Good Dispay ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
+- Good Display ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
 
 ### Note on documentation
 - GxEPD2 uses Adafruit_GFX for Graphics and Text support, which is well documented there
@@ -66,13 +67,31 @@
 - GDEW042Z15     4.2" b/w/r
 - GDEW0583T7     5.83" b/w
 - GDEW075T8      7.5" b/w
+- GDEW075T7      7.5" b/w 800x480
 - GDEW075Z09     7.5" b/w/r
 - GDEW075Z08     7.5" b/w/r 800x480
 #### Supported SPI e-paper panels & boards from Waveshare: compare with Good Display, same panel
 #### other supported panels
 - ED060SCT        6" grey levels, on Waveshare e-Paper IT8951 Driver HAT
 
-### Version 1.2.0
+### Version 1.2.3
+- fixed partial update for 2.13" 3-color and 2.9" 3-color e-paper
+- partial update can be disabled with attribute usePartialUpdateWindow = false
+- added GxEPD2_GFX_Example to show uses of GxEPD2_GFX base class
+- replaced GxEPD2_MultiDisplayExample code, same code as GxEPD2_GFX_MultiDisplayExample
+- added extras/examples/GxEPD2_T_MultiDisplayExample, alternate example using template functions
+- major and minor fixes, such as typos that survived too long
+#### Version 1.2.2
+- fixed BMP handling, e.g. for BMPs created by ImageMagick
+- see also Arduino Forum Topic https://forum.arduino.cc/index.php?topic=642343.0
+#### Version 1.2.1
+- added support for GDEW075T7 7.5" b/w 800x480
+- GDEW075T7 has differential update (1.6s) using a charge balancing waveform
+- added optional SW SPI support, see /extras/sw_spi/README
+- added /extras/tests/GxEPD2_RefreshTests/GxEPD2_RefreshTests.ino, for waveform tuning
+- minor fixes 
+- note that 7.5" e-paper displays don't work reliable if fed from 3.3V Arduino pin
+#### Version 1.2.0
 - added "fast partial update" (differential update) for GDEW0371W7 3.7" b/w 240x416
 - improved differential update waveform for GDEW026T0 2.6" b/w 152x256
 - fixed init code & improved differential update for GDEW042T2 4.2" b/w 300x400

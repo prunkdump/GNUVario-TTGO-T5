@@ -13,7 +13,7 @@
 
 // Supporting Arduino Forum Topics:
 // Waveshare e-paper displays with SPI: http://forum.arduino.cc/index.php?topic=487007.0
-// Good Dispay ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
+// Good Display ePaper for Arduino : https://forum.arduino.cc/index.php?topic=436411.0
 
 // mapping suggestion from Waveshare SPI e-Paper to Wemos D1 mini
 // BUSY -> D2, RST -> D4, DC -> D3, CS -> D8, CLK -> D5, DIN -> D7, GND -> GND, 3.3V -> 3.3V
@@ -128,8 +128,8 @@ SdFat SD;
 #if defined(_BOARD_GENERIC_STM32F103C_H_)
 #define SD_CS 0  // adapt to your wiring
 #define EPD_CS SS // adapt to your wiring
-#define MAX_DISPAY_BUFFER_SIZE 15000ul // ~15k is a good compromise
-#define MAX_HEIGHT(EPD) (EPD::HEIGHT <= MAX_DISPAY_BUFFER_SIZE / (EPD::WIDTH / 8) ? EPD::HEIGHT : MAX_DISPAY_BUFFER_SIZE / (EPD::WIDTH / 8))
+#define MAX_DISPLAY_BUFFER_SIZE 15000ul // ~15k is a good compromise
+#define MAX_HEIGHT(EPD) (EPD::HEIGHT <= MAX_DISPLAY_BUFFER_SIZE / (EPD::WIDTH / 8) ? EPD::HEIGHT : MAX_DISPLAY_BUFFER_SIZE / (EPD::WIDTH / 8))
 // select one and adapt to your mapping
 //GxEPD2_BW<GxEPD2_154, MAX_HEIGHT(GxEPD2_154)> display(GxEPD2_154(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
 //GxEPD2_BW<GxEPD2_213, MAX_HEIGHT(GxEPD2_213)> display(GxEPD2_213(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
@@ -138,7 +138,7 @@ SdFat SD;
 //GxEPD2_BW<GxEPD2_420, MAX_HEIGHT(GxEPD2_420)> display(GxEPD2_420(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
 //GxEPD2_BW<GxEPD2_750, MAX_HEIGHT(GxEPD2_750)> display(GxEPD2_750(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
 // 3-color e-papers
-#define MAX_HEIGHT_3C(EPD) (EPD::HEIGHT <= (MAX_DISPAY_BUFFER_SIZE / 2) / (EPD::WIDTH / 8) ? EPD::HEIGHT : (MAX_DISPAY_BUFFER_SIZE / 2) / (EPD::WIDTH / 8))
+#define MAX_HEIGHT_3C(EPD) (EPD::HEIGHT <= (MAX_DISPLAY_BUFFER_SIZE / 2) / (EPD::WIDTH / 8) ? EPD::HEIGHT : (MAX_DISPLAY_BUFFER_SIZE / 2) / (EPD::WIDTH / 8))
 //GxEPD2_3C<GxEPD2_154c, MAX_HEIGHT_3C(GxEPD2_154c)> display(GxEPD2_154c(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
 //GxEPD2_3C<GxEPD2_213c, MAX_HEIGHT_3C(GxEPD2_213c)> display(GxEPD2_213c(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
 //GxEPD2_3C<GxEPD2_290c, MAX_HEIGHT_3C(GxEPD2_290c)> display(GxEPD2_290c(/*CS=4*/ EPD_CS, /*DC=*/ 3, /*RST=*/ 2, /*BUSY=*/ 1));
@@ -266,6 +266,22 @@ void drawBitmaps_test()
   delay(2000);
   drawBitmapFromSD("bb4.bmp", 0, 0);
   delay(2000);
+  drawBitmapFromSD("output5.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("output6.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_1.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_4.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_8.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_11.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_44.bmp", 0, 0);
+  delay(2000);
+  drawBitmapFromSD("tractor_88.bmp", 0, 0);
+  delay(2000);
 }
 
 void drawBitmapsBuffered_200x200()
@@ -338,7 +354,7 @@ void drawBitmapsBuffered_test()
 
 static const uint16_t input_buffer_pixels = 20; // may affect performance
 
-static const uint16_t max_row_width = 640; // for up to 7.5" display
+static const uint16_t max_row_width = 800; // for up to 7.5" display 800x480
 static const uint16_t max_palette_pixels = 256; // for depth <= 8
 
 uint8_t input_buffer[3 * input_buffer_pixels]; // up to depth 24
@@ -417,13 +433,15 @@ void drawBitmapFromSD(const char *filename, int16_t x, int16_t y, bool with_colo
         if (depth <= 8)
         {
           if (depth < 8) bitmask >>= depth;
-          file.seekSet(54); //palette is always @ 54
+          //file.seekSet(54); //palette is always @ 54
+          file.seekSet(imageOffset - (4 << depth)); // 54 for regular, diff for colorsimportant
           for (uint16_t pn = 0; pn < (1 << depth); pn++)
           {
             blue  = file.read();
             green = file.read();
             red   = file.read();
             file.read();
+            //Serial.print(red); Serial.print(" "); Serial.print(green); Serial.print(" "); Serial.println(blue);
             whitish = with_color ? ((red > 0x80) && (green > 0x80) && (blue > 0x80)) : ((red + green + blue) > 3 * 0x80); // whitish
             colored = (red > 0xF0) || ((green > 0xF0) && (blue > 0xF0)); // reddish or yellowish?
             if (0 == pn % 8) mono_palette_buffer[pn / 8] = 0;
@@ -605,7 +623,8 @@ void drawBitmapFromSD_Buffered(const char *filename, int16_t x, int16_t y, bool 
         if (depth <= 8)
         {
           if (depth < 8) bitmask >>= depth;
-          file.seekSet(54); //palette is always @ 54
+          //file.seekSet(54); //palette is always @ 54
+          file.seekSet(imageOffset - (4 << depth)); //54 for regular, diff for colorsimportant
           for (uint16_t pn = 0; pn < (1 << depth); pn++)
           {
             blue  = file.read();
@@ -739,4 +758,3 @@ uint32_t read32(SdFile& f)
   ((uint8_t *)&result)[3] = f.read(); // MSB
   return result;
 }
-

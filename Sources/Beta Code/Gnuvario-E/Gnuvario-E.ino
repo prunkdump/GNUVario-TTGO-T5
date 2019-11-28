@@ -1,6 +1,16 @@
 #include <Arduino.h>
 #include <DebugConfig.h>
 
+#ifdef PROG_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
+//#include "myassert.h"
+
 #if defined(ESP32)
 static const char* TAG = "Gnuvario";
 #include "esp_log.h"
@@ -11,14 +21,13 @@ static const char* TAG = "Gnuvario";
 #ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
 #endif //HAVE_SDCARD
+
 #include <VarioSettings.h>
 
 #ifdef HAVE_SPEAKER
 #include <toneHAL.h>
 #include <beeper.h>
 #endif //HAVE_SPEAKER
-
-//#define TWOWIRESCHEDULER
 
 #ifdef TWOWIRESCHEDULER
 #include <IntTW.h>
@@ -27,10 +36,11 @@ static const char* TAG = "Gnuvario";
 #include <LightInvensense.h>
 #include <TwoWireScheduler.h>
 #else
-#include <MS5611.h>
+#include <MS5611-Ext.h>
 #include <Wire.h>
 #include <vertaccel2.h>
-#include <SparkFunMPU9250-DMP.h>
+//#include <SparkFunMPU9250-DMP.h>
+#include <MPU9250-DMP_SF_EXT.h>
 #endif
 
 #include <kalmanvert.h>
@@ -42,6 +52,11 @@ static const char* TAG = "Gnuvario";
 #include <LK8Sentence.h>
 #include <IGCSentence.h>
 #include <GPSSentence.h>
+#else
+#define SDCARD_STATE_INITIAL 0
+#define SDCARD_STATE_INITIALIZED 1
+#define SDCARD_STATE_READY 2
+#define SDCARD_STATE_ERROR -1
 #endif //HAVE_GPS
 
 #include <FlightHistory.h>
@@ -74,8 +89,8 @@ SimpleBLE ble;
 /*******************/
 
 #define VERSION      0
-#define SUB_VERSION  5
-#define BETA_CODE    6
+#define SUB_VERSION  6
+#define BETA_CODE    7
 #define DEVNAME      "JPG63"
 #define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
 
@@ -139,7 +154,81 @@ SimpleBLE ble;
 *                                    Modifié la calibration de l'altitude par le GPS                  *
 *                                    Ajout d'un coeficiant de compensation de temperature             *
 *                                    Modification la séquence de démarrage de l'enregistrement        *
-*                                                                                                     *
+* v 0.5     beta 7  10/09/19         Ajout de SDA_Pin et SCL_Pin                                      *                                                                 
+*                                    Modification des librairies du MPU9250 / ajout fonctions de      *                                                                             
+*                                    Calibration                                                      *
+*                                    Modification de la sequence de démarrage -                       *
+*                                    allongement du temps de l'écran de stat à 6 sec                  *
+*                                    init MS5611 avant ecran stat, ajout acquisition durant ecran     *
+*                                    stat et init kalman après                                        *
+*                                    Ajout d'un paramettre de nombre d'acquisition du GPS avant       * 
+*                                    la mise à jour de Altitude Barametrique                          *
+*                                    Modification librairie EEPROM                                    *
+*                                    Ajout de la lecture de l'alti baro durant l'attente de l'écran   *
+*                                    de stat                                                          *
+* v 0.5   beta 8  22/09/19           Modification de l'affichage de Vbat                              *
+*                                    Ajout d'un filtrage de la mesure de Vbat                         *
+*                                    Ajout deep_sleep en cas de batterie trop faible                  *
+* v 0.5   beta 9  23/09/19           Correction affichage ecran Stat                                  *                                    
+*                                    Ajout possibilité d'avoir plusieurs tailles d'écran              *
+*                                    Deep-sleep sur bouton central (3 sec)                            *
+* v 0.6   beta 1  26/09/19           Ajout mise en sommeil                                            *                                   
+*                                    Flash via USB en utilisant flash_download_tools                  *
+*                                    Ajout ecran calibration                                          *
+*                                    Modification SETTING.TXT (Version 1.3)                           *
+*                                    Correction HAVE_SDCARD                                           *
+*                                    Changement de la librairie webserver                             *
+* v 0.6   beta 2  06/10/19           Ajout varioscreen pour l'écran 2.9''                             *
+*                                    Ajout serveur Web sur sdcard                                     *
+*                                    Correction du bug d'affichage des fleches                        *
+*                                    Ajout du nom des champs de données sur l'écran                   *
+*                                    Couper le SSID à 12 caractères                                   *                     
+*                                    Modification du fichier SETTINGS.TXT v1.4                        *                                                                                                    
+*                                    Ajout paramettre d'activation du BT dans le fichier SETTINGS.TXT *
+*                                    Modification de varioscreen pour gérer les lignes et les cercles *
+*                                    ainsi que les titres des champs de donnée                        *
+*                                    Modification de l'arborescence de la carte SD                    *           
+*                                    Enregistrement des fichiers .IGC (traces) dans le dossier 'vols' *
+*                                    Mise à jour Ecran 2,9''                                          *
+*                                    Modifier l'affichage des titres pour que la position             *
+*                                    soit liée au digit                                               *
+* v 0.6   beta 3  20/10/19           Correction bug enregistrement sur la SD                          *
+*                                    recodage de l'affichage des satellites                           *       
+*                                    Ajout desactivation bip au demarrage                             * 
+*                                    Ajout écran 2.13''                                               *
+*                                    Ajout compensation de température et correction altitude GPS     *
+*                                    dans le fichier SETTINGS.TXT                                     *
+* v 0.6   beta 4  27/10/19           Correction gestion zone horaire                                  *
+*                                    Changement de librairie MS5611 et MPU                            *
+*                                    Ajout compensation alti gps                                      *
+*                                    Ajout d'un bip lors du reglage du volume                         *
+*                                    Amélioration gestion des boutons et des écrans au boot           *
+*                                    Correction gestion du volume                                     *
+*                                    Correction Calibration enableAmp                                 *
+*                                    Correction du bug d'affichage de l'écran de stat                 *
+*                                    Correction du bug de reboot / blocage si #define DEBUG_PRO est   *      
+*                                    commenté                                                         *
+* v 0.6  beta 5 03/11/19             Déplacement validation deep-sleep sur bouton gauche              *
+*                                    Corrections mineures sur varioscreen 2.9''                       *
+*                                    Corrections mineures sur varioscreen 1.54''                      *  
+*                                    Amélioration de la gestion de la première mesure d'altitude      *
+*                                    Correction du bug de l'écran qui fige                            *
+*                                    Moyenne alti Gps sur 15 mesures avant calibration baro           *
+* v 0.6  beta 6 11/11/19             plusieurs fichiers de configurations / params.jso                *
+*                                    variocal.cfg, wifi.cfg                                           *
+*                                    Ajout gestion des versions params.jso automatique / création     *
+*                                    automatique des champs recup données                             *
+*                                    Correction bug volume                                            *
+*                                    AJOUT - dans params.jso - MULTIDISPLAY_DURATION et               *
+*                                    plusieurs voiles                                                 *
+* v0.6  beta 7  17/11/19             Mise à jour ecran 2.9''                                          *
+*                                    Mise à jour fichier params.jso                                   *
+*                                    Mise à jour page web                                             *
+*                                    Correction Bug serveurWeb                                        *
+*                                    Correction Bug deep sleep                                        *
+*                                    Ajout TRACE                                                      *
+*                                    Ajout Mode veille paramètrable                                   *
+*                                                                                                     * 
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -147,23 +236,36 @@ SimpleBLE ble;
 * V0.4                                                                                                *    
 * bug affichage finesse                                                                               *                                            
 *                                                                                                     *
-* V0.5                                                                                                *
-* Recupération vol via USB                                                                            *                                                                                        
-* Calibration MPU                                                                                     *                                 
-* Mise à jour ESP32 via USB                                                                           * 
-* revoir volume du son ToneESP32                                                                      *
-* verifier effacement du m (altitude)                                                                 *
-* bug d'affichage des fleches                                                                         *
+* V0.5                                                                                                *    
 * voir réactivité des données GPS                                                                     *
+* Probleme consommasion - SDcard - deep slepp                                                         *
+*                                                                                                     *
+* v0.6                                                                                                *   
+* MODIF - Refaire gestion Eeprom avec preference                                                      *
+* AJOUT - Calibration MPU                                                                             *                                 
+* AJOUT - gestion du MPU par Interruption                                                             *
+* BUG   - reboot à l'init du MPU  - nan lors du first alti                                            *
+* BUG   - blocage MPU - plus de valeur valide                                                         *
+* BUG   - temperature                                                                                 *
+* BUG   - DISPLAY_OBJECT_LINE object ligne ne fonctionne pas                                          *
+* AJOUT - Créer une bibliothèque de log (debug)  avec fichier de log                                  *
+* AJOUT - Passage en veille en cas d'inactivité                                                       *
+* BUG   - Alti erreur deep sleep avorté                                                               *
+* BUG   - Norcissement de l'écran                                                                     *
 *                                                                                                     *
 * VX.X                                                                                                *
-* Refaire gestion du son                                                                              *
 * Paramètrage des écrans                                                                              *
 * Gérer le son via le DAC                                                                             *
-* Afficher la boussole                                                                                *
+* revoir volume du son ToneESP32                                                                      *
+* Refaire gestion du son (parametrage via xctracer)                                                   *
+* Ecran position afficher les coordonées GPS, la boussole, et l'altitude                              *                                                                       
+* Création dynamique des objets screen                                                                *
 * Sens et vitesse du vent                                                                             *
 * Carnet de vol (10 derniers vols)                                                                    *
 *     10 zones d'eeprom - reduit le nombre d'écriture et économise la mémoire flash                   *
+* verifier fonctionnement BT                                                                          *
+* Recupération vol via USB                                                                            *                                                                                        
+* Ecran 2.9'' en vertical                                                                             *
 *******************************************************************************************************/
 
 /************************************************************************
@@ -192,6 +294,25 @@ SimpleBLE ble;
  * - Affichage de la température                                        *
  * - Page de configuration du volume sonore                             *
  * - Page de statistique accéssible via les boutons                     *
+ * - Mise en veille automatique en cas de batterie trop faible          *
+ *                                                                      *
+ * Version 0.6                                                          *
+ * - Page de calibration                                                * 
+ * - Mise en veille prolongée                                           *
+ * - Ajout gestion des écran 2.9'' et 2.13''                            *
+ * - Ajout du serveur Web sur SDCARD                                    *
+ * - Activation du Bluetooth en parametre dans le fichier SETTINGS.TXT  *
+ * - Ajout de titre au dessus des champs de données                     *
+ * - Ajout de nouveau objects screen - ligne - rose des vents           *
+ * - Modification de l'organisation des fichiers sur la carte SD        *
+ * - Ajout compensation de température dans fichier SETTINGS.TXT        *
+ * - Ajout correction d'altitude GPS dans SETTINGS.TXT                  *
+ * - Modification calibration alti GPS - 5 mesures puis moyenne de      *
+ * - l'altitude sur 10 mesures avant de calibrer le barometre           * 
+ * - 3 fichiers de paramètrage params.jso, wifi.cfg, variocal.cfg       *  
+ * - Gestion automatique de la mise à jour du fichier params.jso en cas *
+ *   d'ajout ou de suppréssion de champs                                *
+ *   Mise en veille d'inactivité, paramètrable - 0 infini               *
  *                                                                      *
  ************************************************************************
  
@@ -201,7 +322,7 @@ SimpleBLE ble;
  * Dans DebugConfig.h commanter #define ENABLE_DEBUG pour eviter les    *                                                                      
  *                    ralentissement et dans le cas ou le BlueTooth est *
  *                    activé                                            *
- * Wous ne pouvez pas activer en même temps le Wifi et le BlueTooth, si *
+ * Vous ne pouvez pas activer en même temps le Wifi et le BlueTooth, si *
  *                    vous activez le BT vous ne pourrez plus utiliser  *
  *                    les services Web du Gnuvario                      *                                                             
  * A chaque nouvelle mise à jour, verifiez la version du fichier        *
@@ -216,14 +337,15 @@ SimpleBLE ble;
 *                                                                       *
 * https://dl.espressif.com/dl/package_esp32_index.json                  *
 *                                                                       *
-* Type de carte : ESP32 dev Module                                      *
-* CPU frequency : 80Mhz (Wifi                                           *
+* Type de carte    : ESP32 dev Module                                   *
+* CPU frequency    : 240Mhz                                             *
+* Partition scheme : Minimal SPIFFS (1.9Mb APP with OTA / 190kb spiffs) *
 *************************************************************************/
 
 /************************************************************************
 *               Fichiers de configuration                               *
 *                                                                       *
-* SETTINGS.TXT             parametres utilisateur                       *
+* SETTINGS.TXT             parametres utilisateur VERSION 1.5           *
 * HardwareConfig.h         parametres matériels communs                 *
 * HardwareConfigESP32.h    parametre spécifique à l'ESP32               *
 * DebugConfig.h            parametre de debuggage                       *
@@ -231,12 +353,76 @@ SimpleBLE ble;
 *                          pas de SDcard ou de fichier SETTINGS.TXT     *
 *************************************************************************/
 
+/***********************************************************************
+*               arborescence de la SDCARD                              *
+*                                                                      *
+*               /                                                      *                                                       
+*               RECORD00.CAL            - fichier de calibration       *
+*               SETTINGS.TXT            - fichier de configuration     *        
+*               PARAMS.JSO              - fichier de configuration     *
+*               VOLS/                   - repertoire des traces        *
+*                       19101200.IGC                                   *
+*                       19101201.IGC                                   *
+*               WWW/                    - repertoire du site Web       *
+*                       FAVI.ICO                                       *
+*                       INDEX.HTM                                      *
+*                       INDEXB.JS                                      *
+*                       INDEXB~1.MAP                                   *
+*                       CSS/                                           *
+*                           CHKFC0F6.CSS                               *
+*                           INDEXFC.CSS                                *
+*                       IMG/                                           *
+*                           LOGO0B.SVG                                 *
+*                           LOGODC.PNG                                 *
+*                       JS/                                            *
+*                           CHKFC0F6.JS                                *
+*                           CHKFC0~1.MAP                               *
+*                       CONFIG/         - repertoire de configuration  *
+*                           CONFIG~1.JSO                               *
+*                           CONFIG.XML                                 *
+*                           FLIGHTS.JSO                                *
+*                           TREE.JSO                                   *
+*                                                                      *
+************************************************************************/
+
 /**************************************************************************************************************
  *              Liens utiles                                                                                  *
  *                                                                                                            *
  * https://learn.sparkfun.com/tutorials/9dof-razor-imu-m0-hookup-guide/all#libraries-and-example-firmware     *        
  *                                                                                                            *
  **************************************************************************************************************/
+
+ /*************************************************************************************************************
+  *                                                                                                           *
+  *                                            UTILISATION DES TOUCHES                                        *                                                                                       
+  *   Ecran         Touche      Fonction                                                                      *
+  *                                                                                                           *
+  *   Init          Gauche      passage en mode Wifi                                                          *                                                                                                              
+  *   Init          Droite      Calibration                                                                   *
+  *                                                                                                           *
+  *   Vario         Centre      Coupe et remet le son (Mute)                                                  *
+  *   Vario         Centre 3s   Mode veille                                                                   *
+  *   Vario         Gauche      écran précédent                                                               *
+  *   Vario         Droite      écran suivant                                                                 *
+  *                                                                                                           *
+  *   Wifi          Gauche      Sort du mode Wifi                                                             *
+  *                                                                                                           *
+  *   Sound         Gauche      baisse le volume                                                              *
+  *   Sound         Droit       Monte le volume                                                               *
+  *   Sound         Centre      Entre dans la configuration / Valide la configuration                         *
+  *                                                                                                           *
+  *   Sleep         Gauche      Valide la mise en veille                                                      * 
+  *                                                                                                           *
+  *   Calibration   Centre      Démarre la calibration                                                        *                                                                                                        
+  *   Calibration   Gauche      Sort du mode calibration (reboot)                                             *
+  *                                                                                                           *
+  *************************************************************************************************************
+  *                                                                                                           *
+  * Mise à jour via la carte SD, nom du fichier : update.bin                                                  *                                                                                                           
+  *                                                                                                           *
+  *************************************************************************************************************/
+
+//#define TEST_SD
 
 /*******************/
 /* General objects */
@@ -298,6 +484,8 @@ kalmanvert kalmanvert;
 /* SDCARD objects     */
 /**********************/
 
+int8_t sdcardState = SDCARD_STATE_INITIAL;
+
 VarioSettings GnuSettings;
 
 /************************************/
@@ -343,7 +531,7 @@ unsigned long lastVarioSentenceTimestamp = 0;
 #endif // !HAVE_GPS
 #endif //HAVE_BLUETOOTH
 
-unsigned long lastDisplayTimestamp;
+unsigned long lastDisplayTimestamp, time_deep_sleep, sleepTimeoutSecs;
 boolean displayLowUpdateState=true;
 
 VarioStat flystat;
@@ -359,7 +547,8 @@ String webpage = "";
   ESP8266WebServer server(80);
 #else
   WiFiMulti wifiMulti;
-  ESP32WebServer server(80);
+//  ESP32WebServer server(80);
+  WebServer server(80);
 #endif
 #endif //HAVE_WIFI
 
@@ -386,6 +575,15 @@ uint8_t temprature_sens_read();
 
 int tmpint = 0;
 int compteurGpsFix = 0;
+double gpsAlti = 0;
+
+long MaxVoltage   = 0;
+
+long compteurInt = 0;
+
+void IRAM_ATTR isr() {
+  compteurInt++;  
+}
 
 //****************************
 //****************************
@@ -393,6 +591,16 @@ void setup() {
 //****************************
 //****************************  
 
+  SerialPort.begin(115200);
+
+// *******************************************************  
+// *   
+// ******************************************************* 
+#ifdef TEST_SD
+  delay(5000);
+  TestSDCARD(true);
+#endif
+ 
 /*****************************/
 /*  Init Alimentation        */
 /*****************************/
@@ -413,8 +621,6 @@ void setup() {
     adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
 #endif
 #endif  
-
-  SerialPort.begin(115200);
 
   /*****************************/
   /* wait for devices power on */
@@ -468,7 +674,7 @@ void setup() {
 #if defined( HAVE_SPEAKER)
   toneHAL.init();
   beeper.setVolume(10);
-  beeper.generateTone(2000,300); 
+  //beeper.generateTone(2000,300); 
 #endif
 
   /******************/
@@ -477,7 +683,12 @@ void setup() {
 
 #ifdef HAVE_SDCARD
 
-  if (GnuSettings.initSettings()) {
+#ifdef TEST_SD
+  if (GnuSettings.initSettings(false)) {
+#else 
+  if (GnuSettings.initSettings(true)) {
+#endif
+  
 #ifdef SDCARD_DEBUG
     SerialPort.println("initialization done.");
     SerialPort.flush();
@@ -491,7 +702,11 @@ void setup() {
     SD_present = true; 
 #endif //HAVE_WIFI
     sdcardState = SDCARD_STATE_INITIALIZED;
-    GnuSettings.readSDSettings();
+/*    char FileName[15] = "SETTINGS.TXT";
+    GnuSettings.readSDSettings(FileName);*/
+
+    SerialPort.println("Chargement des parametres depuis le fichier params.jso");
+    GnuSettings.loadConfigurationVario("params.jso");
     
 #ifdef SDCARD_DEBUG
    //Debuuging Printing
@@ -536,6 +751,48 @@ void setup() {
 #endif //PROG_DEBUG
 
     header.saveParams(VARIOMETER_MODEL_NAME, __dataPilotName, __dataGliderName);
+
+    boolean ModifValue = false;
+    char tmpFileName[15] = "wifi.cfg";
+   
+    if (SDHAL.exists(tmpFileName)) {
+      GnuSettings.readSDSettings(tmpFileName, &ModifValue);
+
+      SerialPort.println("");
+      SerialPort.println("Lecture du fichier wifi.cfg");
+
+      SerialPort.print("Wifi SSID 1 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_SSID_1);
+
+      SerialPort.print("Wifi Password 1 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_1);
+
+      SerialPort.print("Wifi SSID 2 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_SSID_2);
+
+      SerialPort.print("Wifi Password 2 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_2);
+
+      SerialPort.print("Wifi SSID 3 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_SSID_3);
+
+      SerialPort.print("Wifi Password 3 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_3);
+
+      SerialPort.print("Wifi SSID 4 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_SSID_4);
+
+      SerialPort.print("Wifi Password 4 : ");
+      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_4);  
+    }   
+
+    //lecture parametre de configuration
+    
+    strcpy(tmpFileName,"variocal.cfg");
+   
+    if (SDHAL.exists(tmpFileName)) {
+      GnuSettings.readSDSettings(tmpFileName, &ModifValue);
+    }
   }
   else
   {    
@@ -558,6 +815,25 @@ void setup() {
     }
 #endif //HAVE_SPEAKER 
   }
+#else //HAVE_SDCARD
+#ifdef HAVE_WIFI
+    SD_present = false; 
+#endif //HAVE_WIFI
+
+#ifdef SDCARD_DEBUG
+      SerialPort.println("initialization failed!");
+#endif //SDCARD_DEBUG
+
+#if defined(ESP32)
+      ESP_LOGE("SDCARD", "initialization failed!");
+#endif //EPS32
+    
+  
+#ifdef HAVE_SPEAKER
+    if (GnuSettings.ALARM_SDCARD) {
+      indicateFaultSDCARD();
+    }
+#endif //HAVE_SPEAKER 
 #endif //HAVE_SDCARD
 
 /*  uint8_t tmp[4];
@@ -570,8 +846,9 @@ void setup() {
   flystat.ForceWrite();*/
 
 #ifdef HAVE_SPEAKER
-  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
-  toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+  if (GnuSettings.ALARM_VARIOBEGIN) beeper.generateTone(2000,300); 
+/*  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+  toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);*/
 #endif //HAVE_SPEAKER
 
 #ifdef HAVE_SDCARD
@@ -633,6 +910,19 @@ void setup() {
 
   
 #endif //HAVE_SCREEN
+
+#ifdef HAVE_SPEAKER
+  GnuSettings.VARIOMETER_BEEP_VOLUME = GnuSettings.soundSettingRead();
+  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+  toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+
+#ifdef SOUND_DEBUG
+  SerialPort.print("Volume SOUND : ");
+  SerialPort.println(GnuSettings.VARIOMETER_BEEP_VOLUME);
+#endif //SOUND_DEBUG
+
+#endif //HAVE_SPEAKER
+
   
 #ifdef TWOWIRESCHEDULER
   /**************************/
@@ -650,7 +940,11 @@ void setup() {
   SerialPort.println("Initialize MS5611 Sensor");
 #endif //MS5611_DEBUG
 
+#if defined(VARIO_SDA_PIN) && defined(VARIO_SCL_PIN)
+  while(!ms5611.begin(VARIO_SDA_PIN, VARIO_SCL_PIN))
+#else
   while(!ms5611.begin())
+#endif
   {
     SerialPort.println("Could not find a valid MS5611 sensor, check wiring!");
 #if defined(ESP32)
@@ -677,7 +971,12 @@ void setup() {
 #endif //ACCEL_DEBUG
 
   // Call imu.begin() to verify communication and initialize
+#if defined(VARIO_SDA_PIN) && defined(VARIO_SCL_PIN)
+  if (imu.begin(VARIO_SDA_PIN, VARIO_SCL_PIN) != INV_SUCCESS)
+#else
   if (imu.begin() != INV_SUCCESS)
+#endif
+
   {
     while (1)
     {
@@ -687,6 +986,37 @@ void setup() {
       while(1);
     }
   }
+
+  // Use setSensors to turn on or off MPU-9250 sensors.
+  // Any of the following defines can be combined:
+  // INV_XYZ_GYRO, INV_XYZ_ACCEL, INV_XYZ_COMPASS,
+  // INV_X_GYRO, INV_Y_GYRO, or INV_Z_GYRO
+  // Enable all sensors:
+  imu.setSensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
+
+/*  // Use setGyroFSR() and setAccelFSR() to configure the
+  // gyroscope and accelerometer full scale ranges.
+  // Gyro options are +/- 250, 500, 1000, or 2000 dps
+  imu.setGyroFSR(2000); // Set gyro to 2000 dps
+  // Accel options are +/- 2, 4, 8, or 16 g
+  imu.setAccelFSR(8); // Set accel to +/-2g
+  // Note: the MPU-9250's magnetometer FSR is set at 
+  // +/- 4912 uT (micro-tesla's)
+
+  // setLPF() can be used to set the digital low-pass filter
+  // of the accelerometer and gyroscope.
+  // Can be any of the following: 188, 98, 42, 20, 10, 5
+  // (values are in Hz).
+  imu.setLPF(5); // Set LPF corner frequency to 5Hz*/
+
+  // The sample rate of the accel/gyro can be set using
+  // setSampleRate. Acceptable values range from 4Hz to 1kHz
+  imu.setSampleRate(100); // Set sample rate to 10Hz
+
+  // Likewise, the compass (magnetometer) sample rate can be
+  // set using the setCompassSampleRate() function.
+  // This value can range between: 1-100Hz
+  imu.setCompassSampleRate(100); // Set mag rate to 10Hz
   
 /*  imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
                DMP_FEATURE_GYRO_CAL, // Use gyro calibration
@@ -696,21 +1026,15 @@ void setup() {
   // DMP_FEATURE_LP_QUAT and 6X_LP_QUAT are mutually exclusive*/
 
     imu.dmpBegin(DMP_FEATURE_SEND_RAW_ACCEL | // Send accelerometer data
+//                 DMP_FEATURE_SEND_RAW_GYRO  | // Send raw gyroscope values to FIFO
                  DMP_FEATURE_GYRO_CAL       | // Calibrate the gyro data
                  DMP_FEATURE_SEND_CAL_GYRO  | // Send calibrated gyro data
                  DMP_FEATURE_6X_LP_QUAT     , // Calculate quat's with accel/gyro
-                 10);                         // Set update rate to 10Hz.
+                 100);                         // Set update rate to 10Hz.
   
 #endif //HAVE_ACCELEROMETER
 
 #endif //TWOWIRESCHEDULER
-
-
-#ifdef HAVE_SCREEN
-// Affichage Statistique
-  flystat.Display();
-  screen.ScreenViewStat();
-#endif //HAVE_SCREEN
 
 #ifdef HAVE_ACCELEROMETER
   /******************/
@@ -739,6 +1063,21 @@ void setup() {
 #endif //TWOWIRESCHEDULER
 
   if (isnan(firstAlti)) {
+    for (int i=0;i<4;i++) {
+      delay(1000);
+
+#ifdef TWOWIRESCHEDULER
+  /* init kalman filter with 0.0 accel*/
+      firstAlti = twScheduler.getAlti();
+#else //TWOWIRESCHEDULER
+      firstAlti = ms5611.readPressure();
+#endif //TWOWIRESCHEDULER
+
+      if (!isnan(firstAlti)) break;   
+    }
+  }
+  
+  if (isnan(firstAlti)) {
     SerialPort.println("Fail firstAlti : ");
     SerialPort.println("reinit");
     ESP_LOGE(TAG, "Erreur Première mesure d'altitude");
@@ -750,6 +1089,34 @@ void setup() {
     SerialPort.println(firstAlti);
 #endif //MS5611_DEBUG
 
+  //Calibration
+  if (ButtonScheduleur.Get_StatePage() == STATE_PAGE_CALIBRATION) screen.ScreenViewMessage("Calibration",5);
+
+#ifdef HAVE_SCREEN
+// Affichage Statistique
+  flystat.Display();
+  screen.ScreenViewStat();
+
+
+  unsigned long TmplastDisplayTimestamp = millis();
+  int compteur = 0;
+  while (compteur < 6) {
+          
+    if( millis() - TmplastDisplayTimestamp > 1000 ) {
+
+      TmplastDisplayTimestamp = millis();
+      compteur++;
+
+//    Messure d'altitude
+#if not defined (TWOWIRESCHEDULER)
+      firstAlti = ms5611.readPressure();
+#endif //TWOWIRESCHEDULER
+    
+    }
+  }
+  
+#endif //HAVE_SCREEN
+
   kalmanvert.init(firstAlti,
                   0.0,
                   POSITION_MEASURE_STANDARD_DEVIATION,
@@ -760,6 +1127,36 @@ void setup() {
   SerialPort.println("kalman init");
 #endif //KALMAN_DEBUG
 #endif //HAVE_ACCELEROMETER
+
+
+    TRACE();
+    SDUMP("Test INT MPU");
+
+
+
+
+/*  
+ *   
+       
+ ******************************************************      
+ *      TEST INT MPU
+ *****************************************************      
+       
+  pinMode(VARIO_MPUINT_PIN, INPUT_PULLUP);   //INPUT);
+
+  attachInterrupt(VARIO_MPUINT_PIN, isr, FALLING);
+   
+  while (1) {
+    SerialPort.print("valeur : ");
+    SerialPort.println(compteurInt);
+    delay(1);        // delay in between reads for stability
+  }
+
+*/
+
+
+
+
 
   compteurGpsFix = 0;
 
@@ -781,6 +1178,11 @@ void setup() {
   
   screen.volLevel->setVolume(toneHAL.getVolume());
 
+#ifdef SOUND_DEBUG
+  SerialPort.print("ToneHal Volume Sound : ");
+  SerialPort.println(toneHAL.getVolume()); //GnuSettings.VARIOMETER_BEEP_VOLUME);
+#endif //SOUND_DEBUG
+
 #ifdef SCREEN_DEBUG
   SerialPort.println("update screen");
 #endif //SCREEN_DEBUG
@@ -790,19 +1192,25 @@ void setup() {
 #endif //HAVE_SCREEN
 
 #ifdef HAVE_BLUETOOTH
+  if (GnuSettings.VARIOMETER_ENABLE_BT) {
 #ifdef BT_DEBUG
-  SerialPort.setDebugOutput(true);
+    SerialPort.setDebugOutput(true);
 //    pinMode(0, INPUT_PULLUP);
-  SerialPort.print("ESP32 SDK: ");
-  SerialPort.println(ESP.getSdkVersion());
+    SerialPort.print("ESP32 SDK: ");
+    SerialPort.println(ESP.getSdkVersion());
 #endif //BT_DEBUG
-  ble.begin("GnuVario-E");
+    ble.begin("GnuVario-E");
+    screen.btinfo->setBT();
+  }
 #endif //HAVE_BLUETOOTH
 
   ButtonScheduleur.Set_StatePage(STATE_PAGE_VARIO);
   /* init time */
   lastDisplayTimestamp = millis(); 
-  displayLowUpdateState = true;  
+  time_deep_sleep       = lastDisplayTimestamp;
+  sleepTimeoutSecs      = lastDisplayTimestamp;
+  displayLowUpdateState = true; 
+  MaxVoltage   = 0; 
 }
 
 double temprature=0;
@@ -811,8 +1219,6 @@ double temprature=0;
 void createSDCardTrackFile(void);
 #endif //defined(HAVE_SDCARD) && defined(HAVE_GPS)
 void enableflightStartComponents(void);
-
-void compute(int16_t *imuAccel, int32_t *imuQuat, double* vertVector, double& vertAccel);
 
 //*****************************
 //*****************************
@@ -834,6 +1240,10 @@ void loop() {
    }
 
 
+//**********************************************************
+//  TRAITEMENT APPUIE SUR LES BOUTONS
+//**********************************************************
+
 /*******************************/
 /*  Compute button             */
 /*******************************/
@@ -843,6 +1253,10 @@ void loop() {
   /*****************************/
   /* compute vertical velocity */
   /*****************************/
+
+//**********************************************************
+//  ACQUISITION DES DONNEES
+//**********************************************************
 
 #ifdef HAVE_ACCELEROMETER
 #ifdef TWOWIRESCHEDULER
@@ -862,7 +1276,7 @@ void loop() {
     long realPressure = ms5611.readPressure();
     tmpAlti = ms5611.getAltitude(realPressure);
     tmpTemp = ms5611.readTemperature();
-    tmpTemp += MPU_COMP_TEMP;
+    tmpTemp += GnuSettings.COMPENSATION_TEMP; //MPU_COMP_TEMP;
 
     // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
     if ( imu.dmpUpdateFifo() == INV_SUCCESS)
@@ -937,13 +1351,36 @@ void loop() {
       screen.tunit->toDisplay();
     }
 
-//*****************
-//* update beeper *
-//*****************
+//**********************************************************
+//  UPDATE BEEPER
+//**********************************************************
 
 #ifdef HAVE_SPEAKER
 		beeper.setVelocity( kalmanvert.getVelocity() );
 #endif //HAVE_SPEAKER
+
+//**********************************************************
+//  TEST INNACTIVITE
+//**********************************************************
+
+   if (abs(kalmanvert.getVelocity()) > GnuSettings.SLEEP_THRESHOLD_CPS) { 
+     // reset sleep timeout watchdog if there is significant vertical motion
+     sleepTimeoutSecs = millis();
+
+   }
+   else
+   if ((GnuSettings.SLEEP_THRESHOLD_CPS != 0) && ((millis()-sleepTimeoutSecs) >= (GnuSettings.SLEEP_TIMEOUT_MINUTES*60*1000))) {
+#ifdef MAIN_DEBUG       
+     SerialPort.println("Timed out with no significant climb/sink, put MPU9250 and ESP8266 to sleep to minimize current draw");
+     SerialPort.flush();
+#endif          
+     indicatePowerDown(); 
+     deep_sleep();
+   }   
+
+//**********************************************************
+//  TRAITEMENT DES DONNEES
+//**********************************************************
 
    /* set history */
 #if defined(HAVE_GPS) 
@@ -962,16 +1399,30 @@ void loop() {
 
     /* set screen */
 
+//**********************************************************
+//  MAJ STATISTIQUE
+//**********************************************************
+
     flystat.SetAlti(currentalti);
     flystat.SetVario(currentvario);
 
 #ifdef HAVE_SCREEN
+
+//**********************************************************
+//  DISPLAY ALTI
+//**********************************************************
+
 #ifdef PROG_DEBUG
  //   SerialPort.print("altitude : ");
  //   SerialPort.println((uint16_t)currentalti);
 #endif //PROG_DEBUG
 
     screen.altiDigit->setValue((uint16_t)currentalti+tmpint);
+
+//**********************************************************
+//  DISPLAY VARIO
+//**********************************************************
+    
     if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) {    
       if( history.haveNewClimbRate() ) {
         screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
@@ -979,6 +1430,10 @@ void loop() {
     } else {
       screen.varioDigit->setValue(currentvario);
     }
+
+//**********************************************************
+//  DISPLAY FINESSE / TAUX DE CHUTE MOYEN
+//**********************************************************
 
     if( history.haveNewClimbRate() ) {
       double TmpTrend;
@@ -1013,7 +1468,40 @@ void loop() {
     }
 #endif //HAVE_SCREEN
      
+  } else {
+/*    SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");   
+
+#ifdef TWOWIRESCHEDULER
+    if( twScheduler.havePressure() ) {
+    
+#ifdef MS5611_DEBUG
+//    SerialPort.println("havePressure");
+#endif //MS5611_DEBUG
+
+      double tmpAlti, tmpTemp;
+      twScheduler.getTempAlti(tmpTemp, tmpAlti);
+#else //TWOWIRESCHEDULER
+      double tmpAlti, tmpTemp, tmpAccel;
+
+      long realPressure = ms5611.readPressure();
+      tmpAlti = ms5611.getAltitude(realPressure);
+      tmpTemp = ms5611.readTemperature();
+      tmpTemp += MPU_COMP_TEMP;
+
+#endif //TWOWIRESCHEDULER
+
+#ifdef DATA_DEBUG
+      SerialPort.print("Alti Sans accelerometre : ");
+      SerialPort.println(tmpAlti);
+      SerialPort.print("Temperature sans accelerometre: ");
+      SerialPort.println(tmpTemp);
+#endif //DATA_DEBUG
+    }*/
   }
+
+//**********************************************************
+//  EMISSION DES BIPS
+//**********************************************************
 
   /*****************/
   /* update beeper */
@@ -1025,7 +1513,12 @@ void loop() {
 #endif //PROG_DEBUG
 #endif //HAVE_SPEAKER
 
- 
+
+ //**********************************************************
+//  EMISSIONTRAME BT
+//  ACQUISITION GPS
+//**********************************************************
+
   /********************/
   /* update bluetooth */
   /********************/
@@ -1117,7 +1610,9 @@ void loop() {
       }
       
       serialNmea.release();
+#ifdef HAVE_SDCARD          
       fileIgc.flush();
+#endif //HAVE_SDCARD
 #ifdef SDCARD_DEBUG
       SerialPort.println("");
 #endif //SDCARD_DEBUG
@@ -1136,6 +1631,11 @@ void loop() {
       }
 #endif //HAVE_BLUETOOTH
     }
+
+
+//**********************************************************
+//  DETECTION FIX GPS / DEBUT DU VOL
+//**********************************************************
     
     /***************************/
     /* update variometer state */
@@ -1169,7 +1669,11 @@ void loop() {
         if( nmeaParser.haveNewAltiValue() && nmeaParser.precision < VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD ) {
 
           compteurGpsFix++;
-          double gpsAlti = nmeaParser.getAlti();
+          double tmpGpsAlti = nmeaParser.getAlti();
+
+          //Moyenne alti gps
+          if (compteurGpsFix > 5) gpsAlti = (gpsAlti + tmpGpsAlti) / 2;
+          else                    gpsAlti = tmpGpsAlti;       
 
 #ifdef GPS_DEBUG
           SerialPort.print("CompteurGpsFix : ");
@@ -1186,7 +1690,7 @@ void loop() {
           SerialPort.println(gpsAlti);
 #endif //DATA_DEBUG
 
-          if (compteurGpsFix > 10) {
+          if (compteurGpsFix > NB_ACQUISITION_FIX_GPS) {
 #ifdef GPS_DEBUG
             SerialPort.println("GPS FIX");
 #endif //GPS_DEBUG
@@ -1206,7 +1710,7 @@ void loop() {
             screen.recordIndicator->setActifGPSFIX();
         //  recordIndicator->stateRECORD();
 #endif //HAVE_SCREEN
-            kalmanvert.calibratePosition(gpsAlti);
+            kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
 
 #ifdef DATA_DEBUG
             SerialPort.print("Gps Alti : ");
@@ -1269,6 +1773,11 @@ void loop() {
 #endif //HAVE_BLUETOOTH
 #endif //HAVE_GPS
 
+
+//**********************************************************
+//  MISE A JOUR ALTI AVEC GPS
+//**********************************************************
+
   /* if no GPS, we can't calibrate, and we have juste to check flight start */
 #ifndef HAVE_GPS
   if( variometerState == VARIOMETER_STATE_CALIBRATED ) { //already calibrated at start 
@@ -1286,28 +1795,15 @@ void loop() {
   }
 #endif // !HAVE_GPS
 
-#if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR) 
-//  int tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
-//  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
-
-      /* update battery level */
-#if defined(VOLTAGE_DIVISOR_DEBUG)
-    int val = adc1_get_raw(ADC1_CHANNEL_7);
-
-    SerialPort.print("Tension : ");
-    SerialPort.println(val);
-#endif //VOLTAGE_DIVISOR_DEBUG
-    
-  if (displayLowUpdateState) screen.batLevel->setVoltage( analogRead(VOLTAGE_DIVISOR_PIN) );
-//  batLevel.setVoltage( maxVoltage );
-//  maxVoltage = 0;
-
-#endif //HAVE_VOLTAGE_DIVISOR
-
   /**********************************/
   /* update low freq screen objects */
   /**********************************/
 #ifdef HAVE_SCREEN
+
+
+//**********************************************************
+//  DISPLAY TIME / DUREE DU VOL
+//**********************************************************
 
 /************************************/
 /* Update Time, duration            */
@@ -1344,6 +1840,11 @@ void loop() {
   /*****************/
   /* update screen */
   /*****************/
+
+//**********************************************************
+//  DISPLAY SPEED
+//**********************************************************
+  
 #ifdef HAVE_GPS
   /* when getting speed from gps, display speed and ratio */
 
@@ -1412,17 +1913,71 @@ void loop() {
     fileIgc.println(kalmanvert.getVelocity());
 #endif //HAVE_GPS*/
 
-   if (displayLowUpdateState) {
-      screen.recordIndicator->stateRECORD();
+
+
+ // }
+
+//**********************************************************
+//   DISPLAY LOW FRECQUENCE OBJECT
+//********************************************************** 
+
+  if (displayLowUpdateState) {
+
+//**********************************************************
+//  ACQUISITION / DISPLAY TENSION BATTERIE
+//**********************************************************
+
+
+#if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR) 
+//  int tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
+//  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
+
+      /* update battery level */
+#if defined(VOLTAGE_DIVISOR_DEBUG)
+    int val = adc1_get_raw(ADC1_CHANNEL_7);
+
+    SerialPort.print("Tension : ");
+    SerialPort.println(val);
+#endif //VOLTAGE_DIVISOR_DEBUG
+
+  int TmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);  
+  if (TmpVoltage > MaxVoltage) MaxVoltage = TmpVoltage;
+  
+    if (MaxVoltage < 1750) {
+      if (millis() - time_deep_sleep > 10000) {
+        screen.ScreenViewMessage("En veille",3);
+        indicatePowerDown(); 
+        deep_sleep();  //protection batterie
+      }
+    } else {
+      time_deep_sleep = millis();        
+    }
+
+    screen.batLevel->setVoltage(MaxVoltage);
+    MaxVoltage   = 0;
+//  batLevel.setVoltage( maxVoltage );
+//  maxVoltage = 0;
+
+#endif //HAVE_VOLTAGE_DIVISOR
+
+//**********************************************************
+//  DISPLAY STATE RECORD
+//**********************************************************
+
+    screen.recordIndicator->stateRECORD();
 #ifdef PROG_DEBUG
-      SerialPort.println("Record Indicator : staterecord ");
-      SerialPort.print("VarioState : ");
-      SerialPort.println(variometerState);
+    SerialPort.println("Record Indicator : staterecord ");
+    SerialPort.print("VarioState : ");
+    SerialPort.println(variometerState);
 #endif //PROG_DEBUG
       
-   }
+  }
 
 
+//**********************************************************
+//  DISPLAY TEMPERATURE ESP32
+//**********************************************************
+/*
    if (displayLowUpdateState) {
     
 #ifdef PROG_DEBUG
@@ -1431,21 +1986,30 @@ void loop() {
       SerialPort.print((temprature_sens_read() - 32) / 1.8);
       SerialPort.println(" C");
 #endif //PROG_DEBUG
-  }
+  }*/
    
-   displayLowUpdateState = false;
+  displayLowUpdateState = false;
 
-   screen.schedulerScreen->displayStep();
-   screen.updateScreen(); 
+//**********************************************************
+//  UPDATE DISPLAY
+//**********************************************************
+
+  screen.schedulerScreen->displayStep();
+  screen.updateScreen(); 
 #endif //HAVE_SCREEN
 
-   flystat.Handle(); 
- // }
-/*******************************/
-/*      TEST TEST TEST         */
+//**********************************************************
+//  UPDATE STATISTIQUE
+//**********************************************************
+
+  flystat.Handle(); 
+
+//*****************************************
+//      FORCE L'ACTIVATION DE L'AMPLI          
+//*****************************************  
 
 #ifdef HAVE_AUDIO_AMPLI
-   toneHAL.enableAmpli();
+  toneHAL.enableAmpli();
 #endif
   
 /*******************************/

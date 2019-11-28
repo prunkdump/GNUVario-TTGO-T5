@@ -24,6 +24,8 @@
 /*  Ver     Date                                                                                   */
 /*  1.0                                                                                            */
 /*  1.1     30/08/19     Ajout message de debug                                                    */
+/*  1.2     01/11/19     Suppression de la gestion du volume dans beeper - le volume ne sera géré  */
+/*                       que dans toneHAL                                                          */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -47,7 +49,7 @@ Beeper::Beeper(uint8_t baseVolume) {
 
 
   /* save volume */
-  volume = baseVolume;
+  //volume = baseVolume;
   
   /* set threshold */
   setThresholds(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY);
@@ -71,7 +73,7 @@ Beeper::Beeper(uint32_t pin, uint8_t baseVolume) {
 #endif //BUTTON_DEBUG
 
   /* save volume */
-  volume = baseVolume;
+ // volume = baseVolume;
   
   /* set threshold */
   setThresholds(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY);
@@ -92,7 +94,7 @@ void Beeper::init(double sinkingThreshold, double climbingThreshold, double near
 #endif //BUTTON_DEBUG
 
   /* save volume */
-  volume = baseVolume;
+  //volume = baseVolume;
   
   /* set threshold */
   setThresholds(sinkingThreshold, climbingThreshold, nearClimbingSensitivity);
@@ -120,15 +122,18 @@ void Beeper::setVolume(uint8_t newVolume) {
 		SerialPort.println(newVolume);
 #endif //BUTTON_DEBUG
 
-  volume = newVolume;
+//  volume = newVolume;
   toneHAL.setVolume(newVolume);
 }
 
 /***************************************************************************************************/
 uint8_t  Beeper::getVolume() {
 /***************************************************************************************************/
-  volume = toneHAL.getVolume();
-  return volume;
+/*  volume = toneHAL.getVolume();
+  return volume;*/
+	
+  uint8_t _volume = toneHAL.getVolume();
+  return _volume;	
 }
 
 /***************************************************************************************************/
@@ -391,6 +396,11 @@ void Beeper::setBeepPaternPosition(double velocity) {
 void Beeper::setTone() {
 /***************************************************************************************************/
   
+#ifdef SOUND_DEBUG
+//			SerialPort.print("Beeper - setTone Volume : ");
+//			SerialPort.println(volume);
+#endif //SOUND_DEBUGG
+	
   /* alarme case */
   if(  bst_isset(CLIMBING_ALARM) || bst_isset(SINKING_ALARM) ) { 
 
@@ -411,10 +421,10 @@ void Beeper::setTone() {
       /* set tone */
       if( halfPaternPosition < CLIMBING_ALARM_HIGH_LENGTH ) {
 				if( !bst_isset(BEEP_HIGH) ) {
-					toneHAL.tone(CLIMBING_ALARM_FREQ, volume);					
+					toneHAL.tone(CLIMBING_ALARM_FREQ); //, volume);					
 					bst_set(BEEP_HIGH);
 				} else if( bst_isset(BEEP_NEW_FREQ) ) {
-					toneHAL.tone(CLIMBING_ALARM_FREQ, volume);
+					toneHAL.tone(CLIMBING_ALARM_FREQ); //, volume);
 				}
       } else {
 				toneHAL.tone(0.0);
@@ -431,7 +441,7 @@ void Beeper::setTone() {
 #endif //SOUND_DEBUGG
 			
       if( !bst_isset(BEEP_HIGH) || bst_isset(BEEP_NEW_FREQ) ) {
-				toneHAL.tone(SINKING_ALARM_FREQ, volume);
+				toneHAL.tone(SINKING_ALARM_FREQ); //, volume);
 				bst_set(BEEP_HIGH);
       }
     }
@@ -446,7 +456,7 @@ void Beeper::setTone() {
 #endif //SOUND_DEBUGG
  
 			if( !bst_isset(BEEP_HIGH) || bst_isset(BEEP_NEW_FREQ) ) {
-				toneHAL.tone(beepFreq, volume);
+				toneHAL.tone(beepFreq);	//, volume);
 				bst_set(BEEP_HIGH);
       }
     }
@@ -472,10 +482,10 @@ void Beeper::setTone() {
      if( bst_isset(GLIDING_BEEP_ENABLED) ) {
 				if( beepPaternPosition < GLIDING_BEEP_HIGH_LENGTH ) {
 					if( !bst_isset(BEEP_HIGH) ) {
-						toneHAL.tone(beepFreq, volume);
+						toneHAL.tone(beepFreq);	//, volume);
 						bst_set(BEEP_HIGH);
 					} else if( bst_isset(BEEP_NEW_FREQ) ) {
-						toneHAL.tone(beepFreq, volume);
+						toneHAL.tone(beepFreq);	//, volume);
 					}
 				} else {
 					toneHAL.tone(0.0);
@@ -500,13 +510,13 @@ void Beeper::setTone() {
 					SerialPort.println("Beeper - setTone : BEEP_TYPE_CLIMBING / BEEP_HIGH");
 #endif //SOUND_DEBUGG
  					
-					toneHAL.tone(beepFreq, volume);
+					toneHAL.tone(beepFreq);	//, volume);
 					bst_set(BEEP_HIGH);
 				} else if( bst_isset(BEEP_NEW_FREQ) ) {
 #ifdef SOUND_DEBUG
 					SerialPort.println("Beeper - setTone : BEEP_TYPE_CLIMBING / BEEP_NEW_FREQ");
 #endif //SOUND_DEBUGG
- 					toneHAL.tone(beepFreq, volume);
+ 					toneHAL.tone(beepFreq);	//, volume);
 					bst_set(BEEP_HIGH);
 			 } else {
 #ifdef SOUND_DEBUG
@@ -535,8 +545,7 @@ void Beeper::setTone() {
 void Beeper::update() {
 /***************************************************************************************************/
   setBeepPaternPosition(beepVelocity);
-  setTone();
-  
+  setTone(); 
 }
 
 
@@ -544,7 +553,7 @@ void Beeper::update() {
 void Beeper::setFrequency(uint32_t fHz) {
 /***************************************************************************************************/
 	if (fHz ) {
-    toneHAL.tone(fHz, volume);   //volume);
+    toneHAL.tone(fHz);	//, volume);   //volume);
 	}
 	else {
 		toneHAL.noTone();
@@ -564,6 +573,32 @@ void Beeper::generateTone(uint32_t fHz, int ms) {
 void Beeper::tone(uint32_t fHz) {
 /***************************************************************************************************/
 	setFrequency(fHz);
+}
+
+/***************************************************************************************************/
+void Beeper::setFrequency(uint32_t fHz, uint8_t volume) {
+/***************************************************************************************************/
+	if (fHz ) {
+    toneHAL.tone(fHz, volume);   //volume);
+	}
+	else {
+		toneHAL.noTone();
+	}
+}
+
+
+/***************************************************************************************************/
+void Beeper::generateTone(uint32_t fHz, int ms, uint8_t volume) {
+/***************************************************************************************************/
+    setFrequency(fHz, volume);
+    delay(ms);
+    setFrequency(0);
+}
+
+/***************************************************************************************************/
+void Beeper::tone(uint32_t fHz, uint8_t volume) {
+/***************************************************************************************************/
+	setFrequency(fHz, volume);
 }
 
 /***************************************************************************************************/

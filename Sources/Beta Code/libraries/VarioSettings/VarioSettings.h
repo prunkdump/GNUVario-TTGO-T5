@@ -32,6 +32,24 @@
 /*    1.0.4  25/07/19   Ajout default settings                           				 */ 
 /*                      Ajout NO_RECORD                                          */
 /*    1.0.5  05/08/19   Ajout paramettres Wifi                                   */
+/*    1.0.6	 01/10/19		Ajout paramettres calibration                            */
+/*    1.0.7  08/10/19   Ajout EnableBT																					 */
+/*		1.0.8	 21/10/19   Ajout Compensation alti gps et température et enable bip */
+/*                      au démarrage                                             */
+/*    1.0.9  11/11/19   Ajout gestion params.jso                                 */
+/*                      suppression statistique                                  */
+/*											Modification applySetting																 */
+/*                      Modification readSDSettings															 */
+/*                      ajout  SLEEP_TIMEOUT_MINUTES														 */
+/*														 SLEEP_THRESHOLD_CPS															 */
+/*														 ALTERNATE_DATA_DURATION													 */
+/*											Ajout saveConfigurationVario / loadConfigurationVario		 */
+/* 		1.1.0	13/11/19		Modification soundSettingRead / soundSettingWrite        */
+/*                      Ajout lecture et sauvegarde fichier wifi.cfg 						 */
+/*										  Ajout gestion automatique des version fichier params.jso */
+/*										  Modif ALTERNATE_DATA_DURATION - MULTIDISPLAY_DURATION	   */
+/*                      ajout gestion de plusieurs voiles                        */
+/*    1.1.1 24/11/19    Modification DEFAULT_SLEEP_THRESHOLD_CPS                 */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -39,11 +57,16 @@
 #define _VARIO_SETTINGS_H_
 
 #include <Arduino.h>
-#include <sdcardHAL.h>
 
 #include "DebugConfig.h"
 #include <HardwareConfig.h>
 
+#ifdef HAVE_SDCARD
+#include <sdcardHAL.h>
+#endif
+
+
+#define PARAMS_VERSION "1.0"
 
 /*----------------------------*/
 /*          DEFAULT           */
@@ -53,9 +76,9 @@
 
 #define DEFAULT_VARIOMETER_PILOT_NAME  										"Magali"
 #define DEFAULT_VARIOMETER_GLIDER_NAME 										"MAC-PARA Muse 3"
+#define DEFAULT_VARIOMETER_GLIDER_SELECT									0
 #define DEFAULT_VARIOMETER_TIME_ZONE  										(+2) 
 #define DEFAULT_VARIOMETER_BASE_PAGE_DURATION 						3000
-#define DEFAULT_VARIOMETER_ALTERNATE_PAGE_DURATION 		  	3000
 #define DEFAULT_VARIOMETER_MULTIDISPLAY_DURATION 			  	2000
 #define DEFAULT_VARIOMETER_BEEP_VOLUME 										3
 #define DEFAULT_VARIOMETER_SINKING_THRESHOLD 							-2.0
@@ -82,7 +105,7 @@
 #define DEFAULT_MS5611_ERROR_TONE_FREQHZ									2500
 #define DEFAULT_SDCARD_ERROR_TONE_FREQHZ									2000
 #define DEFAULT_BEEP_FREQ                  								800
-
+#define DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE						1
 
 #define DEFAULT_VARIOMETER_SSID_1													"your_SSID1"
 #define DEFAULT_VARIOMETER_PASSWORD_1											"your_PASSWORD_for SSID1"
@@ -96,6 +119,43 @@
 #define DEFAULT_VARIOMETER_SSID_4													"your_SSID4"
 #define DEFAULT_VARIOMETER_PASSWORD_4											"your_PASSWORD_for SSID4"
 
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_00								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_01								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_02								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_03								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_04								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_05								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_06								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_07								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_08								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_09								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_10								0x00
+#define DEFAULT_VERTACCEL_GYRO_CAL_BIAS_11								0x00
+#define DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_00								0x00
+#define DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_01								0x00
+#define DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_02								0x00
+#define DEFAULT_VERTACCEL_ACCEL_CAL_SCALE 								0
+#define DEFAULT_VERTACCEL_MAG_CAL_BIAS_00									0
+#define DEFAULT_VERTACCEL_MAG_CAL_BIAS_01									0
+#define DEFAULT_VERTACCEL_MAG_CAL_BIAS_02									0
+#define DEFAULT_VERTACCEL_MAG_CAL_PROJ_SCALE 							-16689
+#define DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 			7
+#define DEFAULT_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 				5
+
+#define DEFAULT_RATIO_MAX_VALUE														30.0
+#define DEFAULT_RATIO_MIN_SPEED														10.0
+
+#define DEFAULT_VARIOMETER_ENABLE_BT										  0
+#define DEFAULT_ALARM_VARIOBEGIN                          1
+
+#define DEFAULT_COMPENSATION_TEMP													-6
+#define DEFAULT_COMPENSATION_GPSALTI											-50
+
+#define DEFAULT_SLEEP_TIMEOUT_MINUTES 										20
+#define DEFAULT_SLEEP_THRESHOLD_CPS												0.5
+#define DEFAULT_ALTERNATE_DATA_DURATION										2000
+
+  
 /*----------------------------*/
 /*          SOFTWARE          */
 /*      Vario parameters      */
@@ -121,10 +181,15 @@
 class VarioSettings {
 
  public:
-  boolean initSettings();
-  boolean readSDSettings();
+  boolean initSettings(bool initSD);
+#ifdef HAVE_SDCARD
+  boolean readSDSettings(char *FileName, boolean *ModifiedValue);
   boolean readFlashSDSettings();
   void writeFlashSDSettings();
+	void loadConfigurationVario(char *filename);
+	void saveConfigurationVario(char *filename);
+	void writeWifiSDSettings(char *filename);
+#endif
   uint8_t soundSettingRead(void);
   void soundSettingWrite(uint8_t volume);
 
@@ -136,6 +201,8 @@ class VarioSettings {
 #endif //SDCARD_DEBUG
   
   String VARIOMETER_PILOT_NAME 	= DEFAULT_VARIOMETER_PILOT_NAME;
+	String VARIOMETER_GLIDER_TAB[4] = {DEFAULT_VARIOMETER_GLIDER_NAME, "", "", ""};
+	uint8_t VARIOMETER_GLIDER_SELECT = DEFAULT_VARIOMETER_GLIDER_SELECT;
   String VARIOMETER_GLIDER_NAME = DEFAULT_VARIOMETER_GLIDER_NAME;
   
   /* time zone relative to UTC */
@@ -147,7 +214,6 @@ class VarioSettings {
 
 /* the duration of the two screen pages in milliseconds */
   int16_t VARIOMETER_BASE_PAGE_DURATION 				= DEFAULT_VARIOMETER_BASE_PAGE_DURATION;
-  int16_t VARIOMETER_ALTERNATE_PAGE_DURATION 		= DEFAULT_VARIOMETER_ALTERNATE_PAGE_DURATION;
 	int16_t VARIOMETER_MULTIDISPLAY_DURATION 			= DEFAULT_VARIOMETER_MULTIDISPLAY_DURATION;
 
   /*********/
@@ -188,21 +254,24 @@ class VarioSettings {
   /* GPS track recording on SD card starting condition :  */ 
   /* -> As soon as possible (GPS fix)                     */
   /* -> When flight start is detected                     */
-   boolean VARIOMETER_RECORD_WHEN_FLIGHT_START 	= DEFAULT_VARIOMETER_RECORD_WHEN_FLIGHT_START;
+  boolean VARIOMETER_RECORD_WHEN_FLIGHT_START 	= DEFAULT_VARIOMETER_RECORD_WHEN_FLIGHT_START;
 
   /* What type of vario NMEA sentence is sent by bluetooth. */
   /* Possible values are :                                  */
   /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
   /*  - VARIOMETER_SENT_LK8000_SENTENCE                     */
-  //boolean VARIOMETER_SENT_LXNAV_SENTENCE = true;
+  //boolean VARIOMETER_SENT_LXNAV_SENTENCE 				= DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE;
 
   /* Alarm */
   /* Alarm SDCARD not insert */
   boolean ALARM_SDCARD 														= DEFAULT_ALARM_SDCARD;
-  /* Alarm GPS Fix */
+  /* Nip when GPS Fix */
   boolean ALARM_GPSFIX 														= DEFAULT_ALARM_GPSFIX;
-  /* Alarm Fly begin */
+  /* Bip when Fly begin */
   boolean ALARM_FLYBEGIN 													= DEFAULT_ALARM_FLYBEGIN;
+	
+	/* Bip when vario begin  */
+	boolean ALARM_VARIOBEGIN    										= DEFAULT_ALARM_VARIOBEGIN;                     
 
 //*****************************************************************************
 //*****************************************************************************
@@ -215,8 +284,8 @@ class VarioSettings {
 // Power-down timeout. Here we power down if the
 // vario does not see any climb or sink rate more than
 // 50cm/sec, for 20 minutes.
-   uint16_t SLEEP_TIMEOUT_SECONDS = 1200; // 20 minutes
-   uint8_t  SLEEP_THRESHOLD_CPS		= 50;
+//   uint16_t SLEEP_TIMEOUT_SECONDS = 1200; // 20 minutes
+//   uint8_t  SLEEP_THRESHOLD_CPS		= 50;
 
 // vario thresholds in cm/sec for generating different
 // audio tones. Between the sink threshold and the zero threshold,
@@ -238,8 +307,8 @@ class VarioSettings {
     uint16_t VARIO_SINK_FREQHZ  	=   400;
     uint16_t VARIO_TICK_FREQHZ  	=   200;
 
-		float 	 RATIO_MAX_VALUE 			=		30.0;
-		float		 RATIO_MIN_SPEED 			=		10.0;
+		float 	 RATIO_MAX_VALUE 			=		DEFAULT_RATIO_MAX_VALUE;
+		float		 RATIO_MIN_SPEED 			=		DEFAULT_RATIO_MIN_SPEED;
 		
 //Setting accelerometer
     double ACCELCALX = 0.0;
@@ -282,13 +351,47 @@ class VarioSettings {
 		String VARIOMETER_SSID_4 														= DEFAULT_VARIOMETER_SSID_4;
 		String VARIOMETER_PASSWORD_4 												= DEFAULT_VARIOMETER_PASSWORD_4;
 		
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_00						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_00;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_01						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_01;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_02					  = DEFAULT_VERTACCEL_GYRO_CAL_BIAS_02;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_03						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_03;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_04						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_04;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_05						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_05;
+		uint8_t VARIO_VERTACCEL_GYRO_CAL_BIAS_06						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_06;
+		uint8_t  VARIO_VERTACCEL_GYRO_CAL_BIAS_07						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_07;
+		uint8_t  VARIO_VERTACCEL_GYRO_CAL_BIAS_08						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_08;
+		uint8_t  VARIO_VERTACCEL_GYRO_CAL_BIAS_09						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_09;
+		uint8_t  VARIO_VERTACCEL_GYRO_CAL_BIAS_10						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_10;
+		uint8_t  VARIO_VERTACCEL_GYRO_CAL_BIAS_11						= DEFAULT_VERTACCEL_GYRO_CAL_BIAS_11;
+		uint16_t VARIO_VERTACCEL_ACCEL_CAL_BIAS_00					= DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_00;
+		uint16_t VARIO_VERTACCEL_ACCEL_CAL_BIAS_01					= DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_01;
+		uint16_t VARIO_VERTACCEL_ACCEL_CAL_BIAS_02					= DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_02;
+		uint16_t VARIO_VERTACCEL_ACCEL_CAL_SCALE    				= DEFAULT_VERTACCEL_ACCEL_CAL_SCALE;
+		uint16_t VARIO_VERTACCEL_MAG_CAL_BIAS_00						= DEFAULT_VERTACCEL_MAG_CAL_BIAS_00;
+		uint16_t VARIO_VERTACCEL_MAG_CAL_BIAS_01						= DEFAULT_VERTACCEL_MAG_CAL_BIAS_01;
+		uint16_t VARIO_VERTACCEL_MAG_CAL_BIAS_02						= DEFAULT_VERTACCEL_MAG_CAL_BIAS_02;
+		uint16_t VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE 				= DEFAULT_VERTACCEL_MAG_CAL_PROJ_SCALE;
+		uint16_t VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER	= DEFAULT_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER;
+		uint16_t VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 	 	= DEFAULT_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+		
+		boolean  VARIOMETER_ENABLE_BT 											= DEFAULT_VARIOMETER_ENABLE_BT;
+
+		float    COMPENSATION_TEMP													= DEFAULT_COMPENSATION_TEMP;
+		int16_t  COMPENSATION_GPSALTI												= DEFAULT_COMPENSATION_GPSALTI;
+
+		uint8_t	 SLEEP_TIMEOUT_MINUTES											= DEFAULT_SLEEP_TIMEOUT_MINUTES;
+		float    SLEEP_THRESHOLD_CPS												= DEFAULT_SLEEP_THRESHOLD_CPS;
+		uint16_t ALTERNATE_DATA_DURATION										= DEFAULT_ALTERNATE_DATA_DURATION;
+		
  protected:
+#ifdef HAVE_SDCARD
 		File myFile;
+#endif
 //  File myFile2;
-		char FileName[15] = "SETTINGS.TXT";
+//		char FileName[15] = "SETTINGS.TXT";
 		char FileFlashName[15] = "FLASH.TXT";
   
-		void applySetting(String settingName, String settingValue);
+		boolean applySetting(String settingName, String settingValue);
 		void applyFlashSetting(String settingName, String settingValue);
 		float toFloat(String settingValue);
 		long toLong(String settingValue);
@@ -297,6 +400,8 @@ class VarioSettings {
 
 extern VarioSettings GnuSettings;
 
+
+/*
 class Statistic {
 
  public:
@@ -335,5 +440,6 @@ class Statistic {
 	double altiDeco;
 	double gain;
 };
+*/
 
 #endif

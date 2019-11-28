@@ -25,6 +25,7 @@
 /*  1.0                                                                                            */
 /*  1.1     21/08/19     Ajout getTempAlti(double& temp, double& alti)                             */
 /*  1.2     04/09/19		 Modification nom bibliothèque MS5611                                      */
+/*  1.3     15/11/19     modif delayMicroseconds(400);                                             */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -43,10 +44,10 @@
 /* scheduler task parameters */
 #define TWO_WIRE_SCHEDULER_STACK_SIZE 2000
 #define TWO_WIRE_SCHEDULER_CORE 1
-#define TWO_WIRE_SCHEDULER_PRIORITY 2
+#define TWO_WIRE_SCHEDULER_PRIORITY 10
 
 /* timer used */
-#define TWO_WIRE_SCHEDULER_TIMER_NUM 0
+#define TWO_WIRE_SCHEDULER_TIMER_NUM 3
 
 #ifdef HAVE_BMP280
 #include <bmp280.h>
@@ -88,7 +89,7 @@
 #ifdef HAVE_BMP280
 #define TWO_WIRE_SCHEDULER_INTERRUPT_COMPARE 1088
 #else
-#define TWO_WIRE_SCHEDULER_INTERRUPT_COMPARE 1200 //1168
+#define TWO_WIRE_SCHEDULER_INTERRUPT_COMPARE 1168
 #endif
 
 /* The scheduler                                          */
@@ -100,7 +101,7 @@
 #define TWO_WIRE_SCHEDULER_BMP280_PERIOD 40
 #define TWO_WIRE_SCHEDULER_BMP280_SHIFT 0
 #define TWO_WIRE_SCHEDULER_IMU_PERIOD 4
-#define TWO_WIRE_SCHEDULER_IMU_SHIFT 2 //1
+#define TWO_WIRE_SCHEDULER_IMU_SHIFT 1
 #define TWO_WIRE_SCHEDULER_MAG_PERIOD 40
 #define TWO_WIRE_SCHEDULER_MAG_SHIFT 3
 

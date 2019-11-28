@@ -157,7 +157,7 @@ void GxEPD2_EPD::_writeData(const uint8_t* data, uint16_t n)
   SPI.endTransaction();
 }
 
-void GxEPD2_EPD::_writeDataPGM(const uint8_t* data, uint16_t n, uint16_t fill_with_zeroes)
+void GxEPD2_EPD::_writeDataPGM(const uint8_t* data, uint16_t n, int16_t fill_with_zeroes)
 {
   SPI.beginTransaction(_spi_settings);
   if (_cs >= 0) digitalWrite(_cs, LOW);
@@ -171,6 +171,25 @@ void GxEPD2_EPD::_writeDataPGM(const uint8_t* data, uint16_t n, uint16_t fill_wi
     fill_with_zeroes--;
   }
   if (_cs >= 0) digitalWrite(_cs, HIGH);
+  SPI.endTransaction();
+}
+
+void GxEPD2_EPD::_writeDataPGM_sCS(const uint8_t* data, uint16_t n, int16_t fill_with_zeroes)
+{
+  SPI.beginTransaction(_spi_settings);
+  for (uint8_t i = 0; i < n; i++)
+  {
+    if (_cs >= 0) digitalWrite(_cs, LOW);
+    SPI.transfer(pgm_read_byte(&*data++));
+    if (_cs >= 0) digitalWrite(_cs, HIGH);
+  }
+  while (fill_with_zeroes > 0)
+  {
+    if (_cs >= 0) digitalWrite(_cs, LOW);
+    SPI.transfer(0x00);
+    fill_with_zeroes--;
+    if (_cs >= 0) digitalWrite(_cs, HIGH);
+  }
   SPI.endTransaction();
 }
 
