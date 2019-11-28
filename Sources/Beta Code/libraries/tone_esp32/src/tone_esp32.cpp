@@ -105,6 +105,11 @@ void ToneEsp32::tone(unsigned long frequency
 #endif
 	    ) {
 
+#ifdef SOUND_DEBUG
+	SerialPort.print("ToneESP32 volume : ");
+	SerialPort.println(volume);
+#endif //SOUND_DEBUG
+
   /* check if no tone */ 
   if (toneACMuted || frequency == 0
 #ifdef TONEAC_VOLUME     

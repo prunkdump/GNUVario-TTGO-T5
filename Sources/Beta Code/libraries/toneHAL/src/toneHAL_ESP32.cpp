@@ -220,7 +220,7 @@ void ToneHalDAC_Esp32::tone(unsigned long frequency , uint8_t volume, unsigned l
 void ToneHalDAC_Esp32::noTone() {
 /***********************************/
 #ifdef SOUND_DEBUG
-					SerialPortln.print("notone");
+					SerialPort.println("notone");
 #endif //SOUND_DEBUG
 
 #if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
@@ -374,7 +374,7 @@ void ToneHal_Esp32::tone(unsigned long frequency , uint8_t volume)
 		return;
 	}
 	if (volume > 10) volume = 10;
-	_volume = volume;
+//	_volume = volume;
 #endif
 #ifdef TONEAC_VOLUME
 
@@ -414,7 +414,7 @@ void ToneHal_Esp32::tone(unsigned long frequency , uint8_t volume, unsigned long
 		return;
 	}
 	if (volume > 10) volume = 10;
-	_volume = volume;
+//	_volume = volume;
 	if (length > 1024) length = 1024;
 #endif
 	
@@ -455,7 +455,7 @@ void ToneHal_Esp32::tone(unsigned long frequency , uint8_t volume, unsigned long
 		return;
 	}
 	if (volume > 10) volume = 10;
-	_volume = volume;
+//	_volume = volume;
 	if (length > 1024) length = 1024;
 #endif
 

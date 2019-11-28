@@ -1,96 +1,55 @@
-/*********************************************************************************/
-/*                                                                               */
-/*                           Libraries wifiServer                                 */
-/*                                                                               */
-/*  version    Date     Description                                              */
-/*    1.0    31/07/19                                                            */
-/*    1.1    16/08/19   Ajout Affichage sur écran                                */
-/*    1.1.1  17/08/19   Ajout message de debuggage                               */
-/*    1.2    21.08/19   Ajout Update ESP32                                       */
-/*    1.2.1  28/08/19		Modification de l'organisation des menus							 	 */
-/*                                                                               */
-/*********************************************************************************/
-#ifndef wifiServer_h
-#define wifiServer_h
+/* WifiServer -- 
+ *
+ * Copyright 2019 Jean-philippe GOI
+ * 
+ * This file is part of GnuVario-E.
+ *
+ * ToneHAL is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ToneHAL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
-#include <Arduino.h>
+/* 
+ *********************************************************************************
+ *********************************************************************************
+ *                                                                               *
+ *                           WifiServer                                          *
+ *                                                                               *
+ *  version    Date     Description                                              *
+ *    1.0    24/09/19                                                            *
+ *    1.0.1  28/09/19   Changement de nom des librairies                         *
+ *    1.1    06/10/19   Ajout serveur Web sur carte SD                           *
+ *                                                                               *
+ *********************************************************************************/
+ 
+ /*
+ *********************************************************************************
+ *                    conversion image to cpp code                               *
+ *                                                                               *
+ *      https://javl.github.io/image2cpp/                                        *
+ *                                                                               *
+ *********************************************************************************/
 
-#ifdef ESP8266
-  #include <ESP8266WiFi.h>       // Built-in
-  #include <ESP8266WiFiMulti.h>  // Built-in
-  #include <ESP8266WebServer.h>  // Built-in
-  #include <ESP8266mDNS.h>
-#else
-  #include <WiFi.h>              // Built-in
-  #include <WiFiMulti.h>         // Built-in
-  #include <ESP32WebServer.h>    // https://github.com/Pedroalbuquerque/ESP32WebServer download and place in your Libraries folder
-  #include <ESPmDNS.h>
-//  #include "FS.h"
-#endif
+#ifndef WIFISERVER_H
+#define WIFISERVER_H
 
-//#define ServerVersion "1.0"
-extern char   ServerVersion[20];
-extern String webpage;
-extern bool   SD_present;
+#include <HardwareConfig.h>
 
-extern char ssid_1[50];
-extern char password_1[50];
+// Serveur sur carte SD
+#include <wifiServer_SD.h>
+#include <wifiServer_SD.h>
 
-extern char ssid_2[50];
-extern char password_2[50];
-
-extern char ssid_3[50];
-extern char password_3[50];
-
-extern char ssid_4[50];
-extern char password_4[50];
-
-
-#ifdef ESP8266
-  extern ESP8266WiFiMulti wifiMulti; 
-  extern ESP8266WebServer server;
-#else
-  extern WiFiMulti wifiMulti;
-  extern ESP32WebServer server;
-#endif
-
-class WifiServer {
-
-  public:
-
-	  boolean begin(void);
-		void disableWifi(void);
-		void disableBT(void);
-		void disableAll(void);
-		void connect(void);
-		void start(void);
-		void handleClient(void);
-};
-
-void HomePage(void);
-void File_Download(void);
-void SD_file_download(String filename);
-void File_Upload();
-void handleFileUpload();
-void SD_dir();
-void printDirectory(const char * dirname, uint8_t levels);
-void File_Stream();
-void SD_file_stream(String filename);
-void File_Update();
-void handleFileUpdate();
-void File_Delete();
-void SD_file_delete(String filename); 
-void SendHTML_Header();
-void SendHTML_Content();
-void SendHTML_Stop();
-void SelectInput(String heading1, String command, String arg_calling_name);
-void ReportSDNotPresent();
-void ReportFileNotPresent(String target);
-void ReportCouldNotCreateFile(String target);
-void ReportCouldNotUpdateFile(String target);
-String file_size(int bytes);
-
-extern WifiServer wifiServer; 
+// Serveur interne
+#include <wifiServer_Int.h>
+#include <wifiServer_Int.h>
 
 #endif
-	

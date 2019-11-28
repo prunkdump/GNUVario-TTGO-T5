@@ -22,8 +22,9 @@
 /*                                                                               */
 /*                           Utility                                             */
 /*                                                                               */
-/*  version    Date     Description                                              */
+/*  version    Date        Description                                           */
 /*    1.0      05/07/19                                                          */
+/*    1.1      23/11/19    Modification deep sleep                               */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -47,8 +48,13 @@ void indicateFaultMPU9250();
 void indicateFaultSDCARD();
 void signalBeep(double freq, unsigned long duration, int count);
 int8_t percentBat(double targetVoltage);
+void deep_sleep(void);
+void printSdDirectory(File dir, int numTabs);
+bool TestSDCARD(bool init);
 
 extern VarioSettings GnuSettings;
+extern File fileIgc;
+
 //extern Beeper beeper;
 
 #endif

@@ -1,0 +1,14 @@
+{
+  "name": "mpp-concole-logger",
+  "keywords": "console, logger",
+  "description": "Arduino, ESP8266 and ESP32 library for console and logging",
+  "repository": {
+    "type": "git",
+    "url": " https://bitbucket.org/henri_bachetti/mpp-console-logger.git"
+  },
+  "frameworks": "arduino",
+  "platforms": [
+    "atmelavr",
+    "espressif"
+  ]
+}

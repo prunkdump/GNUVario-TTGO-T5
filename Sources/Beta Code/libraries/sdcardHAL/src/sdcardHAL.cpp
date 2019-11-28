@@ -22,6 +22,36 @@
 // ESP32
 //********************
 
+	//********************
+	// SDFAT
+	//********************
+
+#if defined(SDFAT_LIB)
+
+//#if ENABLE_SOFTWARE_SPI_CLASS  // Must be set in SdFat/SdFatConfig.h
+//
+// Pin numbers in templates must be constants.
+boolean SdCardHAL::begin(void){
+	const uint8_t SOFT_MISO_PIN = SDCARD_MISO_PIN;
+	const uint8_t SOFT_MOSI_PIN = SDCARD_MOSI_PIN;
+	const uint8_t SOFT_SCK_PIN  = SDCARD_SCK_PIN;
+	//
+	// Chip select may be constant or RAM variable.
+	const uint8_t SD_CHIP_SELECT_PIN = SDCARD_CS_PIN;
+
+	// SdFat software SPI template
+	SdFatSoftSpi<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> sd;
+
+  return(sd.begin(SD_CHIP_SELECT_PIN));
+  }
+
+SdCardHAL SDHAL; 
+
+#else
+	//********************
+  // MYSD
+	//********************
+	
 #include <mySD.h>
 
 boolean SdCardHAL::begin(void){
@@ -29,6 +59,8 @@ boolean SdCardHAL::begin(void){
 };
 
 SdCardHAL SDHAL; 
+
+#endif
 
 #elif defined(ARDUINO_AVR_PRO)
 //********************

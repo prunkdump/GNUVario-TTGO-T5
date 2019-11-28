@@ -86,11 +86,12 @@
 /*    1.4.1    12/03/19   Modifications mineures								                   */
 /*    1.4.2    16/03/19   Ajout description et licence en début de fichier         */
 /*    1.4.3    08/04/19   ToneDAC pour l'ESP32                                     */
-/*    1.4.4    25/04/2019 Modification DebugConfig.h et HardwareConfig.h           */
-/*    1.4.5    05/06/2019 Déclaration de l'instance dans toneHAL.cpp							 */
-/*    1.4.6    10/06/2019 Ajout gestion ampli class D                              */ 
+/*    1.4.4    25/04/19 	Modification DebugConfig.h et HardwareConfig.h           */
+/*    1.4.5    05/06/19 	Déclaration de l'instance dans toneHAL.cpp							 */
+/*    1.4.6    10/06/19 	Ajout gestion ampli class D                              */ 
 /*    1.4.7    02/07/19   Ajout isMute()                                           */
 /*    1.5.0    30/08/19		Ajout gestion commande ampli														 */
+/*    1.5.1  	 03/11/19		Modification des fonctions enableAmpli 									 */
 /*                                                                                 */
 /***********************************************************************************/
 
@@ -182,10 +183,8 @@ class ToneHal  {
 		    /* mute/unmute setting */
     void mute(bool newMuteState);
 		bool isMute(void); 
-#ifdef HAVE_AUDIO_AMPLI
 		void enableAmpli(void);
 		void disableAmpli(void);
-#endif //HAVE_AUDIO_AMPLI
 
 	protected:
 		uint8_t _volume = 10;	

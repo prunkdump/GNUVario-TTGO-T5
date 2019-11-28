@@ -22,8 +22,10 @@
 /*                                                                               */
 /*                           Utility                                             */
 /*                                                                               */
-/*  version    Date     Description                                              */
+/*  version    Date        Description                                           */
 /*    1.0      05/07/19                                                          */
+/*    1.1      24/09/19    Ajout deep_sleep                                      */
+/*    1.2      15/10/19    Ajout test SDCARD
 /*                                                                               */
 /*********************************************************************************/
 
@@ -31,9 +33,24 @@
 
 #include <Utility.h>
 #include <DebugConfig.h>
+#include <HardwareConfig.h>
+
+#ifdef HAVE_SDCARD
+#include <sdcardHAL.h>
+#endif //HAVE_SDCARD
+
 #include <VarioSettings.h>
 
+#ifdef HAVE_SPEAKER
+#include <toneHAL.h>
 #include <beeper.h>
+#endif //HAVE_SPEAKER
+
+#ifdef HAVE_SCREEN
+#include <varioscreenGxEPD.h>
+#endif
+
+#include "driver/rtc_io.h"
 
 /**********************/
 /* sensor objects */
@@ -169,4 +186,126 @@ int8_t percentBat(double targetVoltage) {
 #endif  //PROG_DEBUG
   
  return result;
+}
+
+void deep_sleep(void) {
+	esp_sleep_enable_ext0_wakeup(BUTTON_DEEP_SLEEP,0); //1 = High, 0 = Low
+
+	//If you were to use ext1, you would use it like
+	//esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ANY_HIGH);
+
+	//Go to sleep now
+	SerialPort.println("Going to sleep now");
+	
+	delay(200);
+
+	screen.ScreenViewMessage("DEEP-SLEEP", 0);
+
+	delay(1000);
+	
+	#if defined(HAVE_POWER_ALIM) 
+	pinMode(POWER_PIN, OUTPUT);
+	digitalWrite(POWER_PIN, !POWER_PIN_STATE);   // turn off POWER (POWER_PIN_STATE is the voltage level HIGH/LOW)
+	#endif  
+
+	#ifdef HAVE_SDCARD          
+	fileIgc.close();
+//	SDHAL.end(); 
+	#endif
+
+	#ifdef HAVE_AUDIO_AMPLI
+	toneHAL.disableAmpli();
+	#endif
+	//	rtc_gpio_isolate(GPIO_NUM_12);
+	
+	rtc_gpio_isolate(GPIO_BUTTON_A);
+	rtc_gpio_isolate(GPIO_BUTTON_C);
+
+	display.powerOff();
+	
+	esp_deep_sleep_start();
+	SerialPort.println("This will never be printed");		
+}
+
+void printSdDirectory(File dir, int numTabs) {
+  
+  while(true) {
+     File entry =  dir.openNextFile();
+     if (! entry) {
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       SerialPort.print('\t');   // we'll have a nice indentation
+     }
+     // Print the name
+     SerialPort.print(entry.name());
+     /* Recurse for directories, otherwise print the file size */
+     if (entry.isDirectory()) {
+       SerialPort.println("/");
+       printSdDirectory(entry, numTabs+1);
+     } else {
+       /* files have sizes, directories do not */
+       SerialPort.print("\t\t");
+       SerialPort.println(entry.size());
+     }
+     entry.close();
+   }
+}
+
+//**********************************
+// * TEST SDCARD
+// **********************************
+
+bool TestSDCARD(bool init) {
+	
+	if (init) {
+		if (!SDHAL.begin()) {
+#ifdef SDCARD_DEBUG
+			SerialPort.println("initialization failed!");
+			return false;
+#endif //SDCARD_DEBUG
+		}
+	}
+
+  File root = SDHAL.open("/");
+  if (root) {    
+    printSdDirectory(root, 0);
+    root.close();
+  } else {
+    SerialPort.println("error opening test.txt");
+		return false;
+  }
+  // open "test.txt" for writing 
+  root = SDHAL.open("test.txt", FILE_WRITE);
+  // if open succesfully -> root != NULL 
+  //  then write string "Hello world!" to it
+  
+  if (root) {
+    root.println("GnuVario-E Test OK");
+    root.flush();
+   // close the file 
+    root.close();
+  } else {
+    // if the file open error, print an error 
+    SerialPort.println("error write test.txt");
+		return false;
+  }
+	
+  delay(1000);
+  // after writing then reopen the file and read it 
+  root = SDHAL.open("test.txt");
+  if (root) {    
+    // read from the file until there's nothing else in it 
+    while (root.available()) {
+      // read the file and print to Terminal 
+      SerialPort.write(root.read());
+    }
+    root.close();
+  } else {
+    SerialPort.println("error read test.txt");
+		return false;
+  }
+  
+  SerialPort.println("Test SDcars done!");
+	return true;
 }
