@@ -25,6 +25,8 @@
 /*  version    Date     Description                                              */
 /*    1.0      29/09/19                                                          */
 /*    1.0.1    01/10/19    Ajout detection bouton                                */
+/*    1.0.2    28/10/19    Ajout enable ampli avant chaque appelle à tone        */
+/*    1.0.3    29/11/19    Modif sdfat                                           */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -114,7 +116,11 @@ private:
 #endif //AK89xx_SECONDARY
 
 #if defined(SDCARD_OUTPUT) && defined(HAVE_SDCARD)
+#ifdef SDFAT_LIB
+	SdFile file;
+#else //SDFAT_LIB
 	File file;
+#endif //SDFAT_LIB
 
 	boolean sdcardFound = false;
 	char filename[15] = "RECORD00.CAL";

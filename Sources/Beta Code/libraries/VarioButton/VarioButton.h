@@ -43,6 +43,8 @@
  *    1.0.12 01/11/19   Modification de la configuration du volume               *
  *    1.0.13 03/01/19   Déplacement de la validation de la mise en veille sur le *
  *                      bouton gauche                                            *
+ *    1.0.14 29/11/19   Ajout arduinotrace                                       *
+ *                      Modif sdfat                                              *
  *                                                                               *
  *********************************************************************************/
  
@@ -113,7 +115,11 @@ class VARIOButtonScheduleur {
 #endif //HAVE_WIFI
 
 #ifdef HAVE_SDCARD
+#ifdef SDFAT_LIB
+		void printDirectory(SdFile dir, int numTabs);
+#else //SDFAT_LIB
 		void printDirectory(File dir, int numTabs);
+#endif
 #endif //HAVE_SDCARD
 		
 };

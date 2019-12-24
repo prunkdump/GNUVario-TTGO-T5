@@ -21,6 +21,8 @@
 #include <LightInvensense.h>
 
 #include <Arduino.h>
+#include <VarioSettings.h>
+#include <HardwareConfig.h>
 
 #ifdef LIGHT_INVENSENSE_BUILD
 #include <inv_mpu.h>
@@ -591,10 +593,20 @@ void enableDMP(void) {
 #endif
     BIT_FIFO_EN;
   intTW.writeBytes(INV_HW_ADDR, INV_REG_USER_CTRL, 1, &data);
+
+#ifdef MPU_ENABLE_INT_PIN
+  /* enable DMP FiFo INT pin */
+  data = BIT_ACTL;
+  intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_PIN_CFG, 1, &data);
+  data = BIT_DMP_INT_EN;
+  intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_ENABLE, 1, &data);
+#else
+  data = 0;
+  intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_ENABLE, 1, &data);
+#endif //MPU_ENABLE_INT_PIN
   
   /* reset STD FIFO */
   data = 0;
-  intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_ENABLE, 1, &data);
   intTW.writeBytes(INV_HW_ADDR, INV_REG_FIFO_EN, 1, &data);
 }
 
@@ -943,16 +955,6 @@ int fastMPUInit(bool startMPU) {
   /* set sample rate */
   data[0] = COMPRESSED_DMP_RATE_DIV_CFG; 
   intTW.writeBytes(INV_HW_ADDR, INV_REG_RATE_DIV, 1, data);
-
-  /**************/
-	/* enable INT */
-	/**************/
-
-	data[0] = BIT_ANY_RD_CLR | BIT_LATCH_EN;
-	intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_PIN_CFG, 1, data);
-
-	data[0] = BIT_DMP_INT_EN;
-	intTW.writeBytes(INV_HW_ADDR, INV_REG_INT_ENABLE, 1, data);
 
   /**************/
   /* reset fifo */

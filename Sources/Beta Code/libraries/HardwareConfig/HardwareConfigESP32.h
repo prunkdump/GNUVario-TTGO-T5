@@ -158,6 +158,9 @@ Fly stat        0xD0		26+2
 #define SDCARD_MISO_PIN 2
 #define SDCARD_SCK_PIN  14
 
+#define SDFAT_LIB
+//#define MYSD_LIB
+
 /***************************/
 /*        LED              */
 /***************************/
@@ -291,7 +294,7 @@ Fly stat        0xD0		26+2
 #if (PCB_VERSION == 2)
 #define VARIO_SDA_PIN 27
 #define VARIO_SCL_PIN 32	
-#define VARIO_MPUINT_PIN 26
+#define VARIO_MPU_INT_PIN 26
 #else
 #define VARIO_SDA_PIN 21
 #define VARIO_SCL_PIN 22

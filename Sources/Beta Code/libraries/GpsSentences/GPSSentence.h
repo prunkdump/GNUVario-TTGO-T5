@@ -28,6 +28,7 @@
 /*    1.0.2    25/07/19     Ajout noRecord                                       */
 /*    1.0.3    03/10/19     Ajout gestion HAVE_SDCARD 													 */
 /*    1.0.4    12/10/19     Ajout gestion du dossier de stockage des VOLs        */
+/*    1.0.5    29/11/19     Modif SdFat                                          */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -68,7 +69,11 @@ class GPSSentence {
 #ifdef HAVE_SDCARD
 	
 extern int8_t sdcardState;
+#ifdef SDFAT_LIB
+extern SdFile fileIgc;
+#else //SDFAT_LIB
 extern File fileIgc;
+#endif //SDFAT_LIB
 extern IGCHeader   header;
 extern IGCSentence igc;
 extern GPSSentence igcSD;

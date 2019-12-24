@@ -1,0 +1,45 @@
+
+
+[
+{"type":"directory","name":"/","contents":[
+{"type":"file","name":"SETTINGS.TXT"},
+{"type":"directory","name":"VOLS","contents":[
+{"type":"file","name":"19102000.IGC"},{"type":"file","name":"19102100.IGC"},{"type":"file","name":"19022402.IGC"},{"type":"file","name":"19102101.IGC"}]}
+,
+{"type":"directory","name":"WWW","contents":[
+{"type":"file","name":"FAVI.ICO"},{"type":"file","name":"INDEX.HTM"},{"type":"file","name":"INDEXB.JS"},{"type":"file","name":"INDEXB~1.MAP"}]}
+,{"type":"file","name":"RECORD00.CAL"},{"type":"file","name":"FR5758~1.JSO"}]}
+
+]
+
+
+
+
+[
+  {"type":"directory","name":".","contents":[
+    {"type":"directory","name":"config","contents":[
+      {"type":"file","name":"config.json"},
+      {"type":"file","name":"config.xml"}
+    ]},
+    {"type":"directory","name":"css","contents":[
+      {"type":"file","name":"app.0c5c470d.css"}
+    ]},
+    {"type":"file","name":"favicon.ico"},
+    {"type":"directory","name":"img","contents":[
+      {"type":"file","name":"logo-gnuvario.dca54bc4.png"}
+    ]},
+    {"type":"file","name":"index.html"},
+    {"type":"directory","name":"js","contents":[
+      {"type":"file","name":"app.8eeb1870.js"},
+      {"type":"file","name":"app.8eeb1870.js.map"},
+      {"type":"file","name":"chunk-vendors.2349ee8b.js"},
+      {"type":"file","name":"chunk-vendors.2349ee8b.js.map"}
+    ]},
+    {"type":"directory","name":"vols","contents":[
+      {"type":"file","name":"trace1 copy 2.txt"},
+      {"type":"file","name":"trace1 copy 3.txt"},
+      {"type":"file","name":"trace1 copy.txt"},
+      {"type":"file","name":"trace1.txt"}
+    ]}
+  ]}
+]

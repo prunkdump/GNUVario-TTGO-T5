@@ -182,6 +182,9 @@
 #define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 5
 #define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5*/
 
+/* enable if you want to use the MPU INT pin */
+#define MPU_ENABLE_INT_PIN
+
 /*****************************/
 /* SDCard/Bluetooth behavior */
 /*****************************/

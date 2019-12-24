@@ -28,26 +28,18 @@
 
 #if defined(SDFAT_LIB)
 
-//#if ENABLE_SOFTWARE_SPI_CLASS  // Must be set in SdFat/SdFatConfig.h
-//
-// Pin numbers in templates must be constants.
-boolean SdCardHAL::begin(void){
-	const uint8_t SOFT_MISO_PIN = SDCARD_MISO_PIN;
-	const uint8_t SOFT_MOSI_PIN = SDCARD_MOSI_PIN;
-	const uint8_t SOFT_SCK_PIN  = SDCARD_SCK_PIN;
-	//
-	// Chip select may be constant or RAM variable.
-	const uint8_t SD_CHIP_SELECT_PIN = SDCARD_CS_PIN;
-
 	// SdFat software SPI template
-	SdFatSoftSpi<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> sd;
+SdFatSoftSpi<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> SDHAL_SD; //sd;
 
-  return(sd.begin(SD_CHIP_SELECT_PIN));
+boolean SdCardHAL::begin(void){
+
+
+  return(SDHAL_SD.begin(SD_CHIP_SELECT_PIN));
   }
 
 SdCardHAL SDHAL; 
 
-#else
+#elif defined(MYSD_LIB)
 	//********************
   // MYSD
 	//********************
@@ -56,6 +48,26 @@ SdCardHAL SDHAL;
 
 boolean SdCardHAL::begin(void){
 	return(SDClass::begin(SDCARD_CS_PIN,SDCARD_MOSI_PIN,SDCARD_MISO_PIN,SDCARD_SCK_PIN));	
+};
+
+SdCardHAL SDHAL; 
+
+#else
+	//********************
+  // SD
+	//********************
+	
+//#include <mySD.h>
+
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
+boolean SdCardHAL::begin(void){
+//	return(SDClass::begin(SDCARD_CS_PIN,SDCARD_MOSI_PIN,SDCARD_MISO_PIN,SDCARD_SCK_PIN));	
+
+	SPI.begin(SDCARD_SCK_PIN, SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_CS_PIN);
+	return(SDHAL_SD.begin(SDCARD_CS_PIN));
 };
 
 SdCardHAL SDHAL; 

@@ -12,7 +12,11 @@
 
 #include <Arduino.h>
 
+#include <HardwareConfig.h>
+
+#ifndef SDFAT_LIB
 //#define SDFAT_LIB
+#endif
 
 #if defined(ESP8266)
 //********************
@@ -29,14 +33,27 @@
 #include <SPI.h>
 #include "SdFat.h"
 
-class SdCardHAL : public SdFat {
+//#if ENABLE_SOFTWARE_SPI_CLASS  // Must be set in SdFat/SdFatConfig.h
+//
+// Pin numbers in templates must be constants.
+
+	const uint8_t SOFT_MISO_PIN = SDCARD_MISO_PIN;
+	const uint8_t SOFT_MOSI_PIN = SDCARD_MOSI_PIN;
+	const uint8_t SOFT_SCK_PIN  = SDCARD_SCK_PIN;
+	//
+	// Chip select may be constant or RAM variable.
+	const uint8_t SD_CHIP_SELECT_PIN = SDCARD_CS_PIN;
+
+class SdCardHAL {
 
   public:
 
 	  boolean begin(void);
 };
 
-#else
+extern SdFatSoftSpi<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> SDHAL_SD;
+
+#elif defined(MYSD_LIB)
 #include <mySD.h>
 
 class SdCardHAL : public SDClass {
@@ -45,6 +62,24 @@ class SdCardHAL : public SDClass {
 
 	  boolean begin(void);
 };
+
+#define SDHAL_SD SDHAL
+
+#else
+
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
+class SdCardHAL { //public SDClass {
+
+  public:
+
+	  boolean begin(void);
+};
+
+#define SDHAL_SD SD
+
 #endif
 
 #elif defined(ARDUINO_AVR_PRO)

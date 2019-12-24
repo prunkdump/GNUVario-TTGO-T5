@@ -25,7 +25,9 @@
 /*  version    Date        Description                                           */
 /*    1.0      05/07/19                                                          */
 /*    1.1      24/09/19    Ajout deep_sleep                                      */
-/*    1.2      15/10/19    Ajout test SDCARD
+/*    1.2      15/10/19    Ajout test SDCARD                                     */
+/*    1.3      23/11/19    Modification deep sleep                               */
+/*    1.4      28/11/19    Modif changement librairie sdfat                      */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -227,7 +229,97 @@ void deep_sleep(void) {
 	SerialPort.println("This will never be printed");		
 }
 
-void printSdDirectory(File dir, int numTabs) {
+/**********************************/
+/*      librairie SdFat           */
+/**********************************/
+
+#ifdef SDFAT_LIB
+
+void printSdDirectory(SdFile dir, int numTabs) {
+  SdFile entry;
+  char fBuffer[15];
+	
+  while(true) {
+     if (!entry.openNext(&dir, O_RDONLY)) {
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       SerialPort.print('\t');   // we'll have a nice indentation
+     }
+     // Print the name
+     entry.getName(fBuffer,13);
+     SerialPort.print(fBuffer);
+     /* Recurse for directories, otherwise print the file size */
+     if (entry.isDir()) {
+       SerialPort.println("/");
+       printSdDirectory(entry, numTabs+1);
+     } else {
+       /* files have sizes, directories do not */
+       SerialPort.print("\t\t");
+       SerialPort.println(entry.fileSize());
+     }
+     entry.close();
+   }
+}
+
+//**********************************
+// * TEST SDCARD
+// **********************************
+
+bool TestSDCARD(bool init) {
+	
+	if (init) {
+		if (!SDHAL.begin()) {
+#ifdef SDCARD_DEBUG
+			SerialPort.println("initialization failed!");
+			return false;
+#endif //SDCARD_DEBUG
+		}
+	}
+
+  SdFile root;
+  if (root.open("/")) {    
+    printSdDirectory(root, 0);
+    root.close();
+  } else {
+    SerialPort.println("error opening test.txt");
+		return false;
+  }
+  // open "test.txt" for writing 
+  // if open succesfully -> root != NULL 
+  //  then write string "Hello world!" to it
+  
+  if (root.open("test.txt", O_RDWR | O_CREAT)) {
+    root.println("GnuVario-E Test OK");
+    root.flush();
+   // close the file 
+    root.close();
+  } else {
+    // if the file open error, print an error 
+    SerialPort.println("error write test.txt");
+		return false;
+  }
+	
+  delay(1000);
+  // after writing then reopen the file and read it 
+  if (root.open("test.txt", O_RDONLY)) {    
+    // read from the file until there's nothing else in it 
+    while (root.available()) {
+      // read the file and print to Terminal 
+      SerialPort.write(root.read());
+    }
+    root.close();
+  } else {
+    SerialPort.println("error read test.txt");
+		return false;
+  }
+  
+  SerialPort.println("Test SDcars done!");
+	return true;
+}
+
+#else
+	void printSdDirectory(File dir, int numTabs) {
   
   while(true) {
      File entry =  dir.openNextFile();
@@ -267,7 +359,7 @@ bool TestSDCARD(bool init) {
 		}
 	}
 
-  File root = SDHAL.open("/");
+  File root = SDHAL_SD.open("/");
   if (root) {    
     printSdDirectory(root, 0);
     root.close();
@@ -276,7 +368,7 @@ bool TestSDCARD(bool init) {
 		return false;
   }
   // open "test.txt" for writing 
-  root = SDHAL.open("test.txt", FILE_WRITE);
+  root = SDHAL_SD.open("test.txt", FILE_WRITE);
   // if open succesfully -> root != NULL 
   //  then write string "Hello world!" to it
   
@@ -293,7 +385,7 @@ bool TestSDCARD(bool init) {
 	
   delay(1000);
   // after writing then reopen the file and read it 
-  root = SDHAL.open("test.txt");
+  root = SDHAL_SD.open("test.txt");
   if (root) {    
     // read from the file until there's nothing else in it 
     while (root.available()) {
@@ -309,3 +401,4 @@ bool TestSDCARD(bool init) {
   SerialPort.println("Test SDcars done!");
 	return true;
 }
+#endif

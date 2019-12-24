@@ -32,6 +32,8 @@
 #include <TwoWireScheduler.h>
 
 #include <Arduino.h>
+#include <VarioSettings.h>
+#include <HardwareConfig.h>
 
 #include <IntTW.h>
 #include <esp32-hal-timer.h>
@@ -44,8 +46,6 @@
 #include <ms5611TW.h>
 #endif
 
-#include <VarioSettings.h>
-
 #ifdef HAVE_ACCELEROMETER
 #include <LightInvensense.h>
 #include <vertaccel.h>
@@ -55,6 +55,9 @@
 #define HAVE_PRESSURE 2
 #define HAVE_ACCEL 4
 #define HAVE_MAG 6
+#ifdef MPU_ENABLE_INT_PIN
+#define MPU_FIFO_EMPTIED 7
+#endif //MPU_ENABLE_INT_PIN
 
 #define bset(bit) status |= (1 << bit)
 #define bunset(bit) status &= ~(1 << bit)
@@ -79,6 +82,9 @@ SemaphoreHandle_t TWScheduler::ms5611Mutex;
 #ifdef HAVE_ACCELEROMETER
 uint8_t volatile TWScheduler::checkOutput[2];
 uint8_t volatile TWScheduler::imuOutput[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH]; //imu dmp fifo output
+#ifdef MPU_ENABLE_INT_PIN
+uint8_t volatile TWScheduler::imuIntCount = 0;
+#endif //MPU_ENABLE_INT_PIN
 uint8_t volatile TWScheduler::imuCount = TWO_WIRE_SCHEDULER_IMU_SHIFT;
 SemaphoreHandle_t TWScheduler::imuMutex;
 #ifdef AK89xx_SECONDARY
@@ -314,9 +320,24 @@ const uint8_t imuReadFifo[] PROGMEM = { INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
 
 void TWScheduler::imuInterrupt(void) {
 
+#ifdef MPU_ENABLE_INT_PIN
+  /* once the FiFo is emptied, we use interrupts */
+  if( bisset(MPU_FIFO_EMPTIED) ) {
+    if( imuIntCount > 0 ) {
+      /* we can read the fifo directly */
+      imuReadFifoData();
+    }
+  } else {
+    /* FiFo still not emptied */
+    /* check for measures     */
+    intTW.setRxBuffer((uint8_t*)checkOutput);
+    intTW.start((uint8_t*)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
+  }
+#else
   /* check FiFo for available measures */
   intTW.setRxBuffer((uint8_t*)checkOutput);
   intTW.start((uint8_t*)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
+#endif //MPU_ENABLE_INT_PIN
 }
 
 
@@ -327,17 +348,17 @@ void TWScheduler::imuCheckFifoCountCallBack(void) {
 
   /* launch FiFo read if OK */
   int8_t fifoState = fastMPUHaveFIFOPaquet(fifoCount);
-
-  if( fifoState > 0 ) {
-
-    /* we need to lock */
-    intTW.setRxBuffer((uint8_t*)imuOutput);
-    //!!!
-    delayMicroseconds(400);   //200);
-
+#ifdef MPU_ENABLE_INT_PIN
+  /* check for empty fifo */
+  if( fifoState == 0 ) {
     xSemaphoreTake(imuMutex, portMAX_DELAY);
-    intTW.start((uint8_t*)imuReadFifo, sizeof(imuReadFifo), INTTW_USE_PROGMEM, imuHaveFifoDataCallback);
+    bset(MPU_FIFO_EMPTIED);
+    imuIntCount = 0; //start using the interrupt
     xSemaphoreGive(imuMutex);
+  }
+#endif //MPU_ENABLE_INT_PIN
+  if( fifoState > 0 ) {
+    imuReadFifoData();
   } else {
 
     /* else stop TW communication */
@@ -345,11 +366,45 @@ void TWScheduler::imuCheckFifoCountCallBack(void) {
   }
 }
 
+void TWScheduler::imuReadFifoData(void) {
+
+  /* we need to lock */
+  intTW.setRxBuffer((uint8_t*)imuOutput);
+
+  xSemaphoreTake(imuMutex, portMAX_DELAY);
+  intTW.start((uint8_t*)imuReadFifo, sizeof(imuReadFifo), INTTW_USE_PROGMEM, imuHaveFifoDataCallback);
+  xSemaphoreGive(imuMutex);
+}
+
 void TWScheduler::imuHaveFifoDataCallback(void) {
 
   /* done ! */
   status |= (1 << HAVE_ACCEL);
+  
+#ifdef MPU_ENABLE_INT_PIN
+  /* decrease FiFo counter */
+  xSemaphoreTake(imuMutex, portMAX_DELAY);
+  imuIntCount--;
+  xSemaphoreGive(imuMutex);
+#endif
 }
+
+#ifdef MPU_ENABLE_INT_PIN
+void IRAM_ATTR TWScheduler::imuIntPinInterrupt(void) {
+
+  BaseType_t xHigherPriorityTaskWokenT = 0;
+  xSemaphoreTakeFromISR(imuMutex, &xHigherPriorityTaskWokenT);
+  
+  imuIntCount++;
+
+  BaseType_t xHigherPriorityTaskWokenG = 0;
+  xSemaphoreGiveFromISR(imuMutex, &xHigherPriorityTaskWokenG);
+
+  if( xHigherPriorityTaskWokenT == pdTRUE || xHigherPriorityTaskWokenG == pdTRUE )
+    portYIELD_FROM_ISR();
+}
+#endif  
+
 
 bool TWScheduler::haveAccel(void) {
 
@@ -525,8 +580,14 @@ void TWScheduler::init(void) {
   xSemaphoreGive(magMutex);
 #endif //AK89xx_SECONDARY
 #endif //HAVE_ACCELEROMETER
- 
 
+#ifdef MPU_ENABLE_INT_PIN
+  /* init INT pin */
+  //!!!pinMode(VARIO_MPU_INT_PIN, INPUT_PULLUP);
+  pinMode(VARIO_MPU_INT_PIN, INPUT);
+  attachInterrupt(VARIO_MPU_INT_PIN, imuIntPinInterrupt,  FALLING);
+#endif
+ 
   /* create scheduler task */
   xTaskCreatePinnedToCore(interruptScheduler, "TWS", TWO_WIRE_SCHEDULER_STACK_SIZE, NULL, TWO_WIRE_SCHEDULER_PRIORITY, &schedulerTaskHandler,TWO_WIRE_SCHEDULER_CORE);
 

@@ -50,6 +50,8 @@
 /*										  Modif ALTERNATE_DATA_DURATION - MULTIDISPLAY_DURATION	   */
 /*                      ajout gestion de plusieurs voiles                        */
 /*    1.1.1 24/11/19    Modification DEFAULT_SLEEP_THRESHOLD_CPS                 */
+/*    1.2   29/11/19    Modification sdfat                                       */
+/*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */ 
 /*                                                                               */
 /*********************************************************************************/
 
@@ -175,6 +177,10 @@
 #define VARIOMETER_SPEED_FILTER_SIZE 5
 
 
+#define SCREEN_MODEL_154 "154"
+#define SCREEN_MODEL_290 "290"
+#define SCREEN_MODEL_213 "213"
+
 /******************************************************/
 /******************************************************/
 
@@ -189,6 +195,11 @@ class VarioSettings {
 	void loadConfigurationVario(char *filename);
 	void saveConfigurationVario(char *filename);
 	void writeWifiSDSettings(char *filename);
+	
+	void setVersion(uint8_t version, uint8_t subVersion, uint8_t betaVersion);
+	String getVersion(void);
+	String getScreenModel(void);
+	
 #endif
   uint8_t soundSettingRead(void);
   void soundSettingWrite(uint8_t volume);
@@ -385,11 +396,16 @@ class VarioSettings {
 		
  protected:
 #ifdef HAVE_SDCARD
+#ifdef SDFAT_LIB
+		SdFile myFile;
+#else //SDFAT_LIB
 		File myFile;
+#endif //SDFAT_LIB
 #endif
 //  File myFile2;
 //		char FileName[15] = "SETTINGS.TXT";
 		char FileFlashName[15] = "FLASH.TXT";
+		String GnuvarioVersion;
   
 		boolean applySetting(String settingName, String settingValue);
 		void applyFlashSetting(String settingName, String settingValue);

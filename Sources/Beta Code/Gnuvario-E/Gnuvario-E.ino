@@ -24,6 +24,8 @@ static const char* TAG = "Gnuvario";
 
 #include <VarioSettings.h>
 
+#include <VarioLog.h>
+
 #ifdef HAVE_SPEAKER
 #include <toneHAL.h>
 #include <beeper.h>
@@ -71,7 +73,7 @@ static const char* TAG = "Gnuvario";
 #include <SD_Update.h>
 
 #ifdef HAVE_WIFI
-#include <wifiServer.h>
+#include <VarioWifiServer.h>
 #endif //HAVE_WIFI
 
 #ifdef HAVE_BLUETOOTH
@@ -84,13 +86,15 @@ static const char* TAG = "Gnuvario";
 SimpleBLE ble;
 #endif //HAVE_BLUETOOTH
 
+#include <SysCall.h>
+
 /*******************/
 /* Version         */
 /*******************/
 
 #define VERSION      0
-#define SUB_VERSION  6
-#define BETA_CODE    7
+#define SUB_VERSION  7
+#define BETA_CODE    3
 #define DEVNAME      "JPG63"
 #define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
 
@@ -228,6 +232,17 @@ SimpleBLE ble;
 *                                    Correction Bug deep sleep                                        *
 *                                    Ajout TRACE                                                      *
 *                                    Ajout Mode veille paramètrable                                   *
+*                                    Ajout Passage en veille en cas d'inactivité                      *
+* v0.7  beta 1  28/11/19             Changement librairie Sdcard - SdFat                              *
+*                                    Changement librairie Webserveur par VarioWebServeur              * 
+*                                    Renomage WifiServeur en VarioWifiServer                          *
+* v0.7  beta 2  15/12/19             Recodage updateSD - correction bug                               *                                    
+*                                    Correction MPU                                                   *
+*                                    Ajout variiolog                                                  *
+*                                    AJOUT - gestion du MPU par Interruption                          *
+*                                    Correction BUG reboot à l'init du MPU  - nan lors du first alti  *
+*                                    Ajout logger sur SDcard                                          *
+* v0.7  beta 3  22/12/19             Mise à jour librarie MPU                                         *
 *                                                                                                     * 
 *******************************************************************************************************
 *                                                                                                     *
@@ -243,15 +258,17 @@ SimpleBLE ble;
 * v0.6                                                                                                *   
 * MODIF - Refaire gestion Eeprom avec preference                                                      *
 * AJOUT - Calibration MPU                                                                             *                                 
-* AJOUT - gestion du MPU par Interruption                                                             *
-* BUG   - reboot à l'init du MPU  - nan lors du first alti                                            *
 * BUG   - blocage MPU - plus de valeur valide                                                         *
 * BUG   - temperature                                                                                 *
 * BUG   - DISPLAY_OBJECT_LINE object ligne ne fonctionne pas                                          *
 * AJOUT - Créer une bibliothèque de log (debug)  avec fichier de log                                  *
-* AJOUT - Passage en veille en cas d'inactivité                                                       *
 * BUG   - Alti erreur deep sleep avorté                                                               *
 * BUG   - Norcissement de l'écran                                                                     *
+*                                                                                                     *
+* v0.7                                                                                                *
+* AJOUT - Maj via site web                                                                            *
+* BUG   - Update et Upload webserver                                                                  *                                                                                                     
+* BUG   - Affichage altitude - problème d'effacement au bout du chiffre                               *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -312,7 +329,7 @@ SimpleBLE ble;
  * - 3 fichiers de paramètrage params.jso, wifi.cfg, variocal.cfg       *  
  * - Gestion automatique de la mise à jour du fichier params.jso en cas *
  *   d'ajout ou de suppréssion de champs                                *
- *   Mise en veille d'inactivité, paramètrable - 0 infini               *
+ *   Mise en veille en cas d'inactivité, paramètrable - 0 infini        *
  *                                                                      *
  ************************************************************************
  
@@ -547,8 +564,15 @@ String webpage = "";
   ESP8266WebServer server(80);
 #else
   WiFiMulti wifiMulti;
-//  ESP32WebServer server(80);
-  WebServer server(80);
+#ifdef ESP32WEBSERVEUR 
+  ESP32WebServer server(80);
+#elif defined(ESPASYNCWEBSERVER)
+  AsyncWebServer server(80); 
+#elif defined(ETHERNETWEBSERVER)
+  EthernetServer server(80);   
+#else //ESP32WEBSERVEUR
+  VarioWebServer server(80);
+#endif //ESP32WEBSERVEUR
 #endif
 #endif //HAVE_WIFI
 
@@ -592,6 +616,11 @@ void setup() {
 //****************************  
 
   SerialPort.begin(115200);
+
+  // Wait for USB Serial
+  while (!SerialPort) {
+    SysCall::yield();
+  }
 
 // *******************************************************  
 // *   
@@ -705,6 +734,8 @@ void setup() {
 /*    char FileName[15] = "SETTINGS.TXT";
     GnuSettings.readSDSettings(FileName);*/
 
+    GnuSettings.setVersion(VERSION, SUB_VERSION, BETA_CODE);
+
     SerialPort.println("Chargement des parametres depuis le fichier params.jso");
     GnuSettings.loadConfigurationVario("params.jso");
     
@@ -755,7 +786,7 @@ void setup() {
     boolean ModifValue = false;
     char tmpFileName[15] = "wifi.cfg";
    
-    if (SDHAL.exists(tmpFileName)) {
+    if (SDHAL_SD.exists(tmpFileName)) {
       GnuSettings.readSDSettings(tmpFileName, &ModifValue);
 
       SerialPort.println("");
@@ -790,7 +821,7 @@ void setup() {
     
     strcpy(tmpFileName,"variocal.cfg");
    
-    if (SDHAL.exists(tmpFileName)) {
+    if (SDHAL_SD.exists(tmpFileName)) {
       GnuSettings.readSDSettings(tmpFileName, &ModifValue);
     }
   }
@@ -851,6 +882,17 @@ void setup() {
   toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);*/
 #endif //HAVE_SPEAKER
 
+/*********************/
+/*    init logger    */
+/*********************/
+
+  varioLog.init();
+  TRACELOG(MAIN_DEBUG_LOG);
+
+/********************/
+/** Update Firmware */
+/********************/
+ 
 #ifdef HAVE_SDCARD
   updateFromSDCARD();
 #endif //HAVE_SDCARD

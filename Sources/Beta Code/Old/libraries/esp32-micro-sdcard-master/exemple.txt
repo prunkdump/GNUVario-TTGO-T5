@@ -1,0 +1,59 @@
+This approach worked form me .
+
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
+#define PIN_NUM_MISO 2
+#define PIN_NUM_MOSI 15
+#define PIN_NUM_CLK 14
+#define PIN_NUM_CS 13
+
+void setup(){
+Serial.begin(115200);
+
+// if(!SD.begin()){
+// Serial.println("Card Mount Failed");
+// return;
+// }
+
+SPI.begin(PIN_NUM_CLK, PIN_NUM_MISO, PIN_NUM_MOSI, PIN_NUM_CS);
+if(!SD.begin(PIN_NUM_CS)){
+    Serial.println("Card Mount Failed");
+    return;
+}
+
+uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+Serial.printf("SD Card Size: %lluMB\n", cardSize);
+uint8_t cardType = SD.cardType();
+
+if(cardType == CARD_NONE){
+    Serial.println("No SD card attached");
+    return;
+}
+
+Serial.print("SD Card Type: ");
+if(cardType == CARD_MMC){
+    Serial.println("MMC");
+} else if(cardType == CARD_SD){
+    Serial.println("SDSC");
+} else if(cardType == CARD_SDHC){
+    Serial.println("SDHC");
+} else {
+    Serial.println("UNKNOWN");
+}
+
+uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+Serial.printf("SD Card Size: %lluMB\n", cardSize);
+Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
+Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
+}
+
+void loop(){
+
+}
+//========================
+outut - SD Card Type: SDHC
+SD Card Size: 30436MB
+Total space: 30424MB
+Used space: 939MB

@@ -167,6 +167,9 @@ class TWScheduler {
 #ifdef HAVE_ACCELEROMETER
   static uint8_t volatile checkOutput[2];
   static uint8_t volatile imuOutput[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH]; //imu dmp fifo output
+#ifdef MPU_ENABLE_INT_PIN
+  static uint8_t volatile imuIntCount;
+#endif //MPU_ENABLE_INT_PIN
   static uint8_t volatile imuCount;
   static SemaphoreHandle_t imuMutex;
 #ifdef AK89xx_SECONDARY
@@ -190,7 +193,11 @@ class TWScheduler {
 #ifdef HAVE_ACCELEROMETER
   static void imuInterrupt(void);
   static void imuCheckFifoCountCallBack(void);
+  static void imuReadFifoData(void);
   static void imuHaveFifoDataCallback(void);
+#ifdef MPU_ENABLE_INT_PIN
+  static void imuIntPinInterrupt(void);
+#endif //MPU_ENABLE_INT_PIN
 #ifdef AK89xx_SECONDARY
   static void magInterrupt(void);
   static void magCheckStatusCallback(void);

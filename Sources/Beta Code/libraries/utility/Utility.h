@@ -24,7 +24,10 @@
 /*                                                                               */
 /*  version    Date        Description                                           */
 /*    1.0      05/07/19                                                          */
-/*    1.1      23/11/19    Modification deep sleep                               */
+/*    1.1      24/09/19    Ajout deep_sleep                                      */
+/*    1.2      15/10/19    Ajout test SDCARD                                     */
+/*    1.3      23/11/19    Modification deep sleep                               */
+/*    1.4      28/11/19    Modif changement librairie sdfat                      */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -34,6 +37,8 @@
 
 #include <Arduino.h>
 #include <VarioSettings.h>
+
+#include <HardwareConfig.h>
 
 //#include <EnergySaving.h>
 
@@ -49,11 +54,19 @@ void indicateFaultSDCARD();
 void signalBeep(double freq, unsigned long duration, int count);
 int8_t percentBat(double targetVoltage);
 void deep_sleep(void);
+#ifdef SDFAT_LIB
+void printSdDirectory(SdFile dir, int numTabs);
+#else
 void printSdDirectory(File dir, int numTabs);
+#endif
 bool TestSDCARD(bool init);
 
 extern VarioSettings GnuSettings;
+#ifdef SDFAT_LIB
+extern SdFile fileIgc;
+#else
 extern File fileIgc;
+#endif
 
 //extern Beeper beeper;
 

@@ -50,6 +50,8 @@
 /*										  Modif ALTERNATE_DATA_DURATION - MULTIDISPLAY_DURATION	   */
 /*                      ajout gestion de plusieurs voiles                        */
 /*    1.1.1 24/11/19		Modification SLEEP_THRESHOLD_CPS en float								 */
+/*    1.2   29/11/19    Modification sdfat                                       */
+/*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */ 
 /*                                                                               */
 /*********************************************************************************/
 
@@ -100,8 +102,12 @@ boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
   char character;
   String settingName;
   String settingValue;
-  myFile = SDHAL.open(FileName);
+#ifdef SDFAT_LIB
+  if (myFile.open(FileName, O_RDONLY)) {
+#else //SDFAT_LIB
+  myFile = SDHAL_SD.open(FileName);
   if (myFile) {
+#endif //SDFAT_LIB		
     while (myFile.available()) {
       character = myFile.read();
       while((myFile.available()) && (character != '[')){
@@ -526,7 +532,11 @@ boolean VarioSettings::toBoolean(String settingValue) {
 
 void VarioSettings::writeFlashSDSettings() {
 		
+#ifdef SDFAT_LIB
+SdFile myFile2;
+#else //SDFAT_LIB
 File myFile2;
+#endif //SDFAT_LIB
 
 /*  SD.remove("FLASH.TXT");
    myFile2 = SDHAL.open("FLASH.TXT", FILE_WRITE);
@@ -561,11 +571,14 @@ File myFile2;
 
   
   // Delete the old One
-  SDHAL.remove(FileFlashName);
+  SDHAL_SD.remove(FileFlashName);
   // Create new one
-  myFile2 = SDHAL.open(FileFlashName, FILE_WRITE);
+#ifdef SDFAT_LIB
+  if (myFile2.open(FileFlashName, O_WRONLY | O_CREAT)) {
+#else //SDFAT_LIB
+  myFile2 = SDHAL_SD.open(FileFlashName, FILE_WRITE);
   if (myFile2) {
-	  
+#endif //SDFAT_LIB	  
 #ifdef SDCARD_DEBUG
         //Debuuging Printing
     SerialPort.println("Write File SD");
@@ -623,14 +636,22 @@ File myFile2;
 void VarioSettings::writeWifiSDSettings(char *filename) {
 //**********************************************************
 		
+#ifdef SDFAT_LIB
+SdFile myFile2;
+#else  //SDFAT_LIB
 File myFile2;
+#endif //SDFAT_LIB
   
   // Delete the old One
-  SDHAL.remove(filename);
+  SDHAL_SD.remove(filename);
   // Create new one
-  myFile2 = SDHAL.open(filename, FILE_WRITE);
+
+#ifdef SDFAT_LIB
+  if (myFile2.open(filename, O_WRONLY | O_CREAT)) {
+#else //SDFAT_LIB
+  myFile2 = SDHAL_SD.open(filename, FILE_WRITE);
   if (myFile2) {
-	  
+#endif //SDFAT_LIB	  
 #ifdef SDCARD_DEBUG
         //Debuuging Printing
     SerialPort.println("Write File SD");
@@ -699,7 +720,11 @@ boolean VarioSettings::readFlashSDSettings(){
   char character;
   String settingName;
   String settingValue;
+#ifdef SDFAT_LIB
+  SdFile myFile2;
+#else //SDFAT_LIB
   File myFile2;
+#endif //SDFAT_LIB
 
 #ifdef SDCARD_DEBUG
 
@@ -707,8 +732,12 @@ boolean VarioSettings::readFlashSDSettings(){
         SerialPort.println("readFlashSDSettings");
 #endif //SDCARD_DEBUG
 
-  myFile2 = SDHAL.open(FileFlashName);
+#ifdef SDFAT_LIB
+  if (myFile2.open(FileFlashName, O_RDONLY)) {
+#else //SDFAT_LIB
+  myFile2 = SDHAL_SD.open(FileFlashName);
   if (myFile2) {
+#endif //SDFAT_LIB
     while (myFile2.available()) {
       character = myFile2.read();
       while((myFile2.available()) && (character != '[')){
@@ -903,10 +932,14 @@ void VarioSettings::soundSettingWrite(uint8_t volume) {
 void VarioSettings::loadConfigurationVario(char *filename) {
 //**********************************************************
   // Open file for reading
-  File file = SDHAL.open(filename);
 	boolean MajFileParams = false;
-
+#ifdef SDFAT_LIB
+  SdFile file;
+	if (!file.open(filename, O_RDONLY)) {
+#else
+  File file = SDHAL_SD.open(filename);
   if (!file) {
+#endif
     SerialPort.println(F("Failed to read file"));
     return;
   }
@@ -1453,11 +1486,16 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 void VarioSettings::saveConfigurationVario(char *filename) {
 //**********************************************************
   // Delete existing file, otherwise the configuration is appended to the file
-  SDHAL.remove(filename);
+  SDHAL_SD.remove(filename);
 
   // Open file for writing
-  File file = SDHAL.open(filename, FILE_WRITE);
+#ifdef SDFAT_LIB
+  SdFile file;
+  if (!file.open(filename, O_WRONLY | O_CREAT)) {
+#else //SDFAT_LIB
+  File file = SDHAL_SD.open(filename, FILE_WRITE);
   if (!file) {
+#endif
     SerialPort.println(F("Failed to create file"));
     return;
   }
@@ -1625,7 +1663,32 @@ void VarioSettings::saveConfigurationVario(char *filename) {
 }
 
 
+//**********************************************************
+void VarioSettings::setVersion(uint8_t version, uint8_t subVersion, uint8_t betaVersion) {
+//**********************************************************
+  GnuvarioVersion = String(version) + "." + String(subVersion);
+	if (betaVersion > 0) GnuvarioVersion += "b" + String(betaVersion);
+}
 
+//**********************************************************
+String VarioSettings::getVersion(void) {
+//**********************************************************
+  return GnuvarioVersion;
+}
+
+//**********************************************************
+String VarioSettings::getScreenModel(void) {
+//**********************************************************
+#if (VARIOSCREEN_SIZE == 154)
+	return "154";
+#elif (VARIOSCREEN_SIZE == 29)
+	return "154";
+#elif (VARIOSCREEN_SIZE == 213)
+	return "154";
+#else 
+	return "";
+#endif
+}
 
 
 /*

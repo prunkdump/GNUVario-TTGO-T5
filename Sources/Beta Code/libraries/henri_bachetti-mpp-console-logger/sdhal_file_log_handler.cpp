@@ -1,24 +1,62 @@
+/* sdhal_file_log_handler -- 
+ *
+ * Copyright 2019 Jean-philippe GOI
+ * 
+ * This file is part of GnuVario-E.
+ *
+ * ToneHAL is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ToneHAL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*********************************************************************************/
+/*                                                                               */
+/*                   sdhal_file_log_handler                                      */
+/*                                                                               */
+/*  version    Date        Description                                           */
+/*    1.0      25/11/19                                                          */
+/*    1.1      29/11/19    Modif changement librairie sdfat                      */
+/*                                                                               */
+/*********************************************************************************/
 
 #include "mpp-console.h"
 #include "mpp-sdhal_log_handler.h"
 //#define LOG_DEBUG
 #include "mpp_local.h"
 
+#include <HardwareConfig.h>
+
 #if !defined ESP8266
 // Not implented on ESP8266 as SD filesystem does not support renaming
 
 #define FILE_MAX_NAME   15
 
+#ifdef SDFAT_LIB
+SdFatFileLogHandler::SdFatFileLogHandler(LogFormatter *formatter, char *filename, size_t maxSize, int backupCount) :
+#else
 SdFatFileLogHandler::SdFatFileLogHandler(LogFormatter *formatter, SdCardHAL *sd, char *filename, size_t maxSize, int backupCount) :
+#endif //SDFAT_LIB
 LogHandler(formatter, "SdFatFileLogHandler")
 {
+#ifdef SDFAT_LIB
+#else
   log_sd = sd;
+#endif //SDFAT_LIB
   log_name = filename;
   log_size = maxSize;
   log_backup = backupCount;
 }
 
-#if defined ESP32
+#if defined(ESP32) && not defined (SDFAT_LIB) 
 
 File SdFatFileLogHandler::openLog(void)
 {
@@ -61,9 +99,10 @@ File SdFatFileLogHandler::openLog(void)
 
 SdFile SdFatFileLogHandler::openLog(void)
 {
-  SdFile f(log_name, O_WRONLY | O_CREAT);
-   if (!f.isOpen()) {
-    debug_print("openLog: %s: error 0x%x\n", log_name, log_sd->card()->errorCode());
+  SdFile f;
+	bool retour = f.open(log_name, O_WRONLY | O_CREAT);
+   if (!retour) {
+    debug_print("openLog: %s: error 0x%x\n", log_name, 0); //SDHAL_SD.card()->errorCode());
     return f;
   }
   f.seekEnd();
@@ -71,9 +110,10 @@ SdFile SdFatFileLogHandler::openLog(void)
     debug_print("openLog %s %ld > %ld\n", log_name, f.fileSize(), log_size);
     f.close();
     logRotate();
-    SdFile f(log_name, O_WRONLY | O_CREAT);
-    if (!f.isOpen()) {
-      debug_print("openLog: %s error 0x%x\n", log_name, log_sd->card()->errorCode());
+    SdFile f;
+		bool retour = f.open(log_name, O_WRONLY | O_CREAT);
+    if (!retour) {
+      debug_print("openLog: %s error 0x%x\n", log_name, 0); //log_sd->card()->errorCode());
       return f;
     }
     f.seekEnd();
@@ -84,7 +124,7 @@ SdFile SdFatFileLogHandler::openLog(void)
 
 #endif
 
-#if defined ESP32
+#if defined(ESP32) && not defined(SDFAT_LIB)
 
 int SdFatFileLogHandler::logRotate(void)
 {
@@ -162,8 +202,9 @@ int SdFatFileLogHandler::logRotate(void)
   size_t size;
   SdFile file;
   
-  File dir = log_sd->open("/");
-  if (!dir) {
+	SdFile dir;
+	bool retour = dir.open("/", O_RDONLY);
+  if (!retour) {
     debug_print("/: error\n");
     return 0;
   }
@@ -189,7 +230,7 @@ int SdFatFileLogHandler::logRotate(void)
       char name[FILE_MAX_NAME];
       sprintf(name, "%s.%d", log_name, fno);
       debug_print("%s: delete\n", name);
-      if (log_sd->remove(name) != true) {
+      if (SDHAL_SD.remove(name) != true) {
         debug_print("%s: cannot delete\n", name);
       }
       debug_print("%s: successfully deleted\n", name);
@@ -201,7 +242,7 @@ int SdFatFileLogHandler::logRotate(void)
       sprintf(name, "%s.%d", log_name, fno);
       sprintf(newname, "%s.%d", log_name, fno+1);
       debug_print("%s: rename to %s\n", name, newname);
-      if (log_sd->rename(name, newname) != true) {
+      if (SDHAL_SD.rename(name, newname) != true) {
         debug_print("%s: cannot rename to %s\n", name, newname);
       }
       debug_print("%s: successfully renamed to %s\n", name, newname);
@@ -210,7 +251,7 @@ int SdFatFileLogHandler::logRotate(void)
   char newname[FILE_MAX_NAME];
   sprintf(newname, "%s.%d", log_name, fno+1);
   debug_print("%s: rename to %s\n", log_name, newname);
-  if (log_sd->rename(log_name, newname) != true) {
+  if (SDHAL_SD.rename(log_name, newname) != true) {
     debug_print("%s: cannot rename to %s\n", log_name, newname);
   }
   debug_print("%s: successfully renamed to %s\n", log_name, newname);
@@ -221,7 +262,7 @@ int SdFatFileLogHandler::logRotate(void)
 
 void SdFatFileLogHandler::send(const char *msg)
 {
-#if defined ESP32
+#if not defined(SDFAT_LIB)
   File f = openLog();
   if (f) {
 #else
@@ -238,11 +279,12 @@ void SdFatFileLogHandler::send(const char *msg)
 
 void SdFatFileLogHandler::sendRaw(const char *msg)
 {
-#if defined ESP32
+#if not defined (SDFAT_LIB)
   File f = openLog();
   if (f) {
 #else
-  SdFile f = openLog();
+  SdFile f;
+  f = openLog();
   if (f.isOpen()) {
 #endif
     size_t len = strlen(msg);

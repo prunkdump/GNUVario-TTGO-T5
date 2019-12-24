@@ -28,6 +28,7 @@
 /*    1.0.2    25/07/19     Ajout noRecord                                       */
 /*    1.0.3    03/10/19     Ajout gestion HAVE_SDCARD 													 */
 /*    1.0.4    12/10/19     Ajout gestion du dossier de stockage des VOLs        */
+/*    1.0.5    29/11/19     Modif sdfat                                          */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -38,7 +39,12 @@
 #include <HardwareConfig.h>
 
 #ifdef HAVE_SDCARD
+
+#ifdef SDFAT_LIB
+SdFile fileIgc;
+#else
 File fileIgc;
+#endif
 IGCHeader header;
 IGCSentence igc;
 GPSSentence igcSD;
@@ -188,7 +194,7 @@ void GPSSentence::CreateIgcFile(uint8_t* dateNum, boolean noRecord) {
       fileName[12] = '\0';        
 			strcpy(tmpstr,DIRECTORY_FILES);
 			strcat(tmpstr,fileName);
-      if (!SDHAL.exists(tmpstr)) break;
+      if (!SDHAL_SD.exists(tmpstr)) break;
     }
     
 #ifdef SDCARD_DEBUG
@@ -203,8 +209,12 @@ void GPSSentence::CreateIgcFile(uint8_t* dateNum, boolean noRecord) {
 #ifdef HAVE_SDCARD          
 			/* create file */    
 //			fileIgc = SDHAL.open((char*)fileName, FILE_WRITE);
-			fileIgc = SDHAL.open((char*)tmpstr, FILE_WRITE);
+#ifdef SDFAT_LIB
+			if (fileIgc.open((char*)tmpstr, O_RDWR | O_CREAT)) {
+#else
+			fileIgc = SDHAL_SD.open((char*)tmpstr, FILE_WRITE);
 			if (fileIgc) {
+#endif //SDFAT_LIB
 				sdcardState = SDCARD_STATE_READY;
 #ifdef SDCARD_DEBUG
 				SerialPort.println("createSDCardTrackFile : Write Header ");

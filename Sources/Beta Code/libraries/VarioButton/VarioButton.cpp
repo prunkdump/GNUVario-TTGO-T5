@@ -42,8 +42,10 @@
  *    1.0.10 03/10/19   Ajout HAVE_SDCARD                                        *
  *    1.0.11 28/10/19		Ajout bip de control lors de la configuration du volume  *
  *    1.0.12 01/11/19   Modification de la configuration du volume               *
- *    1.0.13 03/01/19   Déplacement de la validation de la mise en veille sur le *
+ *    1.0.13 03/11/19   Déplacement de la validation de la mise en veille sur le *
  *                      bouton gauche                                            *
+ *    1.0.14 29/11/19   Ajout arduinotrace                                       *
+ *                      Modif sdfat                                              *
  *                                                                               *
  *********************************************************************************/
  
@@ -61,7 +63,7 @@
 #include <beeper.h>
 #include <varioscreenGxEPD.h>
 #ifdef HAVE_WIFI
-#include <wifiServer.h>
+#include <VarioWifiServer.h>
 #endif //HAVE_WIFI
 
 #include <Utility.h>
@@ -221,7 +223,11 @@ uint8_t VARIOButtonScheduleur::Get_StatePage(void) {
 }
 
 #ifdef HAVE_SDCARD
+#ifdef SDFAT_LIB
+SdFile root;
+#else //SDFAT_LIB
 File root;
+#endif //SDFATLIB
 #endif
 		
 /**********************************************************/
@@ -355,8 +361,12 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 #ifdef HAVE_SDCARD
 
     /* Begin at the root "/" */
-    root = SDHAL.open("/");
+#ifdef SDFAT_LIB
+    if (root.open("/")) {    
+#else
+    root = SDHAL_SD.open("/");
     if (root) {    
+#endif //SDFAT_LIB
       printDirectory(root, 0);
       root.close();
     } else {
@@ -370,22 +380,54 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 #endif //BUTTON_DEBUG	
 
 /*START SERVEUR WEB */
-		wifiServer.begin();
-		wifiServer.connect();
+		varioWifiServer.begin();
+		varioWifiServer.connect();
 
-		wifiServer.start();
+		varioWifiServer.start();
 
 		Set_StatePage(STATE_PAGE_WEBSERV);
 		
 		while(1) {
-		  wifiServer.handleClient(); 
+		  varioWifiServer.handleClient(); 
 			update();
 		}
 }
 #endif //HAVE_WIFI
 
 #ifdef HAVE_SDCARD
+#ifdef SDFAT_LIB
+void VARIOButtonScheduleur::printDirectory(SdFile dir, int numTabs) {
+  
+	char fBuffer[15];
+  SdFile entry;
 
+	dir.rewind();
+//#ifdef BUTTON_DEBUG
+  while(true) {
+     if (!entry.openNext(&dir, O_RDONLY)) {
+	
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       SerialPort.print('\t');   // we'll have a nice indentation
+    }
+     // Print the name
+		 entry.getName(fBuffer,13);
+     SerialPort.print(fBuffer);
+     /* Recurse for directories, otherwise print the file size */
+     if (entry.isDir()) {
+       SerialPort.println("/");
+       printDirectory(entry, numTabs+1);
+     } else {
+       /* files have sizes, directories do not */
+       SerialPort.print("\t\t");
+       SerialPort.println(entry.fileSize());
+     }
+     entry.close();
+   }
+//#endif //BUTTON_DEBUG
+}	 
+#else //SDFAT_LIB
 void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
   
 	dir.rewindDirectory();
@@ -413,6 +455,7 @@ void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
    }
 //#endif //BUTTON_DEBUG
 }	 
+#endif //SDFATLIB
 #endif //HAVE_SDCARD
 
 

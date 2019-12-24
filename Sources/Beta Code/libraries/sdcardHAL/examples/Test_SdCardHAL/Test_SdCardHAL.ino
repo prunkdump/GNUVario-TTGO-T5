@@ -5,11 +5,15 @@
 
 #include <DebugConfig.h>
 
-File root;
+SdFile root;
 
 void setup()
 {
   SerialPort.begin(115200);
+
+  while (!Serial) {
+    SysCall::yield();
+  }
 
   delay(5000);
 
@@ -17,27 +21,29 @@ void setup()
    pinMode(pinLED, OUTPUT);
 #endif
 
-  SerialPort.print("Initializing SD card...");
+  SerialPort.println("Initializing SD card...");
   /* initialize SD library with SPI pins */
  if (!SDHAL.begin()) {            //T1:13,15,2,14  T2: 23,5,19,18
     SerialPort.println("initialization failed!");
     return;
   }
   SerialPort.println("initialization done.");
+
+  
   /* Begin at the root "/" */
-  root = SDHAL.open("/");
-  if (root) {    
+  if (root.open("/")) {    
     printDirectory(root, 0);
     root.close();
   } else {
     SerialPort.println("error opening test.txt");
   }
+  
   /* open "test.txt" for writing */
-  root = SDHAL.open("test.txt", FILE_WRITE);
-  /* if open succesfully -> root != NULL 
+
+  /* if open succesfully  
     then write string "Hello world!" to it
   */
-  if (root) {
+  if (root.open("test.txt", O_RDWR | O_CREAT)) {
     root.println("Hello world!");
     root.flush();
    /* close the file */
@@ -47,13 +53,14 @@ void setup()
     SerialPort.println("error opening test.txt");
   }
   delay(1000);
+  
   /* after writing then reopen the file and read it */
-  root = SDHAL.open("test.txt");
-  if (root) {    
-    /* read from the file until there's nothing else in it */
+  if (root.open("test.txt", O_RDONLY)) {    
+    /* read from the file until there's nothing else in it *
     while (root.available()) {
       /* read the file and print to Terminal */
-      SerialPort.write(root.read());
+    while (root.available()) {
+       SerialPort.write(root.read());
     }
     root.close();
   } else {
@@ -75,27 +82,45 @@ void loop()
 #endif
 }
 
-void printDirectory(File dir, int numTabs) {
-  
+void printDirectory(SdFile dir, int numTabs) {
+
+  SdFile entry;
+  char fBuffer[15];
+ 
   while(true) {
-     File entry =  dir.openNextFile();
-     if (! entry) {
+     
+ /* while (file.openNext(&dir, O_RDONLY)) {
+    if (!file.isHidden()) {
+      rootFileCount++;
+    }*/
+     
+     if (!entry.openNext(&dir, O_RDONLY)) {
        break;
      }
      for (uint8_t i=0; i<numTabs; i++) {
        SerialPort.print('\t');   // we'll have a nice indentation
      }
      // Print the name
-     SerialPort.print(entry.name());
+     entry.getName(fBuffer,13);
+     SerialPort.print(fBuffer);
      /* Recurse for directories, otherwise print the file size */
-     if (entry.isDirectory()) {
+     if (entry.isDir()) {
        SerialPort.println("/");
        printDirectory(entry, numTabs+1);
      } else {
        /* files have sizes, directories do not */
        SerialPort.print("\t\t");
-       SerialPort.println(entry.size());
+       SerialPort.println(entry.fileSize());
      }
      entry.close();
    }
 }
+
+
+/*
+   if (sd.exists("Folder1")
+    || sd.exists("Folder1/file1.txt")
+    || sd.exists("Folder1/File2.txt")) {
+    error("Please remove existing Folder1, file1.txt, and File2.txt");
+  }
+ */

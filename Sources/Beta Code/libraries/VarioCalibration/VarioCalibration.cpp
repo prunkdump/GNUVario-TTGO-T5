@@ -26,6 +26,7 @@
 /*    1.0      29/09/19                                                          */
 /*    1.0.1    01/10/19    Ajout detection bouton                                */
 /*    1.0.2    28/10/19    Ajout enable ampli avant chaque appelle à tone        */
+/*    1.0.3    29/11/19    Modif sdfat                                           */
 /*                                                                               */
 /*********************************************************************************/
 #include <Arduino.h>
@@ -35,7 +36,7 @@
 #include <VarioCalibration.h>
 
 #include <SPI.h>
-#include "eepromHAL.h"
+#include <eepromHAL.h>
 
 #include <VarioSettings.h>
 
@@ -410,7 +411,11 @@ void VarioCalibration::Begin(void)
 				
 #if defined(SDCARD_OUTPUT) && defined(HAVE_SDCARD)
 				if( sdcardFound ) {
-					file = SDHAL.open(filename, FILE_WRITE);  //, FILENAME_SIZE);
+#ifdef SDFAT_LIB
+					file.open(filename, O_RDWR | O_CREAT);
+#else //SDFAT_LIB
+					file = SDHAL_SD.open(filename, FILE_WRITE);  //, FILENAME_SIZE);
+#endif // SDFAT_LIB
 				}
 
 				writeNumber(gyroCal[0]);
