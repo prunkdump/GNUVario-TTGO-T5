@@ -683,7 +683,9 @@ void ScreenDigit::show() {
 	
 		if ((anchorX+w+2) > display.width()) w = display.width()-anchorX+2;
 
-		display.fillRect(anchorX, anchorY-Zheight-3, w+6, Zheight+4, GxEPD_WHITE);
+		display.fillRect(anchorX, anchorY-Zheight-3, w+5, Zheight+4, GxEPD_WHITE);
+
+//		display.drawRect(anchorX, anchorY-Zheight-3, w+5, Zheight+4, GxEPD_BLACK);
 	  
     display.setCursor(anchorX, anchorY-1);
 		titleX = anchorX + 4;
@@ -704,9 +706,13 @@ void ScreenDigit::show() {
 		SerialPort.print("W : ");
 		SerialPort.println(w);
 #endif //SCREEN_DEBUG
-					
-		display.fillRect(anchorX-w-2, anchorY-Zheight-3, w+6, Zheight+4, GxEPD_WHITE);
-		
+	
+//		display.fillRect(anchorX-w-2, anchorY-Zheight-3, w+6, Zheight+4, GxEPD_WHITE);
+	
+		display.fillRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_WHITE);
+
+//		display.drawRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_BLACK);
+
     display.setCursor(anchorX-w1-2, anchorY-1);
 		titleX = anchorX - MaxWidth;
 		titleY = anchorY - MaxHeight - 5; 		
@@ -1126,7 +1132,7 @@ void MSUnit::show() {
 #endif //SCREEN_DEBUG
 
 // display.drawBitmap(msicons, posX, posY, 48, 48, GxEPD_WHITE,false);   //GxEPD_BLACK);
-	display.fillRect(posX, posY, 24, 24, GxEPD_WHITE);
+//	display.fillRect(posX, posY, 24, 24, GxEPD_WHITE);
 //	display.drawRect(posX, posY, 24, 24, GxEPD_BLACK);
   display.drawBitmap(posX, posY, msicons, 24, 24, GxEPD_BLACK);   //GxEPD_BLACK);
 //display.drawInvertedBitmap	
@@ -1407,6 +1413,13 @@ b=0.386384
   SerialPort.print("pVoltage : ");
   SerialPort.println(pVoltage);
 #endif //SCREEN_DEBUG
+
+#if defined(VOLTAGE_DIVISOR_DEBUG)
+  float percentage = 2808.3808 * pow(voltage, 4) - 43560.9157 * pow(voltage, 3) + 252848.5888 * pow(voltage, 2) - 650767.4615 * voltage + 626532.5703;
+  if (voltage > 4.19) percentage = 100;
+  else if (voltage <= 3.50) percentage = 0;
+  SerialPort.println(String(percentage)+"%");
+#endif //VOLTAGE_DIVISOR_DEBUG
 #endif //SIMPLE_VOLTAGE_VIEW
   
   reset();
@@ -1705,7 +1718,7 @@ void SATLevel::show(void) {
 #endif //SCREEN_DEBUG
 	
   display.fillRect(posX+floor((float)satelliteBar*6.5), posY, 32-floor((float)satelliteBar*6.5), 32, GxEPD_WHITE);
-//	display.drawRect(posX+(satelliteBar*6), posY, 32-(satelliteBar*6), 32, GxEPD_BLACK);
+//	display.drawRect(posX+floor((float)satelliteBar*6.5), posY, 32-floor((float)satelliteBar*6.5), 32, GxEPD_BLACK);
 }
 
 //****************************************************************************************************************************
@@ -1991,8 +2004,9 @@ void ScreenTime::show(void) {
   SerialPort.println("Show : ScreenTime");
 #endif //SCREEN_DEBUG
 
-  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
-// 	display.drawRect(posX-70, posY-32, 65, 34, GxEPD_BLACK);
+//  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
+  display.fillRect(posX-70, posY-32, 16, 34, GxEPD_WHITE);
+// 	display.drawRect(posX-70, posY-32, 16, 34, GxEPD_BLACK);
 
 
   if (dot_or_h == false) {

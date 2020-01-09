@@ -728,7 +728,7 @@ void ScreenDigit::show() {
 			break;
 		case DISPLAY_OBJECT_ALTI :
 //			display.drawInvertedBitmap(0, 31, altitext, 18, 11, GxEPD_BLACK);
-			display.drawBitmap(titleX+15, titleY-5, altitext, 15, 7, GxEPD_BLACK);
+			display.drawBitmap(titleX-77, titleY-5, altitext, 15, 7, GxEPD_BLACK);
 			break;
 		case DISPLAY_OBJECT_VARIO :
 //			display.drawInvertedBitmap(0, 85, variotext, 31, 11, GxEPD_BLACK);

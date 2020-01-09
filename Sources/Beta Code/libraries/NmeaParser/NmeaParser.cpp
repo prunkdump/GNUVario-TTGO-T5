@@ -1,6 +1,6 @@
 /* NmeaParser -- Parse NMEA GPS sentences
  *
- * Copyright 2016-2019 Baptiste PELLEGRIN
+ * Copyright 2016-2019 Baptiste PELLEGRIN, Jean-Philippe
  * 
  * This file is part of GNUVario.
  *
@@ -18,6 +18,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/* 
+ *********************************************************************************
+ *********************************************************************************
+ *                                                                               *
+ *                           NmeaParser                                          *
+ *                                                                               *
+ *  version    Date     Description                                              *
+ *    1.0                                                                        *
+ *    1.0.1  04/01/20   Ajout décodage Compas                                    *
+ *                                                                               *
+ *********************************************************************************/
+
 #include <NmeaParser.h>
 
 #include <Arduino.h>
@@ -33,6 +45,7 @@
 #define HAVE_NEW_SPEED_VALUE 6
 #define HAVE_NEW_ALTI_VALUE 4
 #define HAVE_DATE 5
+#define HAVE_BEARING 7
 
 #define KNOTS_TO_KMH 1.852 
 
@@ -84,29 +97,33 @@ void NmeaParser::feed(uint8_t c) {
       if( parserState_isset(PARSE_RMC) ) {
 
 	/* RMC speed */
-	if( commaCount == NMEA_PARSER_RMC_SPEED_POS ) { 
+				if( commaCount == NMEA_PARSER_RMC_SPEED_POS ) { 
 	
 #ifdef NMEAPARSER_DEBUG
-    SerialPort.print("Speed : ");
-    SerialPort.println((((double)value)/NMEA_RMC_SPEED_PRECISION)*KNOTS_TO_KMH);
+					SerialPort.print("Speed : ");
+					SerialPort.println((((double)value)/NMEA_RMC_SPEED_PRECISION)*KNOTS_TO_KMH);
 #endif //NMEAPARSER_DEBUG
 
-	  speed = value;
-	  parserState_set(HAVE_NEW_SPEED_VALUE);
+					speed = value;
+					parserState_set(HAVE_NEW_SPEED_VALUE);
 		
 #ifdef NMEAPARSER_DEBUG
-    SerialPort.print("state set : ");
-    SerialPort.println(state);
+					SerialPort.print("state set : ");
+					SerialPort.println(state);
 #endif //NMEAPARSER_DEBUG
 		
-	}
+				}
 
 	/* RMC date */
-        else if( commaCount == NMEA_PARSER_RMC_DATE_POS ) {
-	  date = value;
-	  parserState_set(HAVE_DATE);
-	}
+				else if( commaCount == NMEA_PARSER_RMC_DATE_POS ) {
+					date = value;
+					parserState_set(HAVE_DATE);
+				}
 
+				else if( commaCount == NMEA_PARSER_RMC_TRACK_POS ) {
+					track = value;
+					parserState_set(HAVE_BEARING);
+				}
       }
 
       /* GGA case */
@@ -181,6 +198,17 @@ double NmeaParser::getSpeed(void) {
   return ((((double)speed)/NMEA_RMC_SPEED_PRECISION)*KNOTS_TO_KMH);
 }
 
+bool NmeaParser::haveBearing(void) {
+
+  return parserState_isset(HAVE_BEARING);
+}
+
+double NmeaParser::getBearing(void) {
+
+  parserState_unset(HAVE_BEARING);
+  return ((double)track)/NMEA_RMC_TRACK_PRECISION;
+}
+
 double NmeaParser::getSpeed_no_unset(void) {
 
 #ifdef NMEAPARSER_DEBUG
@@ -204,5 +232,42 @@ bool NmeaParser::isParsingGGA(void) {
   return parserState_isset(PARSE_GGA);
 }
 
-
+String NmeaParser::Bearing_to_Ordinal(float bearing) {
+  if (bearing >=    0.0  && bearing < 11.25  ) return "N";
+  if (bearing >=  11.25  && bearing < 33.75 )  return "NNE";
+  if (bearing >=  33.75  && bearing < 56.25 )  return "NE";
+  if (bearing >=  56.25  && bearing < 78.75 )  return "ENE";
+  if (bearing >=  78.75  && bearing < 101.25 ) return "E";
+  if (bearing >=  101.25 && bearing < 123.75 ) return "ESE";
+  if (bearing >=  123.75 && bearing < 146.25 ) return "SE";
+  if (bearing >=  146.25 && bearing < 168.75 ) return "SSE";
+  if (bearing >=  168.75 && bearing < 191.25 ) return "S";
+  if (bearing >=  191.25 && bearing < 213.75 ) return "SSW";  
+  if (bearing >=  213.75 && bearing < 236.25 ) return "SW";
+  if (bearing >=  236.25 && bearing < 258.25 ) return "WSW";
+  if (bearing >=  258.25 && bearing < 281.25 ) return "W";
+  if (bearing >=  281.25 && bearing < 303.75 ) return "WNW";
+  if (bearing >=  303.75 && bearing < 326.25 ) return "NW";
+  if (bearing >=  326.25 && bearing < 348.75 ) return "NNW";
+  if (bearing >=  348.75 && bearing < 360.00 ) return "N";
+  else return "N";
+}
+/*
+N    348.75   11.25
+NNE   11.25   33.75
+NE    33.75   56.25
+ENE   56.25   78.75
+E     78.75  101.25
+ESE  101.25  123.75
+SE   123.75  146.25
+SSE  146.25  168.75
+S    168.75  191.25
+SSW  191.25  213.75
+SW   213.75  236.25
+WSW  236.25  258.75
+W    258.75  281.25
+WNW  281.25  303.75
+NW   303.75  326.25
+NNW  326.25  348.75
+*/
 

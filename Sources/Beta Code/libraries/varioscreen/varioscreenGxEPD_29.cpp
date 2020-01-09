@@ -120,8 +120,8 @@ volatile uint8_t stateMulti = 0;
 #define ColorScreen    GxEPD_WHITE
 #define ColorText      GxEPD_BLACK
 
-#define VARIOSCREEN_TENSION_ANCHOR_X 140
-#define VARIOSCREEN_TENSION_ANCHOR_Y 170
+#define VARIOSCREEN_TENSION_ANCHOR_X 200
+#define VARIOSCREEN_TENSION_ANCHOR_Y 80
 
 #define VARIOSCREEN_AUTONOMIE_ANCHOR_X 90
 #define VARIOSCREEN_AUTONOMIE_ANCHOR_Y 235
@@ -460,6 +460,7 @@ void genericTask( void * parameter ){
 #endif //SCREEN_DEBUG
 
 	display.display(true); // partial update
+	display.epd2.powerOff();
 //	display.
   stateDisplay = STATE_OK;
   vTaskDelete(taskDisplay);
@@ -935,20 +936,20 @@ void VarioScreen::ScreenViewReboot(void)
 // 	  display.fillScreen(ColorScreen);
 //		display.clearScreen(ColorScreen);
 
-		display.drawBitmap(0, 10, logo_gnuvario, 51, 37, ColorText); //94
+		display.drawInvertedBitmap(10, 20, logo_gnuvario, 94, 74, ColorText); //94
 
 		display.setFont(&FreeSansBold9pt7b);
 		display.setTextColor(ColorText);
 		display.setTextSize(1);
 
-		display.setCursor(95, 80);
-		display.print("Vario-E");
+		display.setCursor(130, 45);
+		display.print("GNUVARIO-E");
 
 		display.setFont(&FreeSansBold9pt7b);
 		display.setTextSize(1);
-		display.setCursor(20, 140);
+		display.setCursor(130, 70);
 		display.print("Redemarrage");
- 		display.setCursor(40, 170);
+ 		display.setCursor(150, 95);
 		display.print("en cours");
   }
   while (display.nextPage());
@@ -967,9 +968,9 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 // 	  display.fillScreen(ColorScreen);
 //		display.clearScreen(ColorScreen);
 
-		display.drawBitmap(0, 10, logo_gnuvario, 102, 74, ColorText); //94
+		display.drawInvertedBitmap(10, 20, logo_gnuvario, 94, 74, ColorText); //94
 
-		display.setFont(&FreeSansBold12pt7b);
+		display.setFont(&FreeSansBold9pt7b);
 		display.setTextColor(ColorText);
 		display.setTextSize(1);
 
@@ -988,10 +989,10 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 		display.setCursor(25, 110);
 		display.print(tmpbuffer);*/
 
-		display.setCursor(20, 110);
-		display.print("GnueVario-E");
+		display.setCursor(130, 45);
+		display.print("GNUVARIO-E");
 
-		display.setFont(&FreeSansBold12pt7b);
+		display.setFont(&FreeSansBold9pt7b);
 		display.setTextSize(1);
 		
 		
@@ -1000,7 +1001,7 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
   // center bounding box by transposition of origin:
 		uint16_t x = ((display.width() - tbw) / 2) - tbx;
 		uint16_t y = ((display.height() - tbh) / 2) - tby;
-    display.setCursor(x, VARIOSCREEN_TENSION_ANCHOR_Y); // set the postition to start printing text
+    display.setCursor(x+40, VARIOSCREEN_TENSION_ANCHOR_Y); // set the postition to start printing text
 		display.print(message);
   }
   while (display.nextPage());
@@ -1025,7 +1026,7 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 			TmplastDisplayTimestamp = millis();
 			compteur++;
 		
-		  display.fillRect(19, 170, 180, -30, GxEPD_WHITE);
+		  display.fillRect(19, 170, 180, -30, GxEPD_BLACK);
 
 		  if ((compteur % 2) == 0) {
 				display.setCursor(x, VARIOSCREEN_TENSION_ANCHOR_Y);

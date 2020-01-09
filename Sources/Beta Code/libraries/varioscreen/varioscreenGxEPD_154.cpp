@@ -72,6 +72,8 @@ static const char* TAG = "VarioScreen";
 
 #include <Utility.h>
 
+#include <SysCall.h>
+
 #ifdef __AVR__
   #include <avr/pgmspace.h>
 #elif defined(ESP8266) || defined(ESP32)
@@ -134,6 +136,7 @@ volatile uint8_t stateMulti = 0;
 #define VARIOSCREEN_ALTI_ANCHOR_Y 80
 #define VARIOSCREEN_ALTI_UNIT_ANCHOR_X    120
 #define VARIOSCREEN_VARIO_ANCHOR_X 90
+//#define VARIOSCREEN_VARIO_ANCHOR_X 5
 #define VARIOSCREEN_VARIO_ANCHOR_Y 135
 #define VARIOSCREEN_VARIO_UNIT_ANCHOR_X   100
 #define VARIOSCREEN_VARIO_UNIT_ANCHOR_Y   110
@@ -271,6 +274,7 @@ void VarioScreen::createScreenObjectsPage0(void) {
 	altiDigit = new ScreenDigit(VARIOSCREEN_ALTI_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y, 4, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_ALTI);
 	munit = new MUnit(VARIOSCREEN_ALTI_UNIT_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y);
 	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNRIGHT, true, DISPLAY_OBJECT_VARIO);
+//	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNLEFT, true, DISPLAY_OBJECT_VARIO);
 	msunit = new MSUnit(VARIOSCREEN_VARIO_UNIT_ANCHOR_X, VARIOSCREEN_VARIO_UNIT_ANCHOR_Y);
 	kmhunit = new KMHUnit(VARIOSCREEN_SPEED_UNIT_ANCHOR_X, VARIOSCREEN_SPEED_UNIT_ANCHOR_Y);
 	speedDigit = new ScreenDigit(VARIOSCREEN_SPEED_ANCHOR_X, VARIOSCREEN_SPEED_ANCHOR_Y, 2, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_SPEED);
@@ -458,6 +462,12 @@ void genericTask( void * parameter ){
 #endif //SCREEN_DEBUG
 
 	display.display(true); // partial update
+	display.epd2.powerOff();
+/*	for(int i=0;i<200;i++) {
+		delay(1);
+// Passes control to other tasks when called
+		SysCall::yield();
+	}*/
 //	display.
   stateDisplay = STATE_OK;
   vTaskDelete(taskDisplay);

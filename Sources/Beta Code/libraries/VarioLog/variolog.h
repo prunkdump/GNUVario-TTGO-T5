@@ -24,7 +24,28 @@
 /*                                                                               */
 /*  version    Date        Description                                           */
 /*    1.0      18/12/19                                                          */
+/*    1.1      03/01/20    Ajout ouverture du fichier dans init et writesd       */
+/*                         Ajout gestion du fichier log.cfg                      */
+/*    1.1.1    06/01/20		 Ajout logvariable																		 */
 /*                                                                               */
+/*********************************************************************************/
+/*                                                                               */
+/*   TRACELOG(type, module)                                                      */
+/*                                    Type                                       */
+/*																						LOG_TYPE_DEBUG				DEBUG				 */
+/*																						LOG_TYPE_INFO					INFO         */
+/*																						LOG_TYPE_WARNING			WARNING      */
+/*																						LOG_TYPE_ERROR				ERROR        */
+/*																						LOG_TYPE_CRITICAL			CRITICAL		 */
+/*																																							 */
+/*                                    Module  de 1 à 20                          */
+/*																																							 */
+/*	DUMPLOG(type, module, variable)																							 */
+/* 																																							 */
+/*	MESSLOG(type, module, Text)																									 */
+/*																																							 */
+/*	INFOLOG(Text)																																 */
+/*																																							 */
 /*********************************************************************************/
 
 
@@ -35,23 +56,24 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 #include <ArduinoTrace.h>
-#include "mpp-console.h"
-#include "mpp-logger.h"
-#include "mpp-sdhal_log_handler.h"
 
-#define MAIN_DEBUG_LOG 				0			  
-#define SCREEN_DEBUG_LOG 			1
-#define GPS_DEBUG_LOG					2
-#define BUTTON_DEBUG_LOG			3
-#define MS5611_DEBUG_LOG			4
-#define MPU_DEBUG_LOG					5
-#define KALMAN_DEBUG_LOG			6
-#define EEPROM_DEBUG_LOG			7
-#define SDCARD_DEBUG_LOG			8
-#define IGC_DEBUG_LOG					9
-#define BT_DEBUG_LOG					10
-#define WIFI_DEBUG_LOG				11
-#define SOUND_DEBUG_LOG				12
+#include <sdcardHAL.h>
+#include <VarioSettings.h>
+
+#define ALL_DEBUG_LOG         0
+#define MAIN_DEBUG_LOG 				1			  
+#define SCREEN_DEBUG_LOG 			2
+#define GPS_DEBUG_LOG					3
+#define BUTTON_DEBUG_LOG			4
+#define MS5611_DEBUG_LOG			5
+#define MPU_DEBUG_LOG					6
+#define KALMAN_DEBUG_LOG			7
+#define EEPROM_DEBUG_LOG			8
+#define SDCARD_DEBUG_LOG			9
+#define IGC_DEBUG_LOG					10
+#define BT_DEBUG_LOG					11
+#define WIFI_DEBUG_LOG				12
+#define SOUND_DEBUG_LOG				13
 
 #define LOG_TYPE_DEBUG				0
 #define LOG_TYPE_INFO					1
@@ -68,42 +90,71 @@ class VarioLog {
    void init(void);
 	 void setDebug(uint8_t module, bool status);
 	 bool getDebug(uint8_t module);
+	 void setEnableSerial(bool status);
+	 void setEnableSdCard(bool status);
+	 void setEnableDebug(bool status);
+	 void setEnableDebugESP32(bool status);
 	 void logtrace(uint8_t type, uint8_t module, String file, int line, String function);
+	 void logmessage(uint8_t type, uint8_t module, String file, int line, String function, String message);
+	 void logvariable(uint8_t type, uint8_t module, String file, int line, String function, String namevariable, String variable);
+	 void loginfo(String message);
+	 String formatlog(uint8_t type, uint8_t module, String file, int line, String function);
+	 void traitement(uint8_t type, uint8_t module, String msg);
+	 
+#ifdef SDFAT_LIB
+		SdFile *log_sd;
+#else
+    SdCardHAL *log_sd;
+#endif //SDFAT_LIB
+		
+#ifdef SDFAT_LIB
+		SdFile logFile;
+#else
+    File logFile;
+#endif //SDFAT_LIB
+		
+#ifdef SDFAT_LIB
+   SdFile openLog(void);
+#else
+   File openLog(void);
+#endif //SDFAT_LIB
+   int logRotate(void);
 
+   VarioLog(char *filename, size_t maxSize, int backupCount);
+   void send(const char *msg);
+	 void send(String msg);
+	 void writeSd(const char *msg);
+	 void writeSd(String msg);
+	 void openSd(void);
+	 
+protected:
+	 char *log_name;
+	 size_t log_size;
+	 int log_backup;
 
  private:
-   bool EnableDebug[20];
-
+   bool EnableDebugModule[20];
+	 bool EnableSerial;
+	 bool EnableSdCard;
+	 bool EnableDebugESP32;
+	 bool EnableDebug;
 };
 
 extern VarioLog varioLog;
 
-#define TRACELOG(module)                             \
-  varioLog.logtrace(module, __COUNTER__, __FILE__,   \
+#define TRACELOG(type, module)                      \
+  varioLog.logtrace(type, module, __FILE__,         \
 										__LINE__, __PRETTY_FUNCTION__)
 
-#define DUMPLOG(variable)
-#define MESSLOG(Text)
+//, __COUNTER__
+#define DUMPLOG(type, module, variable)             \
+  varioLog.logvariable(type, module, __FILE__,       \
+										__LINE__, __PRETTY_FUNCTION__, String(#variable), String(variable))
 
-extern Logger LOGGER;
+#define MESSLOG(type, module, Text)                 \
+  varioLog.logmessage(type, module, __FILE__,       \
+										__LINE__, __PRETTY_FUNCTION__, Text)
 
-#define LOGS_ACTIVE
-
-#ifndef LOGS_ACTIVE
-#define log_setLevel
-#define log_debug
-#define log_info
-#define log_warning
-#define log_error
-#define log_critical
-#else
-#define log_setLevel    LOGGER.setLevel
-#define log_printf      LOGGER.log
-#define log_debug       LOGGER.debug
-#define log_info        LOGGER.info
-#define log_warning     LOGGER.warning
-#define log_error       LOGGER.error
-#define log_critical    LOGGER.critical
-#endif
-
+#define INFOLOG(Text) \
+	varioLog.loginfo(Text)
 #endif

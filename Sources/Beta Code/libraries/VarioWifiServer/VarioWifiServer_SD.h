@@ -25,7 +25,7 @@
 
 #include <VarioWifiServer.h>
 
-//#define ESP32WEBSERVEUR 
+#define ESP32WEBSERVEUR 
 //#define ESPASYNCWEBSERVER
 //#define ETHERNETWEBSERVER
 
@@ -46,11 +46,11 @@
 #ifdef ESP32WEBSERVEUR 
 #include <WiFiMulti.h> // Built-in
 //#include <WiFiClient.h>
-#include <ESP32WebServer.h>    // https://github.com/Pedroalbuquerque/ESP32WebServer download and place in your Libraries folder
+#include <VarioESP32WebServer.h>    // https://github.com/Pedroalbuquerque/ESP32WebServer download and place in your Libraries folder
 #include <WiFi.h>
 #include <ESPmDNS.h>
 
-#define WEBSERVERTYPE "ESP32WebServer"
+#define WEBSERVERTYPE "VarioESP32WebServer"
 
 #elif defined(ESPASYNCWEBSERVER)
 
@@ -113,7 +113,7 @@ extern ESP8266WebServer server;
 #else
 extern WiFiMulti wifiMulti;
 #ifdef ESP32WEBSERVEUR 
-extern ESP32WebServer server;
+extern VarioESP32WebServer server;
 #elif defined(ESPASYNCWEBSERVER)
   AsyncWebServer server; 
 #elif defined(ETHERNETWEBSERVER)

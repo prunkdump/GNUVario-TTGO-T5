@@ -84,6 +84,7 @@ uint8_t volatile TWScheduler::checkOutput[2];
 uint8_t volatile TWScheduler::imuOutput[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH]; //imu dmp fifo output
 #ifdef MPU_ENABLE_INT_PIN
 uint8_t volatile TWScheduler::imuIntCount = 0;
+SemaphoreHandle_t TWScheduler::imuIntCountMutex;
 #endif //MPU_ENABLE_INT_PIN
 uint8_t volatile TWScheduler::imuCount = TWO_WIRE_SCHEDULER_IMU_SHIFT;
 SemaphoreHandle_t TWScheduler::imuMutex;
@@ -351,10 +352,10 @@ void TWScheduler::imuCheckFifoCountCallBack(void) {
 #ifdef MPU_ENABLE_INT_PIN
   /* check for empty fifo */
   if( fifoState == 0 ) {
-    xSemaphoreTake(imuMutex, portMAX_DELAY);
+    xSemaphoreTake(imuIntCountMutex, portMAX_DELAY);
     bset(MPU_FIFO_EMPTIED);
     imuIntCount = 0; //start using the interrupt
-    xSemaphoreGive(imuMutex);
+    xSemaphoreGive(imuIntCountMutex);
   }
 #endif //MPU_ENABLE_INT_PIN
   if( fifoState > 0 ) {
@@ -383,9 +384,9 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
   
 #ifdef MPU_ENABLE_INT_PIN
   /* decrease FiFo counter */
-  xSemaphoreTake(imuMutex, portMAX_DELAY);
+  xSemaphoreTake(imuIntCountMutex, portMAX_DELAY);
   imuIntCount--;
-  xSemaphoreGive(imuMutex);
+  xSemaphoreGive(imuIntCountMutex);
 #endif
 }
 
@@ -393,12 +394,12 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
 void IRAM_ATTR TWScheduler::imuIntPinInterrupt(void) {
 
   BaseType_t xHigherPriorityTaskWokenT = 0;
-  xSemaphoreTakeFromISR(imuMutex, &xHigherPriorityTaskWokenT);
+  xSemaphoreTakeFromISR(imuIntCountMutex, &xHigherPriorityTaskWokenT);
   
   imuIntCount++;
 
   BaseType_t xHigherPriorityTaskWokenG = 0;
-  xSemaphoreGiveFromISR(imuMutex, &xHigherPriorityTaskWokenG);
+  xSemaphoreGiveFromISR(imuIntCountMutex, &xHigherPriorityTaskWokenG);
 
   if( xHigherPriorityTaskWokenT == pdTRUE || xHigherPriorityTaskWokenG == pdTRUE )
     portYIELD_FROM_ISR();
@@ -583,7 +584,8 @@ void TWScheduler::init(void) {
 
 #ifdef MPU_ENABLE_INT_PIN
   /* init INT pin */
-  //!!!pinMode(VARIO_MPU_INT_PIN, INPUT_PULLUP);
+  imuIntCountMutex = xSemaphoreCreateBinary();
+  xSemaphoreGive(imuIntCountMutex);
   pinMode(VARIO_MPU_INT_PIN, INPUT);
   attachInterrupt(VARIO_MPU_INT_PIN, imuIntPinInterrupt,  FALLING);
 #endif

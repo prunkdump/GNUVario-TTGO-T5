@@ -1,7 +1,7 @@
 // GxEPD2_Spiffs_Loader : Display Library example for SPI e-paper panels from Dalian Good Display and boards from Waveshare.
-// Requires HW SPI and Adafruit_GFX. Caution: these e-papers require 3.3V supply AND data lines!
+// Requires HW SPI and Adafruit_GFX. Caution: the e-paper panels require 3.3V supply AND data lines!
 //
-// Display Library based on Demo Example from Good Display: http://www.good-display.com/download_list/downloadcategoryid=34&isMode=false.html
+// Display Library based on Demo Example from Good Display: http://www.e-paper-display.com/download_list/downloadcategoryid=34&isMode=false.html
 //
 // Author: Jean-Marc Zingg
 //

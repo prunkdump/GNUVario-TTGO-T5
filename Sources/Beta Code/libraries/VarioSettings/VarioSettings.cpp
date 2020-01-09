@@ -51,7 +51,8 @@
 /*                      ajout gestion de plusieurs voiles                        */
 /*    1.1.1 24/11/19		Modification SLEEP_THRESHOLD_CPS en float								 */
 /*    1.2   29/11/19    Modification sdfat                                       */
-/*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */ 
+/*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */
+/*    1.3   28/12/19    Ajout read log.cfg                                       */ 
 /*                                                                               */
 /*********************************************************************************/
 
@@ -70,6 +71,8 @@
 #endif
 
 #include <ArduinoJson.h>
+
+#include <VarioLog.h> 
 
 //SdFat SD;
 
@@ -495,6 +498,49 @@ boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
 	   // Kalman filter configuration
      COMPENSATION_GPSALTI=toFloat(settingValue);
    }	 
+	 //Paramètre LOG 
+   else if(settingName == "LOG_ENABLE") {
+		 varioLog.setEnableDebug(toBoolean(settingValue));
+    }	 
+   else if(settingName == "LOG_SERIAL_ENABLE") {
+		 varioLog.setEnableSerial(toBoolean(settingValue));
+    }	 
+   else if(settingName == "LOG_SD_ENABLE") {
+		 varioLog.setEnableSdCard(toBoolean(settingValue));
+    }	 
+   else if(settingName == "LOG_DEBUG_ENABLE") {
+		 varioLog.setEnableDebugESP32(toBoolean(settingValue));
+    }	 
+   else if(settingName == "MAIN_DEBUG") {
+		 varioLog.setDebug(MAIN_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "SCREEN_DEBUG") {
+		 varioLog.setDebug(SCREEN_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "GPS_DEBUG") {
+		 varioLog.setDebug(GPS_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "BUTTON_DEBUG") {
+		 varioLog.setDebug(BUTTON_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "MS5611_DEBUG") {
+		 varioLog.setDebug(MS5611_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "MPU_DEBUG") {
+		 varioLog.setDebug(MPU_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "SDCARD_DEBUG") {
+		 varioLog.setDebug(SDCARD_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "BT_DEBUG") {
+		 varioLog.setDebug(BT_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "WIFI_DEBUG") {
+		 varioLog.setDebug(WIFI_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "SOUND_DEBUG") {
+		 varioLog.setDebug(SOUND_DEBUG_LOG,toBoolean(settingValue));
+    }	 
   else {       
    }  
 	return ValeurDifferente;

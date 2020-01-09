@@ -1,3 +1,23 @@
+/* WifiServer_SD -- 
+ *
+ * Copyright 2016-2020 Jean-philippe, Pascal
+ * 
+ * This file is part of GNUVario-E
+ *
+ * GNUVario is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * GNUVario is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 /*********************************************************************************/
 /*                                                                               */
 /*                           Libraries wifiServer_SD                             */
@@ -16,6 +36,8 @@
 /*                      Recodage de l'update                                     */
 /*    1.2.7  11/12/19   Changement de nom                                        */
 /*    1.2.8  12/12/19   Librairie VarioWebServer                                 */
+/*    1.2.9  27/12/19   Modif ESP32WebServer par VarioESP32WebServer             */
+/*    1.2.10 28/12/19   Modification HandleUpdate                                */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -1114,12 +1136,12 @@ void handleFileDownload()
   dataFile.close();
 }
 
-/*
+
 // upload d'un fichier dont le chemin + nom se trouve en param dans le nommage du fichier
-/***********************************
+/***********************************/
 void handleFileUpload()
 {
-  /***********************************
+  /***********************************/
 #ifdef WIFI_DEBUG
   SerialPort.println("handleFileUpload");
 #endif
@@ -1180,13 +1202,12 @@ void handleFileUpload()
   server.sendHeader("Access-Control-Allow-Origin", "*");
   returnOK();
 }
-*/
 
-// upload d'un fichier dont le chemin + nom se trouve en param dans le nommage du fichier
 
-/***********************************/
+/*
+/***********************************
 void handleFileUpload() {
-/***********************************/
+/***********************************
 
 #ifdef WIFI_DEBUG
   SerialPort.println("handleFileUpload");
@@ -1272,7 +1293,7 @@ void handleFileUpload() {
 	server.sendHeader("Access-Control-Allow-Origin","*");
 	returnOK();
 }
-
+*/
 
 // suppression d'un fichier dont le chemin + nom se trouve en param
 /**********************************/
@@ -1412,6 +1433,77 @@ File UpdateFile;
 #endif
 
 // Mise à jour OTA
+
+// upload d'un fichier dont le chemin + nom se trouve en param dans le nommage du fichier
+/***********************************
+void handleFileUpdate() {
+/***********************************
+
+#ifdef WIFI_DEBUG
+  SerialPort.println("handleFileUpdate");
+#endif
+
+/*  if (server.uri()!= "/upload") {
+		return;
+	}*
+
+// Si le fichier existe on le supprime
+	HTTPUpload &upload = server.upload();
+	if (upload.status == UPLOAD_FILE_START) {
+    SerialPort.setDebugOutput(true);
+//        WiFiUDP::stop();   //All();
+#ifdef WIFI_DEBUG
+		SerialPort.printf("Update: %s\n", upload.filename.c_str());
+#endif
+		uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+		if(!Update.begin(maxSketchSpace)){//start with max available size
+				Update.printError(SerialPort);
+		}
+	} 
+  else if (upload.status == UPLOAD_FILE_WRITE)
+	{
+		if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
+			Update.printError(SerialPort);
+		}
+		TRACE();
+//				DUMP(upload.buf);
+	} 
+	else if (upload.status == UPLOAD_FILE_END) 
+	{
+		if(Update.end(true)){ //true to set the size to the current progress
+#ifdef WIFI_DEBUG
+			SerialPort.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+#endif
+						
+			SerialPort.println("RESTART ESP32");
+			SerialPort.flush();
+
+			returnOK();
+
+			ESP_LOGI("GnuVario-E", "RESTART ESP32");
+#ifdef ENABLE_DISPLAY_WEBSERVER
+			screen.ScreenViewReboot();
+#endif
+			ESP.restart();			
+		} else {
+			Update.printError(SerialPort);
+			SerialPort.setDebugOutput(false);
+			return returnFail("could not update");
+		}
+		SerialPort.setDebugOutput(false);
+
+#ifdef WIFI_DEBUG
+				SerialPort.print("Upload: END, Size: ");
+				SerialPort.println(upload.totalSize);
+#endif
+	}
+	
+	server.sendHeader("Access-Control-Allow-Origin","*");
+	returnOK();
+}*/
+
+
+
 /***********************************/
 void handleFileUpdate()
 { // update ESP32
@@ -1455,6 +1547,8 @@ void handleFileUpdate()
 		}
 	}
 }
+
+
 /*
   boolean tmpReturn = false;
 #ifdef WIFI_DEBUG

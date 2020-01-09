@@ -122,7 +122,6 @@ public:
 
   static String urlDecode(const String& text);
 
-/*
 template<typename T> size_t streamFile(T &file, const String& contentType){
   setContentLength(file.size());
   if (String(file.name()).endsWith(".gz") &&
@@ -141,8 +140,8 @@ template<typename T> size_t streamFile(T &file, const String& contentType){
   }
   return fsize;
 }
-*/
 
+/*
 template<typename T> size_t streamFile(T &file, const String& contentType){
 	setContentLength(file.size());
 	if (String(file.name()).endsWith(".gz") &&
@@ -173,6 +172,7 @@ template<typename T> size_t streamFile(T &file, const String& contentType){
 
 	return fsize;
 }
+*/
 
 protected:
   void _addRequestHandler(RequestHandler* handler);

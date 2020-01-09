@@ -16,6 +16,7 @@
 #include "GxEPD2_EPD.h"
 #include "epd/GxEPD2_154.h"
 #include "epd/GxEPD2_154U.h"
+#include "epd/GxEPD2_154_D67.h"
 #include "epd/GxEPD2_213.h"
 #include "epd/GxEPD2_213_B72.h"
 #include "epd/GxEPD2_213_B73.h"
@@ -515,6 +516,7 @@ class GxEPD2_BW : public Adafruit_GFX
     void refresh(bool partial_update_mode = false) // screen refresh from controller memory to full screen
     {
       epd2.refresh(partial_update_mode);
+      if (!partial_update_mode) epd2.powerOff();
     }
     void refresh(int16_t x, int16_t y, int16_t w, int16_t h) // screen refresh from controller memory, partial screen
     {

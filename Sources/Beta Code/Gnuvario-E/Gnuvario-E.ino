@@ -12,7 +12,7 @@
 //#include "myassert.h"
 
 #if defined(ESP32)
-static const char* TAG = "Gnuvario";
+static const char* TAG = "GnuvarioE";
 #include "esp_log.h"
 #endif //ESP32
 
@@ -94,7 +94,7 @@ SimpleBLE ble;
 
 #define VERSION      0
 #define SUB_VERSION  7
-#define BETA_CODE    3
+#define BETA_CODE    5
 #define DEVNAME      "JPG63"
 #define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
 
@@ -243,13 +243,22 @@ SimpleBLE ble;
 *                                    Correction BUG reboot à l'init du MPU  - nan lors du first alti  *
 *                                    Ajout logger sur SDcard                                          *
 * v0.7  beta 3  22/12/19             Mise à jour librarie MPU                                         *
+*                                    Correction Update webserver                                      *
+*                                    Ajout Log sur SDcard                                             *
+* v0.7  beta 4  29/12/19             Modif MPU en mode INT - résolution bug                           *
+*                                    Modif screen 2.90'' et 2.13''                                    *
+*                                    Correction bug ecran figé                                        *
+*                                    Finesse bug résolu                                               *
+*                                    Update webszerver OK                                             *
+*                                    Gestion des fichiers de log                                      *
+*                                    Correction norcissement de l'écran - display.poweroff            *
+* v0.7  beta 5  09/01/20             Correction bug d'affichage vario / alti -                        *
+*                                    raffraichissement > 10 ms                                        * 
+*                                    Ajout compas via GPS - degré et text                             *
 *                                                                                                     * 
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
-*                                                                                                     *                                                             
-* V0.4                                                                                                *    
-* bug affichage finesse                                                                               *                                            
 *                                                                                                     *
 * V0.5                                                                                                *    
 * voir réactivité des données GPS                                                                     *
@@ -258,17 +267,15 @@ SimpleBLE ble;
 * v0.6                                                                                                *   
 * MODIF - Refaire gestion Eeprom avec preference                                                      *
 * AJOUT - Calibration MPU                                                                             *                                 
-* BUG   - blocage MPU - plus de valeur valide                                                         *
 * BUG   - temperature                                                                                 *
 * BUG   - DISPLAY_OBJECT_LINE object ligne ne fonctionne pas                                          *
-* AJOUT - Créer une bibliothèque de log (debug)  avec fichier de log                                  *
 * BUG   - Alti erreur deep sleep avorté                                                               *
-* BUG   - Norcissement de l'écran                                                                     *
 *                                                                                                     *
 * v0.7                                                                                                *
-* AJOUT - Maj via site web                                                                            *
-* BUG   - Update et Upload webserver                                                                  *                                                                                                     
+* BUG   - Upload webserver                                                                            *                                                                                                     
 * BUG   - Affichage altitude - problème d'effacement au bout du chiffre                               *
+* BUG   - Affichage barres GPS - problème de raffraichissement                                        *
+* AJOUT - Direction via GPS                                                                           *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -373,32 +380,21 @@ SimpleBLE ble;
 /***********************************************************************
 *               arborescence de la SDCARD                              *
 *                                                                      *
-*               /                                                      *                                                       
+*               /                                                      *
+*               LOGS/                   - repertoire de log            *                                                       
+*                      GNUVARIO.LOG     - Fichier de log               *
 *               RECORD00.CAL            - fichier de calibration       *
-*               SETTINGS.TXT            - fichier de configuration     *        
 *               PARAMS.JSO              - fichier de configuration     *
+*               LOG.CFG                 - Paramètres de debug          *
+*               VARIOCAL.CFG            - Paramètres de calibration    *
+*               WIFI.CFG                - Paramètres Wifi              *
 *               VOLS/                   - repertoire des traces        *
 *                       19101200.IGC                                   *
 *                       19101201.IGC                                   *
 *               WWW/                    - repertoire du site Web       *
-*                       FAVI.ICO                                       *
 *                       INDEX.HTM                                      *
 *                       INDEXB.JS                                      *
 *                       INDEXB~1.MAP                                   *
-*                       CSS/                                           *
-*                           CHKFC0F6.CSS                               *
-*                           INDEXFC.CSS                                *
-*                       IMG/                                           *
-*                           LOGO0B.SVG                                 *
-*                           LOGODC.PNG                                 *
-*                       JS/                                            *
-*                           CHKFC0F6.JS                                *
-*                           CHKFC0~1.MAP                               *
-*                       CONFIG/         - repertoire de configuration  *
-*                           CONFIG~1.JSO                               *
-*                           CONFIG.XML                                 *
-*                           FLIGHTS.JSO                                *
-*                           TREE.JSO                                   *
 *                                                                      *
 ************************************************************************/
 
@@ -548,8 +544,9 @@ unsigned long lastVarioSentenceTimestamp = 0;
 #endif // !HAVE_GPS
 #endif //HAVE_BLUETOOTH
 
-unsigned long lastDisplayTimestamp, time_deep_sleep, sleepTimeoutSecs;
+unsigned long lastDisplayTimestamp, time_deep_sleep, sleepTimeoutSecs, lastDisplayTimestamp2;
 boolean displayLowUpdateState=true;
+boolean displayUpdateState=true;
 
 VarioStat flystat;
 
@@ -565,7 +562,7 @@ String webpage = "";
 #else
   WiFiMulti wifiMulti;
 #ifdef ESP32WEBSERVEUR 
-  ESP32WebServer server(80);
+  VarioESP32WebServer server(80);
 #elif defined(ESPASYNCWEBSERVER)
   AsyncWebServer server(80); 
 #elif defined(ETHERNETWEBSERVER)
@@ -887,7 +884,12 @@ void setup() {
 /*********************/
 
   varioLog.init();
-  TRACELOG(MAIN_DEBUG_LOG);
+  String tmpStr;
+  tmpStr =   "FirmWare : " + String(VERSION) + "." + String(SUB_VERSION); 
+  if (BETA_CODE > 0) tmpStr = tmpStr + "b" + String(BETA_CODE);
+
+  INFOLOG(tmpStr);
+  TRACELOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG);
 
 /********************/
 /** Update Firmware */
@@ -1249,9 +1251,11 @@ void setup() {
   ButtonScheduleur.Set_StatePage(STATE_PAGE_VARIO);
   /* init time */
   lastDisplayTimestamp = millis(); 
+  lastDisplayTimestamp = millis();
   time_deep_sleep       = lastDisplayTimestamp;
   sleepTimeoutSecs      = lastDisplayTimestamp;
   displayLowUpdateState = true; 
+  displayUpdateState = true;
   MaxVoltage   = 0; 
 }
 
@@ -1281,6 +1285,14 @@ void loop() {
      else             tmpint = 0;*/
    }
 
+// DISPLAY
+   if( millis() - lastDisplayTimestamp2 > 10 ) {
+
+     lastDisplayTimestamp2 = millis();
+     displayUpdateState = true;
+ /*    if (tmpint == 0) tmpint = 1000;
+     else             tmpint = 0;*/
+   }
 
 //**********************************************************
 //  TRAITEMENT APPUIE SUR LES BOUTONS
@@ -1456,10 +1468,10 @@ void loop() {
 
 #ifdef PROG_DEBUG
  //   SerialPort.print("altitude : ");
- //   SerialPort.println((uint16_t)currentalti);
+ //   SerialPort.println(currentalti);
 #endif //PROG_DEBUG
 
-    screen.altiDigit->setValue((uint16_t)currentalti+tmpint);
+    if (displayLowUpdateState) screen.altiDigit->setValue(currentalti);
 
 //**********************************************************
 //  DISPLAY VARIO
@@ -1467,10 +1479,10 @@ void loop() {
     
     if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) {    
       if( history.haveNewClimbRate() ) {
-        screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
+        if (displayLowUpdateState) screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
       }
     } else {
-      screen.varioDigit->setValue(currentvario);
+      if (displayLowUpdateState) screen.varioDigit->setValue(currentvario);    
     }
 
 //**********************************************************
@@ -1503,10 +1515,10 @@ void loop() {
 #else
     if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) {
       if( history.haveNewClimbRate() ) {
-        screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
+        if (displayLowUpdateState) screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
       }
     else {
-      screen.varioDigit->setValue(currentvario);
+      if (displayLowUpdateState) screen.varioDigit->setValue(currentvario);
     }
 #endif //HAVE_SCREEN
      
@@ -1969,7 +1981,6 @@ void loop() {
 //  ACQUISITION / DISPLAY TENSION BATTERIE
 //**********************************************************
 
-
 #if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR) 
 //  int tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
 //  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
@@ -2029,8 +2040,31 @@ void loop() {
       SerialPort.println(" C");
 #endif //PROG_DEBUG
   }*/
+
+//**********************************************************
+//  DISPLAY BEARING
+//**********************************************************
+
+  if (displayLowUpdateState) {
+    
+    if (nmeaParser.haveBearing()) {
+
+      double bearing = nmeaParser.getBearing();
+#ifdef PROG_DEBUG
+      SerialPort.print("Compas : ");
+      SerialPort.print(bearing);
+      SerialPort.print(" - ");
+      SerialPort.print(nmeaParser.Bearing_to_Ordinal(bearing));
+#endif //PROG_DEBUG     
+      DUMPLOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG, bearing);
+      DUMPLOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG, nmeaParser.Bearing_to_Ordinal(bearing));
+    }
+  }
    
   displayLowUpdateState = false;
+
+// Passes control to other tasks when called
+  SysCall::yield();
 
 //**********************************************************
 //  UPDATE DISPLAY
@@ -2191,4 +2225,63 @@ if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP) {
 }
 
 //$GNGGA,064607.000,4546.2282,N,00311.6590,E,1,05,2.6,412.0,M,0.0,M,,*77
+//$GNGGA,055828.000,4546.2305,N,00311.6597,E,1,09,1.8,385.2,M,0.0,M,,*75
+
 //$GNRMC,064607.000,A,4546.2282,N,00311.6590,E,0.76,0.00,230619,,,A*7D
+//$GNRMC,055828.000,A,4546.2305,N,00311.6597,E,0.25,0.00,070120,,,A*78
+
+//$LXWP0,Y,,189.0,-0.11,,,,,,,,*67
+
+/*
+ $GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68
+225446 = Heure du Fix 22:54:46 UTC
+A = Alerte du logiciel de navigation ( A = OK, V = warning (alerte)
+4916.45,N = Latitude 49 deg. 16.45 min North
+12311.12,W = Longitude 123 deg. 11.12 min West
+000.5 = vitesse sol, Noeuds
+054.7 = cap (vrai)
+191194 = Date du fix 19 Novembre 1994
+020.3,E = Déclinaison Magnétique 20.3 deg Est
+*68 = checksum obligatoire
+
+
+$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
+
+Where:
+     RMC          Recommended Minimum sentence C
+     123519       Fix taken at 12:35:19 UTC
+     A            Status A=active or V=Void.
+     4807.038,N   Latitude 48 deg 07.038' N
+     01131.000,E  Longitude 11 deg 31.000' E
+     022.4        Speed over the ground in knots
+     084.4        Track angle in degrees True
+     230394       Date - 23rd of March 1994
+     003.1,W      Magnetic Variation
+     *6A          The checksum data, always begins with *
+
+ $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
+
+Where:
+     GGA          Global Positioning System Fix Data
+     123519       Fix taken at 12:35:19 UTC
+     4807.038,N   Latitude 48 deg 07.038' N
+     01131.000,E  Longitude 11 deg 31.000' E
+     1            Fix quality: 0 = invalid
+                               1 = GPS fix (SPS)
+                               2 = DGPS fix
+                               3 = PPS fix
+             4 = Real Time Kinematic
+             5 = Float RTK
+                               6 = estimated (dead reckoning) (2.3 feature)
+             7 = Manual input mode
+             8 = Simulation mode
+     08           Number of satellites being tracked
+     0.9          Horizontal dilution of position
+     545.4,M      Altitude, Meters, above mean sea level
+     46.9,M       Height of geoid (mean sea level) above WGS84
+                      ellipsoid
+     (empty field) time in seconds since last DGPS update
+     (empty field) DGPS station ID number
+     *47          the checksum data, always begins with *
+
+*/
