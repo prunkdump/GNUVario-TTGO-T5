@@ -38,6 +38,7 @@
 /*    1.4.7  02/07/19   Ajout isMute()                                           */
 /*    1.5.0  30/08/19		Ajout gestion commande ampli													   */
 /*    1.5.1  03/11/19		Modification des fonctions enableAmpli 									 */
+/*    1.5.2    10/010/20  Ajout TONEDACTIMER																			 */
 /*                                                                               */
 /*********************************************************************************/
 

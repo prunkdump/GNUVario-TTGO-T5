@@ -26,6 +26,7 @@
  *  version    Date     Description                                              *
  *    1.0                                                                        *
  *    1.0.1  13/10/19   Ajout Wind                                               *
+ *    1.0.2  11/01/20   VARIOSCREEN_SIZE == 290                                  *
  *                                                                               *
  *********************************************************************************/
 
@@ -34,7 +35,7 @@
 
 #include <HardwareConfig.h>
 
-#if (VARIOSCREEN_SIZE == 29)
+#if (VARIOSCREEN_SIZE == 290)
 
 #if defined(ESP8266) || defined(ESP32)
 #include <pgmspace.h>

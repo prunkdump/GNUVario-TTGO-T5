@@ -709,7 +709,7 @@ void ScreenDigit::show() {
 	
 //		display.fillRect(anchorX-w-2, anchorY-Zheight-3, w+6, Zheight+4, GxEPD_WHITE);
 	
-		display.fillRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_WHITE);
+		display.fillRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+4, MaxHeight+6, GxEPD_WHITE);
 
 //		display.drawRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_BLACK);
 

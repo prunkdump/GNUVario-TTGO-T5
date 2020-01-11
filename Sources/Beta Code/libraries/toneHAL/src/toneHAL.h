@@ -55,10 +55,11 @@
 
 		choice of interface types		
 	
-				#define TONEI2S 		I2S Interface
-				#define	TONEDAC			DAC Interface
-				#define	TONEAC 			2 pins Push-Pull PWM
-				#define TONE 				1 pin PWM
+				#define TONEI2S 			I2S Interface
+				#define	TONEDAC				DAC Interface
+				#define TONEDACTIMER 	DAC Interface
+				#define	TONEAC 				2 pins Push-Pull PWM
+				#define TONE 					1 pin PWM
 	
  *
  * \par History:
@@ -92,6 +93,7 @@
 /*    1.4.7    02/07/19   Ajout isMute()                                           */
 /*    1.5.0    30/08/19		Ajout gestion commande ampli														 */
 /*    1.5.1  	 03/11/19		Modification des fonctions enableAmpli 									 */
+/*    1.5.2    10/010/20  Ajout TONEDACTIMER																			 */
 /*                                                                                 */
 /***********************************************************************************/
 
@@ -137,9 +139,10 @@
 #ifndef AUDIO_TYPE_INTERFACE
 #define AUDIO_TYPE_INTERFACE
 
-#define TONE // 1 pin PWM
+//#define TONE // 1 pin PWM
 //#define	TONEAC // 2 pins Push-Pull PWM
 //#define	TONEDAC
+#define TONEDACTIMER
 //#define TONEI2S
 #endif
 

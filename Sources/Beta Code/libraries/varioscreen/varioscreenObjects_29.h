@@ -52,7 +52,8 @@
  *    1.1.6  20/10/19   Suppression classe GxEPD2_BW_U													 *
  *    1.1.7  03/11/19   Modification de la position des titres                   *
  *                      Modification DISPLAY_OBJECT_ALTI                         *
- *    1.1.8  16/11/19   Ajout classe GxEPD2_BW_U                                                                      *
+ *    1.1.8  16/11/19   Ajout classe GxEPD2_BW_U                                 *
+ *    1.1.9  11/01/20   Modif VARIOSCREEN_SIZE == 290                            *
  *********************************************************************************/
 
 #ifndef VARIOSCREENOBJECTS_29_H
@@ -62,7 +63,7 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
-#if (VARIOSCREEN_SIZE == 29)
+#if (VARIOSCREEN_SIZE == 290)
 
 #include <digit.h>
 #include <variostat.h>

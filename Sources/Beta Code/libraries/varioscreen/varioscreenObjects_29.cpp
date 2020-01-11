@@ -51,7 +51,8 @@
  *    1.1.4  14/10/19   Modification affichage titre champs screendigit          *
  *    1.1.5  15/10/19   Modification affichage des satellites                    *
  *    1.1.6  20/10/19   Suppression classe GxEPD2_BW_U													 *
- *    1.1.7  16/11/19   Ajout classe GxEPD2_BW_U                                                                              *
+ *    1.1.7  16/11/19   Ajout classe GxEPD2_BW_U                                 *
+ *    1.1.8  11/01/20   Modif VARIOSCREEN_SIZE == 290                            *
  *********************************************************************************/
  
  
@@ -69,7 +70,7 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
-#if (VARIOSCREEN_SIZE == 29)
+#if (VARIOSCREEN_SIZE == 290)
 
 #include <varioscreenObjects_29.h>
 

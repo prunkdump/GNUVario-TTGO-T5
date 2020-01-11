@@ -30,6 +30,8 @@
  *    1.0.2  09/10/19   Ajout showtitle                                          *
  *    1.0.3	 13/10/19		Ajout Wind																							 *	
  *    1.0.4  07/11/19   Modif updateScreen																			 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
+ *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
  *                                                                               *
  *********************************************************************************/
 
@@ -213,7 +215,7 @@ class VarioScreen {
   void ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Author, uint8_t Beta_Code);
 	void ScreenViewStat(void);
 	void ScreenViewStatPage(int PageStat);
-	void ScreenViewPage(int8_t page, boolean clear);
+	void ScreenViewPage(int8_t page, boolean clear, boolean refresh = false);
 	void ScreenViewWifi(String SSID, String IP);
 	void ScreenViewReboot(void);
   void ScreenViewSound(int volume);	

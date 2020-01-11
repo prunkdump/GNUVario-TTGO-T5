@@ -39,6 +39,7 @@
 /*    1.0.6  19/09/19   Ajout NB_ACQUISITION_FIX_GPS														 */
 /*    1.0.7  06/10/19   Ajout Résolution de l'ecran                              */
 /*    1.0.8  22/10/19   Ajout écran 2.13''                                       */
+/*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -47,9 +48,19 @@
 /******************************/
 
 #define VARIOSCREEN_SIZE 	154			//Ecran 1.54''
-//#define VARIOSCREEN_SIZE	29			//Ecran 2.9''
+//#define VARIOSCREEN_SIZE	290			//Ecran 2.9''
 //#define VARIOSCREEN_SIZE 	213			//Ecran 2.13''
 
+#if (VARIOSCREEN_SIZE == 154)
+#define DISPLAY_LOW_UPDATE 50
+#define DISPLAY_UPDATE     10
+#elif (VARIOSCREEN_SIZE == 290)
+#define DISPLAY_LOW_UPDATE 40
+#define DISPLAY_UPDATE     10
+#elif (VARIOSCREEN_SIZE == 213)
+#define DISPLAY_LOW_UPDATE 40
+#define DISPLAY_UPDATE     10
+#endif
 
 /***********************/
 /* The voltage divisor */

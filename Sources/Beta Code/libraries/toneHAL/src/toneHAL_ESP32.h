@@ -35,8 +35,9 @@
 
 #include <toneHAL.h>
 
-#if defined(TONEDAC)
+#if defined(TONEDAC) || defined(TONEDACTIMER)
 #include <toneDAC_esp32.h>
+#include <toneDACTimer_esp32.h>
 
 class ToneHalDAC_Esp32 : public ToneHal {
 	public:

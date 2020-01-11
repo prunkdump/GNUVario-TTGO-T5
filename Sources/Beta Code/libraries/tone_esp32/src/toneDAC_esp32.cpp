@@ -7,10 +7,11 @@
 /*    1.1      07/04/19    Reecriture librairie                              */
 /*    1.1.1    10/06/19    Ajout gestion ampli class D externe               */
 /*    1.1.2    20/08/19    Reecriture AUDIO_AMP_ENABLE et AUDIO_AMP_DISABLE  */
+/*    1.1.3    10/01/20		 ajout defined(TONEDAC)														 */
 /*                                                                           */
 /*****************************************************************************/
 
-#if defined(ESP32)
+#if defined(ESP32) && defined(TONEDAC)
 
 
 #include "toneDAC_esp32.h"

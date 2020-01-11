@@ -31,6 +31,8 @@
  *    1.0.3  13/10/19   Integration au GnuVario                                  *
  *                      Ajout Wind                                               *
  *    1.0.4  16/11/19   Modif updateScreen																			 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
+ *                      Modif VARIOSCREEN_SIZE == 290                            *
  *                                                                               *
  *********************************************************************************/
 
@@ -40,7 +42,7 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
-#if (VARIOSCREEN_SIZE == 29)
+#if (VARIOSCREEN_SIZE == 290)
 
 #include <varioscreenObjects_29.h>
 
@@ -215,7 +217,7 @@ class VarioScreen {
   void ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Author, uint8_t Beta_Code);
 	void ScreenViewStat(void);
 	void ScreenViewStatPage(int PageStat);
-	void ScreenViewPage(int8_t page, boolean clear);
+	void ScreenViewPage(int8_t page, boolean clear, boolean refresh = false);
 	void ScreenViewWifi(String SSID, String IP);
 	void ScreenViewReboot(void);
   void ScreenViewSound(int volume);	

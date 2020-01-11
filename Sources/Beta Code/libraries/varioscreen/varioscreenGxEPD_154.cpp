@@ -31,6 +31,8 @@
  *    1.0.2  09/10/19   Ajout showtitle                                          *
  *    1.0.3	 13/10/19		Ajout Wind																							 *	
  *    1.0.4  07/11/19   Modif updateScreen																			 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
+ *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
  *                                                                               *
  *********************************************************************************/
  
@@ -665,7 +667,7 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 }
 
 //****************************************************************************************************************************
-void VarioScreen::ScreenViewPage(int8_t page, boolean clear)
+void VarioScreen::ScreenViewPage(int8_t page, boolean clear, boolean refresh)
 //****************************************************************************************************************************
 {
 	
@@ -692,29 +694,51 @@ void VarioScreen::ScreenViewPage(int8_t page, boolean clear)
 	SerialPort.println("update");	
 #endif //SCREEN_DEBUG	
 
-  altiDigit->setValue(9999);
-  varioDigit->setValue(0.0);
-	speedDigit->setValue(0);
-	ratioDigit->setValue(0);
-	trendDigit->setValue(0);
-	infoLevel->set(INFO_NONE);
-	volLevel->setVolume(10);
+	if (refresh) {
+		altiDigit->update(true);
+		varioDigit->update(true);
+		speedDigit->update(true);
+		ratioDigit->update(true);
+		trendDigit->update(true);
+		infoLevel->update(true);
+		volLevel->update(true);
 	
-	recordIndicator->setActifSCAN();
-	recordIndicator->stateRECORD();
-	trendLevel->stateTREND(0);
-	batLevel->setVoltage(0);
-	satLevel->setSatelliteCount(0);
+		recordIndicator->update(true);
+		recordIndicator->update(true);
+		trendLevel->update(true);
+		batLevel->update(true);
+		satLevel->update(true);
+		screenTime->update(true);
+		screenElapsedTime->update(true);
 
-  int8_t tmptime[] = {0,0,0};
-  screenTime->setTime(tmptime);
-
-	screenElapsedTime->setBaseTime(screenTime->getTime());
-	screenElapsedTime->setCurrentTime(screenTime->getTime());
-
-	fixgpsinfo->unsetFixGps();
-	btinfo->unsetBT();
+		fixgpsinfo->update(true);
+		btinfo->update(true);
+	}
+	else {		
+		altiDigit->setValue(9999);
+		varioDigit->setValue(0.0);
+		speedDigit->setValue(0);
+		ratioDigit->setValue(0);
+		trendDigit->setValue(0);
+		infoLevel->set(INFO_NONE);
+		volLevel->setVolume(10);
 	
+		recordIndicator->setActifSCAN();
+		recordIndicator->stateRECORD();
+		trendLevel->stateTREND(0);
+		batLevel->setVoltage(0);
+		satLevel->setSatelliteCount(0);
+
+		int8_t tmptime[] = {0,0,0};
+		screenTime->setTime(tmptime);
+
+		screenElapsedTime->setBaseTime(screenTime->getTime());
+		screenElapsedTime->setCurrentTime(screenTime->getTime());
+
+		fixgpsinfo->unsetFixGps();
+		btinfo->unsetBT();
+	}
+		
 	munit->toDisplay();
 	msunit->toDisplay();
 	kmhunit->toDisplay();

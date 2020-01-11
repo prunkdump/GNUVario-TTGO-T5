@@ -53,6 +53,7 @@
 /*    1.2   29/11/19    Modification sdfat                                       */
 /*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */
 /*    1.3   28/12/19    Ajout read log.cfg                                       */ 
+/*    1.3.1 11/01/20		Modif VARIOSCREEN_SIZE == 290														 */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -1727,7 +1728,7 @@ String VarioSettings::getScreenModel(void) {
 //**********************************************************
 #if (VARIOSCREEN_SIZE == 154)
 	return "154";
-#elif (VARIOSCREEN_SIZE == 29)
+#elif (VARIOSCREEN_SIZE == 290)
 	return "154";
 #elif (VARIOSCREEN_SIZE == 213)
 	return "154";
