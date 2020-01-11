@@ -94,7 +94,7 @@ SimpleBLE ble;
 
 #define VERSION      0
 #define SUB_VERSION  7
-#define BETA_CODE    5
+#define BETA_CODE    6
 #define DEVNAME      "JPG63"
 #define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
 
@@ -254,7 +254,9 @@ SimpleBLE ble;
 *                                    Correction norcissement de l'écran - display.poweroff            *
 * v0.7  beta 5  09/01/20             Correction bug d'affichage vario / alti -                        *
 *                                    raffraichissement > 10 ms                                        * 
-*                                    Ajout compas via GPS - degré et text                             *
+*                                    Ajout direction via GPS - degré et texte                         *
+* v0.7  beta 6  11/01/20             Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE                       *
+*                                    Correction de bug d'affichage mineur                             *
 *                                                                                                     * 
 *******************************************************************************************************
 *                                                                                                     *
@@ -273,9 +275,8 @@ SimpleBLE ble;
 *                                                                                                     *
 * v0.7                                                                                                *
 * BUG   - Upload webserver                                                                            *                                                                                                     
-* BUG   - Affichage altitude - problème d'effacement au bout du chiffre                               *
 * BUG   - Affichage barres GPS - problème de raffraichissement                                        *
-* AJOUT - Direction via GPS                                                                           *
+* AJOUT - Update via internet                                                                         *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -290,6 +291,7 @@ SimpleBLE ble;
 * verifier fonctionnement BT                                                                          *
 * Recupération vol via USB                                                                            *                                                                                        
 * Ecran 2.9'' en vertical                                                                             *
+* Espaces aeriens                                                                                     *
 *******************************************************************************************************/
 
 /************************************************************************
@@ -338,6 +340,8 @@ SimpleBLE ble;
  *   d'ajout ou de suppréssion de champs                                *
  *   Mise en veille en cas d'inactivité, paramètrable - 0 infini        *
  *                                                                      *
+ * Version 0.7                                                          *                                                                     
+ *   Ajout de fichiers de log                                           *
  ************************************************************************
  
 /************************************************************************
@@ -433,7 +437,17 @@ SimpleBLE ble;
   *                                                                                                           *
   * Mise à jour via la carte SD, nom du fichier : update.bin                                                  *                                                                                                           
   *                                                                                                           *
-  *************************************************************************************************************/
+  *************************************************************************************************************
+  *                                                                                                           *
+  * Debbug                                                                                                    *
+  *                                                                                                           *
+  * TRACE();                  Affiche sur le moniteur serie le numero de ligne, le nom du fichier             *
+  * DUMP(someValue);          Affcihe sur le moniteur serie la variable ainsi que le fichier et la ligne      *
+  *                                                                                                           *
+  * DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne    * 
+  * MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne *
+  * INFOLOG(Text)                    Enregistre dans le fichier de log un texte                               *                                                                                                     
+  *************************************************************************************************************/  
 
 //#define TEST_SD
 
@@ -1250,8 +1264,8 @@ void setup() {
 
   ButtonScheduleur.Set_StatePage(STATE_PAGE_VARIO);
   /* init time */
-  lastDisplayTimestamp = millis(); 
-  lastDisplayTimestamp = millis();
+  lastDisplayTimestamp  = millis(); 
+  lastDisplayTimestamp2 = millis();
   time_deep_sleep       = lastDisplayTimestamp;
   sleepTimeoutSecs      = lastDisplayTimestamp;
   displayLowUpdateState = true; 
@@ -1277,7 +1291,7 @@ void loop() {
   }*/
 
 /*  LOW UPDATE DISPLAY */
-   if( millis() - lastDisplayTimestamp > 500 ) {
+   if( millis() - lastDisplayTimestamp > DISPLAY_LOW_UPDATE ) {
 
      lastDisplayTimestamp = millis();
      displayLowUpdateState = true;
@@ -1286,7 +1300,7 @@ void loop() {
    }
 
 // DISPLAY
-   if( millis() - lastDisplayTimestamp2 > 10 ) {
+   if( millis() - lastDisplayTimestamp2 > DISPLAY_UPDATE ) {
 
      lastDisplayTimestamp2 = millis();
      displayUpdateState = true;

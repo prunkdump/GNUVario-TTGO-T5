@@ -1,0 +1,1431 @@
+/*********************************************************************************/
+/*                                                                               */
+/*                           Libraries wifiServer_SD                             */
+/*                                                                               */
+/*  version    Date     Description                                              */
+/*    1.0                                                                        */
+/*    1.1    08/10/19   Ajout listDirectory                                      */
+/*    1.2    20/10/19   Mise à jour par rapport au fichier main.cpp de Pascal    */
+/*    1.2.1  22/10/19   Ajout printDirectoryRecurse                              */
+/*                                                                               */
+/*********************************************************************************/
+
+#include <Arduino.h>
+#include <HardwareConfig.h>
+#include <DebugConfig.h>
+
+#if defined(WEBSERVER_SDCARD)
+
+#include <wifiServer_SD.h>
+
+#ifdef HAVE_SDCARD
+#include <sdcardHAL.h>
+#endif
+
+#include <SPI.h>
+
+#include <VarioSettings.h>
+
+#include <Update.h>
+
+#include <ArduinoJson.h>
+
+extern VarioSettings GnuSettings;
+
+#define TAG "server"
+
+bool   SD_present = false;
+char   ServerVersion[20]; // = "3.4";
+
+#ifdef _HARDWARECONFIG_H_
+IPAddress local_IP(LOCAL_IP); // Set your server's fixed IP address here
+IPAddress gateway(GATEWAY);    // Set your network Gateway usually your Router base address
+IPAddress subnet(SUBNET);   // Set your network sub-network mask here
+IPAddress dns(DNS);           // Set your network DNS usually your Router base address
+#else
+IPAddress local_IP(192, 168, 1, 150); // Set your server's fixed IP address here
+IPAddress gateway(192, 168, 1, 1);    // Set your network Gateway usually your Router base address
+IPAddress subnet(255, 255, 255, 0);   // Set your network sub-network mask here
+IPAddress dns(192, 168, 1, 1);           // Set your network DNS usually your Router base address	
+#endif
+
+char ssid_1[50];
+char password_1[50];
+
+char ssid_2[50];
+char password_2[50];
+
+char ssid_3[50];
+char password_3[50];
+
+char ssid_4[50];
+char password_4[50];
+
+File uploadFile; 
+
+#include "CSS.h"
+
+//************************************************************
+// DISPLAY SCREEN
+//************************************************************
+#define ENABLE_DISPLAY_WEBSERVER
+
+#ifdef ENABLE_DISPLAY_WEBSERVER
+#include <varioscreenGxEPD.h>
+#endif
+
+static bool hasSD = false;
+
+// Retour 200 = succes
+/***********************************/
+void returnOK() 
+/***********************************/
+{
+  server.send(200, "text/plain", "");
+}
+
+// Retour 500 = erreur serveur
+/***********************************/
+void returnFail(String msg) 
+/***********************************/
+{
+  server.send(500, "text/plain", msg + "\r\n");
+}
+
+//////////////////////////////////////
+//          GENERIC HANDLERS        //
+//////////////////////////////////////
+
+// envoi du contenu d'un fichier avec les vons entetes si trouvé
+/***********************************/
+bool loadFromSdCard(String path) {
+/***********************************/
+  String dataType = "text/plain";
+	
+  String basePath = "/www";
+
+  path = basePath + path;
+	
+  if (path.endsWith("/")) {
+    path += "index.htm";
+  }
+
+  if (path.endsWith(".src")) {
+    path = path.substring(0, path.lastIndexOf("."));
+  } else if (path.endsWith(".htm")) {
+    dataType = "text/html";
+  } else if (path.endsWith(".css")) {
+    dataType = "text/css";
+  } else if (path.endsWith(".js")) {
+    dataType = "application/javascript";
+  } else if (path.endsWith(".png")) {
+    dataType = "image/png";
+  } else if (path.endsWith(".gif")) {
+    dataType = "image/gif";
+  } else if (path.endsWith(".jpg")) {
+    dataType = "image/jpeg";
+  } else if (path.endsWith(".ico")) {
+    dataType = "image/x-icon";
+  } else if (path.endsWith(".xml")) {
+    dataType = "text/xml";
+  } else if (path.endsWith(".pdf")) {
+    dataType = "application/pdf";
+  } else if (path.endsWith(".zip")) {
+    dataType = "application/zip";
+	} else if (path.endsWith(".svg")) {
+    dataType = "image/svg+xml";
+  }
+
+#ifdef HAVE_SDCARD
+
+  File dataFile = SDHAL.open(path.c_str());
+  if (dataFile.isDirectory()) {
+    path += "/index.htm";
+    dataType = "text/html";
+    dataFile = SDHAL.open(path.c_str());
+  }
+
+  if (!dataFile) {
+    return false;
+  }
+
+  if (server.hasArg("download")) {
+    dataType = "application/octet-stream";
+  }
+
+  if (server.streamFile(dataFile, dataType) != dataFile.size()) {
+#ifdef WIFI_DEBUG
+    SerialPort.println("Sent less data than expected!");
+#endif
+  }
+
+  dataFile.close();
+  return true;
+#else
+	return false;
+#endif
+}
+
+//////////////////////////////////////
+//       END  GENERIC HANDLERS       //
+//////////////////////////////////////
+
+//////////////////////////////////////
+//          SPECIFIC HANDLERS       //
+//////////////////////////////////////
+
+// Récupération de la liste des fichiers du répertoire vols au format json
+
+/***********************************/
+void handleListFlights() {
+/***********************************/
+  String path;
+  path = "/vols";
+  File dir = SDHAL.open((char *)path.c_str());
+  path = String();
+  if (!dir.isDirectory()) {
+    dir.close();
+    return returnFail("NOT DIR");
+  }
+  dir.rewindDirectory();
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "text/json", "");
+  WiFiClient client = server.client();
+
+  server.sendContent("[");
+  for (int cnt = 0; true; ++cnt) {
+    File entry = dir.openNextFile();
+    if (!entry) {
+      break;
+    }
+
+    String output;
+    if (cnt > 0) {
+      output = ',';
+    }
+
+    String fsize = "";
+    if (!entry.isDirectory()){
+      int bytes = entry.size();
+
+      if (bytes < 1024)                     fsize = String(bytes)+" B";
+      else if(bytes < (1024 * 1024))        fsize = String(bytes/1024.0,3)+" KB";
+      else if(bytes < (1024 * 1024 * 1024)) fsize = String(bytes/1024.0/1024.0,3)+" MB";
+      else                                  fsize = String(bytes/1024.0/1024.0/1024.0,3)+" GB";
+    } else {
+      fsize = "na";
+    }
+
+    output += "{\"type\":\"";
+    output += (entry.isDirectory()) ? "dir" : "file";
+    output += "\",\"name\":\"";
+    output += entry.name();
+    output += "\",\"size\":\"";
+    output += fsize;
+    output += "\"";
+    output += "}";
+    server.sendContent(output);
+    entry.close();
+  }
+  server.sendContent("]");
+  dir.close();
+}
+
+// Récupération du contenu du fichier parameters.jso
+/*****************************/
+void handleParams()
+/*****************************/
+{
+    if (server.uri() != "/params")
+    {
+        return returnFail("BAD ARGS");
+    }
+    String dataType = "application/json";
+    String path = "/parameters.jso";
+    File dataFile = SD.open(path.c_str());
+
+    if (!dataFile)
+    {
+        return returnFail("NO FILE named parameters.jso");
+    }
+    if (server.streamFile(dataFile, dataType) != dataFile.size())
+    {
+        SerialPort.println("Sent less data than expected!");
+    }
+
+    dataFile.close();
+    return;
+}
+
+// récupération en JSON de la liste des fichiers d'un répertoire
+// ou de la racine de la carte SD
+// récursivement
+/***********************************/
+void handlePrintDirectory() {
+/***********************************/
+  String path;
+	if (!server.hasArg("dir")) {
+		path = "/";
+	
+	}
+	else {
+		path = server.arg("dir");
+	}
+	printDirectoryRecurse(path,0);
+}
+
+// téléchargement d'un fichier dont le chemin+ nom se trouve en param
+/***********************************/
+void handleFileDownload(){
+/***********************************/
+  if (server.uri() != "/file") {
+    returnFail("BAD URL");
+  }
+	
+  if (server.args() == 0) {
+    return returnFail("BAD ARGS");
+  }
+
+  String path = server.arg(0);
+  File dataFile = SD.open(path.c_str());
+
+  if (!dataFile) {
+    return returnFail("NO FILE");
+  }
+
+  String dataType = "application/octet-stream";
+
+  if (server.streamFile(dataFile, dataType) != dataFile.size()) {
+    SerialPort.println("Sent less data than expected!");
+  }
+
+  dataFile.close();
+
+}
+
+// suppression d'un fichier dont le chemin + nom se trouve en param
+
+/**********************************/
+void handleFileDelete() {
+/**********************************/
+  if (server.uri() != "/file") {
+    return returnFail("BAD URL");
+  }
+  if (server.args() == 0) {
+     return returnFail("BAD ARGS");
+  }
+  String path = server.arg(0);
+  if ( !SDHAL.exists((char *)path.c_str())) {
+    return returnFail("FILE DOES NOT EXIST");
+  }
+  deleteRecursive(path);
+  returnOK();
+}
+
+// upload d'un fichier dont le chemin + nom se trouve en param dans le nommage du fichier
+/***********************************/
+void handleFileUpload() {
+/***********************************/	
+  if (server.uri() != "/upload") {
+    return;
+  }
+
+	HTTPUpload& upload = server.upload();
+	if (upload.status == UPLOAD_FILE_START) {
+		if (SDHAL.exists((char *)upload.filename.c_str())) {
+			SDHAL.remove((char *)upload.filename.c_str());
+		}
+		uploadFile = SDHAL.open(upload.filename.c_str(), FILE_WRITE);
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: START, filename: "); SerialPort.println(upload.filename);
+#endif
+	} else if (upload.status == UPLOAD_FILE_WRITE) {
+		if (uploadFile) {
+			uploadFile.write(upload.buf, upload.currentSize);
+		}
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: WRITE, Bytes: "); SerialPort.println(upload.currentSize);
+#endif
+	} else if (upload.status == UPLOAD_FILE_END) {
+		if (uploadFile) {
+			uploadFile.close();
+		}
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: END, Size: "); SerialPort.println(upload.totalSize);
+#endif
+	}
+
+	 returnOK();
+
+}
+
+// Gestion du 404
+
+/***********************************/
+void handleNotFound() {
+/***********************************/
+  if (hasSD && loadFromSdCard(server.uri())) {
+    return;
+  }
+  String message = "SDCARD Not Detected\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " NAME:" + server.argName(i) + "\n VALUE:" + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  SerialPort.print(message);
+}
+
+#ifdef HAVE_SDCARD
+File UpdateFile; 
+#endif
+
+// Mise à jour OTA
+/***********************************/
+void handleFileUpdate()
+{ // update ESP32
+/***********************************/
+#ifdef HAVE_SDCARD
+#ifdef WIFI_DEBUG
+    SerialPort.println("File update stage-3");
+#endif //WIFI_DEBUG
+
+    HTTPUpload &updatefile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
+                                              // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
+    if (updatefile.status == UPLOAD_FILE_START)
+    {
+#ifdef WIFI_DEBUG
+        SerialPort.println("File update stage-4");
+#endif //WIFI_DEBUG
+        String filename = updatefile.filename;
+        if (!filename.startsWith("/"))
+            filename = "/" + filename;
+#ifdef WIFI_DEBUG
+        SerialPort.print("Update File Name: ");
+        SerialPort.println(filename);
+#endif //WIFI_DEBUG
+
+        char copy[250];
+        String scopy = filename;
+        scopy.toCharArray(copy, 250);
+
+        SDHAL.remove(copy);                        // Remove a previous version, otherwise data is appended the file again
+        UpdateFile = SDHAL.open(copy, FILE_WRITE); // Open the file for writing in SPIFFS (create it, if doesn't exist)
+        filename = String();
+
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN))
+        { //start with max available size
+            Update.printError(SerialPort);
+        }
+    }
+    else if (updatefile.status == UPLOAD_FILE_WRITE)
+    {
+        SerialPort.println("File update stage-5");
+        if (UpdateFile)
+            UpdateFile.write(updatefile.buf, updatefile.currentSize); // Write the received bytes to the file
+        /* flashing firmware to ESP*/
+        if (Update.write(updatefile.buf, updatefile.currentSize) != updatefile.currentSize)
+        {
+            Update.printError(SerialPort);
+        }
+    }
+    else if (updatefile.status == UPLOAD_FILE_END)
+    {
+        if (UpdateFile) // If the file was successfully created
+        {
+            UpdateFile.close(); // Close the file again
+#ifdef WIFI_DEBUG
+            SerialPort.print("Update Size: ");
+            SerialPort.println(updatefile.totalSize);
+#endif //WIFI_DEBUG
+        }
+        else
+        {
+            return returnFail("Could not create file");
+        }
+
+        if (Update.end(true))
+        { //true to set the size to the current progress
+#ifdef WIFI_DEBUG
+            SerialPort.printf("Update Success: %u\nRebooting...\n", updatefile.totalSize);
+#endif //WIFI_DEBUG
+
+            // 200 si OK
+            returnOK();
+
+            SerialPort.println("RESTART ESP32");
+            SerialPort.flush();
+            ESP_LOGI("GnuVario-E", "RESTART ESP32");
+            screen.ScreenViewReboot();
+            ESP.restart();
+        }
+        else
+        {
+            Update.printError(SerialPort);
+            //retour 500 si echec
+            return returnFail("Could not proceed update");
+        }
+    }
+#else
+    return returnFail("SD CARD not present");
+#endif
+}
+
+//////////////////////////////////////
+//      END SPECIFIC HANDLERS       //
+//////////////////////////////////////
+
+/***********************************/
+void deleteRecursive(String path) {
+/***********************************/
+  File fileSD = SDHAL.open((char *)path.c_str());
+  if (!fileSD.isDirectory()) {
+    fileSD.close();
+    SDHAL.remove((char *)path.c_str());
+    return;
+  }
+
+  fileSD.rewindDirectory();
+  while (true) {
+    File entry = fileSD.openNextFile();
+    if (!entry) {
+      break;
+    }
+    String entryPath = path + "/" + entry.name();
+    if (entry.isDirectory()) {
+      entry.close();
+      deleteRecursive(entryPath);
+    } else {
+      entry.close();
+      SDHAL.remove((char *)entryPath.c_str());
+    }
+    yield();
+  }
+
+  SDHAL.rmdir((char *)path.c_str());
+  fileSD.close();
+}
+
+/***********************************/
+void printDirectory() {
+/***********************************/
+  if (!server.hasArg("dir")) {
+    return returnFail("BAD ARGS");
+  }
+  String path = server.arg("dir");
+  if (path != "/" && !SDHAL.exists((char *)path.c_str())) {
+    return returnFail("BAD PATH");
+  }
+  File dir = SDHAL.open((char *)path.c_str());
+  path = String();
+  if (!dir.isDirectory()) {
+    dir.close();
+    return returnFail("NOT DIR");
+  }
+  dir.rewindDirectory();
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "text/json", "");
+  WiFiClient client = server.client();
+
+  server.sendContent("[");
+  for (int cnt = 0; true; ++cnt) {
+    File entry = dir.openNextFile();
+    if (!entry) {
+      break;
+    }
+
+    String output;
+    if (cnt > 0) {
+      output = ',';
+    }
+
+    output += "{\"type\":\"";
+    output += (entry.isDirectory()) ? "dir" : "file";
+    output += "\",\"name\":\"";
+    output += entry.name();
+    output += "\"";
+    output += "}";
+    server.sendContent(output);
+    entry.close();
+  }
+  server.sendContent("]");
+  dir.close();
+}
+
+/***********************************/
+void printDirectoryRecurse(String repertoire, int niveau) {
+/***********************************/
+  String path, TmpPath;
+	String output;
+	int    tmpniveau;
+	int 	 compteur;
+	String tmpname;
+	
+	tmpniveau = niveau;
+/*	SerialPort.print("Niveau : ");
+	SerialPort.println(tmpniveau);*/
+	
+	if (repertoire == "") {
+		return returnFail("BAD ARGS");
+	}
+			
+	path = repertoire;
+	
+  if (path != "/" && !SDHAL.exists((char *)path.c_str())) {
+    return returnFail("BAD PATH");
+  }
+	
+	TmpPath = path;
+	
+  File dir = SDHAL.open((char *)path.c_str());
+  path = String();
+  if (!dir.isDirectory()) {
+    dir.close();
+    return returnFail("NOT DIR");
+  }
+  dir.rewindDirectory();
+
+  if (tmpniveau == 0) {	
+    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server.send(200, "text/json", "");
+    WiFiClient client = server.client();
+
+    output = "[\n";
+    server.sendContent(output);
+#ifdef WIFI_DEBUG
+	  SerialPort.print(output);
+#endif //WIFI_DEBUG
+	}
+	else {
+    output = ",\n";
+    server.sendContent(output);
+#ifdef WIFI_DEBUG
+	  SerialPort.print(output);
+#endif //WIFI_DEBUG
+	}
+
+	output = "{\"type\":\"directory\",\"name\":\"" + TmpPath +"\",\"contents\":";
+  server.sendContent(output);
+#ifdef WIFI_DEBUG
+	SerialPort.print(output);
+#endif //WIFI_DEBUG
+
+  output = "";
+	compteur = 0;
+	
+  for (int cnt = 0; true; ++cnt) {
+    File entry = dir.openNextFile();
+    if (!entry) {
+      break;
+    }
+
+		tmpname  = entry.name();
+/*		SerialPort.print("Name : ");
+	  SerialPort.println(tmpname);*/
+    if (!tmpname.equalsIgnoreCase("SYSTEM~1")) {
+		
+			if (compteur > 0) {
+				output = ',';
+			}	else {
+				output = "[\n";
+			}
+
+			compteur++;
+
+			if (entry.isDirectory() == true) {
+//				SerialPort.print(output);	
+				//Appel recursif
+				printDirectoryRecurse(entry.name(), tmpniveau+1);
+			}
+			else {
+				output += "{\"type\":\"";
+				output += (entry.isDirectory()) ? "dir" : "file";
+				output += "\",\"name\":\"";
+				output += entry.name();
+				output += "\"";
+				output += "}";
+				server.sendContent(output);
+#ifdef WIFI_DEBUG
+				SerialPort.print(output);
+#endif //WIFI_DEBUG
+				entry.close();
+			}
+		}
+  }
+  server.sendContent("]}");
+#ifdef WIFI_DEBUG
+	SerialPort.println("]}");
+#endif //WIFI_DEBUG
+	
+  if (niveau == 0) {	
+    output = "]";
+    server.sendContent(output);
+#ifdef WIFI_DEBUG
+	  SerialPort.println(output);
+#endif //WIFI_DEBUG
+	}
+	
+  dir.close();
+}
+
+
+/***********************************/
+void listDirectory(File dir, int numTabs) {
+/***********************************/
+//	DynamicJsonBuffer jsonBuffer;
+//	DynamicJsonDocument doc(1024);
+//  JsonArray& array = jsonBuffer.createArray();
+
+	dir.rewindDirectory();
+	
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      SerialPort.print('\t');
+    }
+    SerialPort.print(entry.name());
+    if (entry.isDirectory()) {
+      SerialPort.println("/");
+      listDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      SerialPort.print("\t\t");
+      SerialPort.println(entry.size(), DEC);
+    }
+		
+/*    JsonObject& object = jsonBuffer.createObject();
+
+    object["type"] = (entry.isDirectory()) ? "dir" : "file";
+    object["name"] = String(entry.name());
+    array.add(object);	*/	
+		
+    entry.close();
+  }
+}
+
+
+//////////////////////////////////////
+//      CLASSE WIFISERVER           //
+//////////////////////////////////////
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+boolean WifiServer::begin(void) {
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	GnuSettings.VARIOMETER_SSID_1.toCharArray(ssid_1,sizeof(ssid_1));
+	GnuSettings.VARIOMETER_PASSWORD_1.toCharArray(password_1,sizeof(password_1));
+
+#ifdef WIFI_DEBUG
+  SerialPort.print("ssid_1 : ");
+  SerialPort.println(ssid_1);
+  SerialPort.print("password_1 : ");
+  SerialPort.println(password_1);
+#endif //WIFI_DEBUG
+
+	GnuSettings.VARIOMETER_SSID_2.toCharArray(ssid_2,sizeof(ssid_2));
+	GnuSettings.VARIOMETER_PASSWORD_2.toCharArray(password_2,sizeof(password_2));
+
+#ifdef WIFI_DEBUG
+  SerialPort.print("ssid_2 : ");
+  SerialPort.println(ssid_2);
+  SerialPort.print("password_2 : ");
+  SerialPort.println(password_2);
+#endif //WIFI_DEBUG
+
+	GnuSettings.VARIOMETER_SSID_3.toCharArray(ssid_3,sizeof(ssid_3));
+	GnuSettings.VARIOMETER_PASSWORD_3.toCharArray(password_3,sizeof(password_3));
+	
+#ifdef WIFI_DEBUG
+  SerialPort.print("ssid_3 : ");
+  SerialPort.println(ssid_3);
+  SerialPort.print("password_3 : ");
+  SerialPort.println(password_3);
+#endif //WIFI_DEBUG
+
+	GnuSettings.VARIOMETER_SSID_4.toCharArray(ssid_4,sizeof(ssid_4));
+	GnuSettings.VARIOMETER_PASSWORD_4.toCharArray(password_4,sizeof(password_4));
+
+#ifdef WIFI_DEBUG
+  SerialPort.print("ssid_4 : ");
+  SerialPort.println(ssid_4);
+  SerialPort.print("password_4 : ");
+  SerialPort.println(password_4);
+#endif //WIFI_DEBUG
+
+  File dataFile = SDHAL.open("www/index.htm");
+  if (dataFile) {
+//    if (SDHAL.exists("www/index.html")) {
+#ifdef WIFI_DEBUG
+    SerialPort.println("SD Card initialized.");
+#endif //WIFI_DEBUG
+
+    hasSD = true;
+  	dataFile.close();
+  }
+  
+  dataFile = SDHAL.open("/");
+
+  dataFile.rewindDirectory();
+
+#ifdef WIFI_DEBUG
+	
+  SerialPort.println("");
+  SerialPort.println("ListeDirectory");
+  listDirectory(dataFile, 0);
+
+  SerialPort.println("");
+  SerialPort.println("printDirectoryRecurse");
+	printDirectoryRecurse("/",0);
+  SerialPort.println("");
+#endif //WIFI_DEBUG
+//  listDirectoryJson(dataFile, 0);
+	
+//	printDirectoryToJson("/");
+
+	if (hasSD != true) {
+#ifdef WIFI_DEBUG
+		SerialPort.println("Erreur SDCARD");
+#endif
+		return false;
+	}
+	
+#ifdef WIFI_DEBUG
+  SerialPort.println("Begin Wifi done!");
+#endif
+  	
+	return true;
+};
+
+/***********************************/
+void WifiServer::disableWifi(void) {
+/***********************************/
+	WiFi.mode(WIFI_OFF);
+}
+
+/***********************************/
+void WifiServer::disableBT(void) {
+/***********************************/
+}
+		
+void WifiServer::disableAll(void) {
+	disableWifi();
+	disableBT();
+}
+   
+/***********************************/
+void WifiServer::connect(void) {
+/***********************************/
+#ifdef IP_FIXE
+ if (!WiFi.config(local_IP, gateway, subnet, dns)) { //WiFi.config(ip, gateway, subnet, dns1, dns2);
+    SerialPort.println("WiFi STATION Failed to configure Correctly"); 
+  } 
+#endif //IP_FIXE	
+	
+  wifiMulti.addAP(ssid_1, password_1);  // add Wi-Fi networks you want to connect to, it connects strongest to weakest
+  wifiMulti.addAP(ssid_2, password_2);  // Adjust the values in the Network tab
+  wifiMulti.addAP(ssid_3, password_3);
+  wifiMulti.addAP(ssid_4, password_4);  // You don't need 4 entries, this is for example!
+  
+  SerialPort.println("Connecting ...");
+#ifdef ENABLE_DISPLAY_WEBSERVER
+	screen.ScreenViewWifi("", "");
+#endif //ENABLE_DISPLAY_WEBSERVER
+	
+	int counter = 0;
+  while (wifiMulti.run() != WL_CONNECTED) { // Wait for the Wi-Fi to connect: scan for Wi-Fi networks, and connect to the strongest of the networks above
+    delay(250); SerialPort.print('.');
+		counter++;
+		if (counter > 30) {
+			SerialPort.println(F("Error Wifi not found!")); 
+			ESP.restart(); 
+		}
+  }
+  SerialPort.println("\nConnected to "+WiFi.SSID()+" Use IP address: "+WiFi.localIP().toString()); // Report which SSID and IP is in use
+  // The logical name http://fileserver.local will also access the device if you have 'Bonjour' running or your system supports multicast dns
+#ifdef ENABLE_DISPLAY_WEBSERVER
+	screen.ScreenViewWifi(WiFi.SSID().substring(0,12), WiFi.localIP().toString());
+#endif //ENABLE_DISPLAY_WEBSERVER
+
+  if (MDNS.begin(servername)) {
+    MDNS.addService("http", "tcp", 80);
+    SerialPort.println("MDNS responder started");
+    SerialPort.print("You can now connect to http://");
+    SerialPort.print(servername);
+    SerialPort.println(".local");
+  }
+  else {          
+    SerialPort.println(F("Error setting up MDNS responder!")); 
+    ESP.restart(); 
+  } 
+}
+
+/***********************************/
+void WifiServer::start(void) {
+/***********************************/
+//  if (SD.begin(SS)) {
+	SerialPort.println("SD Card initialized.");
+  hasSD = true;
+//  }
+
+ /* server.on("/list", HTTP_GET, printDirectory);
+  server.on("/edit", HTTP_DELETE, handleFileDelete);
+  server.on("/edit", HTTP_PUT, handleCreate);
+  server.on("/edit", HTTP_POST, []() {
+	    returnOK();
+  }, handleFileUpload);
+  server.on("/flights", HTTP_GET, listFlights);
+  server.on("/upload", HTTP_POST, []() {
+    returnOK();
+  }, myHandleFileUpload);
+  server.onNotFound(handleNotFound);*/
+	
+	
+    //////////////////////////////////////
+    //   Liste des routes spécifiques   //
+    //////////////////////////////////////
+
+    // téléchargements de "mes vols" = contenu du repertoire vols
+    server.on("/flights", HTTP_GET, handleListFlights);
+
+    //récupération du contenu du fichier param
+    server.on("/params", HTTP_GET, handleParams);
+
+    //récupération de la liste du contenu de la carte SD
+    server.on("/list", HTTP_GET, handlePrintDirectory);
+
+    // upload d'un fichier, le chemin de destination se trouve dans le nom du fichier posté
+    server.on("/upload", HTTP_POST, []() {
+        returnOK();
+    }, handleFileUpload);
+
+    //telechargement d'un fichier dont le nom complet avec chemin se trouve en param
+    server.on("/file", HTTP_GET, handleFileDownload);
+
+    //suppression d'un fichier dont le nom complet avec chemin se trouve en param
+    server.on("/file", HTTP_DELETE, handleFileDelete);
+
+    // mise à jour OTA
+    server.on("/fupdate", HTTP_POST, []() { server.send(200); }, handleFileUpdate);
+
+    //Aucun route spécifique, on regarde si il s'agit d'un fichier du répertoire www
+    server.onNotFound(handleNotFound);
+	
+  ///////////////////////////// End of Request commands
+  server.begin();
+  SerialPort.println("HTTP server started");
+#ifdef ENABLE_DISPLAY_WEBSERVER
+	screen.ScreenViewWifi("START", "");
+#endif //ENABLE_DISPLAY_WEBSERVER
+
+}
+
+/***********************************/
+void WifiServer::handleClient(void){
+/***********************************/
+	server.handleClient(); // Listen for client connections
+}
+
+WifiServer wifiServer; 
+
+#endif //WEBSERVER_SDCARD
+
+
+
+
+
+
+
+
+
+
+
+
+/***********************************
+void handleFileUpload() {
+/***********************************
+  if (server.uri() != "/edit") {
+    return;
+  }
+  HTTPUpload& upload = server.upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    if (SDHAL.exists((char *)upload.filename.c_str())) {
+      SDHAL.remove((char *)upload.filename.c_str());
+    }
+		
+    uploadFile = SDHAL.open(upload.filename.c_str(), FILE_WRITE);
+		
+#ifdef WIFI_DEBUG
+    SerialPort.print("Upload: START, filename: "); 
+		SerialPort.println(upload.filename);
+#endif
+
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (uploadFile) {
+      uploadFile.write(upload.buf, upload.currentSize);
+    }
+#ifdef WIFI_DEBUG
+    SerialPort.print("Upload: WRITE, Bytes: "); 
+		SerialPort.println(upload.currentSize);
+#endif
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (uploadFile) {
+      uploadFile.close();
+    }
+		
+#ifdef WIFI_DEBUG
+    SerialPort.print("Upload: END, Size: "); 
+		SerialPort.println(upload.totalSize);
+#endif
+  }
+}
+
+/***********************************
+void handleDelete() {
+/***********************************
+  if (server.args() == 0) {
+    return returnFail("BAD ARGS");
+  }
+  String path = server.arg(0);
+  if (path == "/" || !SDHAL.exists((char *)path.c_str())) {
+    returnFail("BAD PATH");
+    return;
+  }
+  deleteRecursive(path);
+  returnOK();
+}
+
+void handleFileDelete() {
+  if (server.uri() != "/file") {
+    return returnFail("BAD URL");
+  }
+  if (server.args() == 0) {
+     return returnFail("BAD ARGS");
+  }
+  String path = server.arg(0);
+  if ( !SD.exists((char *)path.c_str())) {
+    return returnFail("FILE DOES NOT EXIST");
+  }
+  deleteRecursive(path);
+  returnOK();
+   
+}
+
+/***********************************
+void myHandleDownload(){
+/***********************************
+  if (server.uri() != "/file") {
+    returnFail("BAD URL");
+  }
+  if (server.args() == 0) {
+    return returnFail("BAD ARGS");
+  }
+
+    String path = server.arg(0);
+  File dataFile = SDHAL.open(path.c_str());
+
+  if (!dataFile) {
+    return returnFail("NO FILE");
+  }
+
+  String dataType = "application/octet-stream";
+
+  if (server.streamFile(dataFile, dataType) != dataFile.size()) {
+    SerialPort.println("Sent less data than expected!");
+  }
+
+  dataFile.close();
+}
+
+/***********************************
+void handleCreate() {
+/***********************************
+  if (server.args() == 0) {
+    return returnFail("BAD ARGS");
+  }
+  String path = server.arg(0);
+  if (path == "/" || SDHAL.exists((char *)path.c_str())) {
+    returnFail("BAD PATH");
+    return;
+  }
+
+  if (path.indexOf('.') > 0) {
+    File fileSD = SDHAL.open((char *)path.c_str(), FILE_WRITE);
+    if (fileSD) {
+      fileSD.write("\0");
+      fileSD.close();
+    }
+  } else {
+    SDHAL.mkdir((char *)path.c_str());
+  }
+  returnOK();
+}
+
+
+/***********************************
+void myHandleFileUpload() {
+/***********************************
+  if (server.uri() != "/upload") {
+    return;
+  }
+
+	HTTPUpload& upload = server.upload();
+	if (upload.status == UPLOAD_FILE_START) {
+		if (SDHAL.exists((char *)upload.filename.c_str())) {
+			SDHAL.remove((char *)upload.filename.c_str());
+		}
+		uploadFile = SDHAL.open(upload.filename.c_str(), FILE_WRITE);
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: START, filename: "); SerialPort.println(upload.filename);
+#endif
+	} else if (upload.status == UPLOAD_FILE_WRITE) {
+		if (uploadFile) {
+			uploadFile.write(upload.buf, upload.currentSize);
+		}
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: WRITE, Bytes: "); SerialPort.println(upload.currentSize);
+#endif
+	} else if (upload.status == UPLOAD_FILE_END) {
+		if (uploadFile) {
+			uploadFile.close();
+		}
+#ifdef WIFI_DEBUG
+		SerialPort.print("Upload: END, Size: "); SerialPort.println(upload.totalSize);
+#endif
+	}
+
+	 returnOK();
+
+}
+
+/*****************************
+void handleParams(){
+/*****************************
+  if (server.uri() != "/params") {
+     returnFail("BAD ARGS");
+    return;
+  }
+    String dataType = "application/json";
+    String path = "/parameters.jso";
+    File dataFile = SDHAL.open(path.c_str());
+
+  if (!dataFile) {
+    returnFail("NO FILE");
+    return;
+ }
+    if (server.streamFile(dataFile, dataType) != dataFile.size()) {
+      SerialPort.println("Sent less data than expected!");
+    }
+
+    dataFile.close();
+    return;
+}*/
+
+/*****************************
+void handleParams()
+/*****************************
+{
+  if (server.uri() != "/params")
+  {
+    returnFail("BAD ARGS");
+    return;
+  }
+  String dataType = "application/json";
+  String path = "/parameters.jso";
+  File dataFile = SD.open(path.c_str());
+
+  if (!dataFile)
+  {
+    returnFail("NO FILE");
+    return;
+  }
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
+  {
+    SerialPort.println("Sent less data than expected!");
+  }
+
+  dataFile.close();
+  return;
+}
+
+/***********************************
+void ReportCouldNotCreateFile(String target){
+/***********************************
+/*  SendHTML_Header();
+  webpage += F("<h3>Could Not Create Uploaded File (write-protected?)</h3>"); 
+  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();*
+}
+
+/***********************************
+void ReportCouldNotUpdateFile(String target){
+/***********************************
+/*  SendHTML_Header();
+  webpage += F("<h3>Could Not Update ESP32 (write-protected?)</h3>"); 
+  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();*
+}
+
+
+/***********************************
+void handleFileUpdate(){ // update ESP32
+/***********************************
+#ifdef HAVE_SDCARD
+#ifdef WIFI_DEBUG
+  SerialPort.println("File update stage-3");
+#endif //WIFI_DEBUG
+
+  HTTPUpload& updatefile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
+                                            // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
+  if(updatefile.status == UPLOAD_FILE_START)
+  {		
+#ifdef WIFI_DEBUG
+    SerialPort.println("File update stage-4");
+#endif //WIFI_DEBUG
+    String filename = updatefile.filename;
+    if(!filename.startsWith("/")) filename = "/"+filename;
+#ifdef WIFI_DEBUG
+    SerialPort.print("Update File Name: "); SerialPort.println(filename);
+#endif //WIFI_DEBUG
+
+    char copy[250];
+    String scopy = filename;
+    scopy.toCharArray(copy, 250);
+
+    SDHAL.remove(copy);                         // Remove a previous version, otherwise data is appended the file again
+    UpdateFile = SDHAL.open(copy, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
+    filename = String();
+		
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
+        Update.printError(SerialPort);
+    }
+  }
+  else if (updatefile.status == UPLOAD_FILE_WRITE)
+  {
+    SerialPort.println("File update stage-5");
+    if(UpdateFile) UpdateFile.write(updatefile.buf, updatefile.currentSize); // Write the received bytes to the file
+      /* flashing firmware to ESP*
+      if (Update.write(updatefile.buf, updatefile.currentSize) != updatefile.currentSize) {
+        Update.printError(SerialPort);
+      }
+  } 
+  else if (updatefile.status == UPLOAD_FILE_END)
+  {
+    if(UpdateFile)          // If the file was successfully created
+    {                                    
+      UpdateFile.close();   // Close the file again
+#ifdef WIFI_DEBUG
+      SerialPort.print("Update Size: "); SerialPort.println(updatefile.totalSize);
+#endif //WIFI_DEBUG
+
+/*      webpage = "";
+      append_page_header();
+      webpage += F("<h3>File was successfully uploaded</h3>"); 
+      webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename+"</h2>";
+      webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>"; 
+      append_page_footer();
+      server.send(200,"text/html",webpage);*
+    } 
+    else
+    {
+      ReportCouldNotCreateFile("update");
+    }
+		
+    if (Update.end(true)) { //true to set the size to the current progress
+#ifdef WIFI_DEBUG
+      SerialPort.printf("Update Success: %u\nRebooting...\n", updatefile.totalSize);
+#endif //WIFI_DEBUG
+
+/*      webpage = "";
+      append_page_header();
+      webpage += F("<h3>ESP32 was successfully updated</h3>"); 
+      webpage += F("<h2>Updated File Name: "); webpage += updatefile.filename+"</h2>";
+      webpage += F("<h2>File Size: "); webpage += file_size(updatefile.totalSize) + "</h2><br>"; 
+      append_page_footer();
+      server.send(200,"text/html",webpage);	*
+
+			SerialPort.println("RESTART ESP32");
+			SerialPort.flush();
+			ESP_LOGI("GnuVario-E", "RESTART ESP32");
+			screen.ScreenViewReboot();
+			ESP.restart();		
+			
+    } else {
+      Update.printError(SerialPort);
+      ReportCouldNotUpdateFile("update");
+    }	
+  }
+#else
+	ReportSDNotPresent();
+#endif
+}  
+ 
+/***********************************
+void listDirectoryJson(File dir, int numTabs) {
+/***********************************
+//	DynamicJsonBuffer jsonBuffer;
+	DynamicJsonDocument doc(1024);
+//  JsonArray& array = jsonBuffer.createArray();
+	JsonArray array = doc.to<JsonArray>();
+	
+	dir.rewindDirectory();
+	
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+
+    JsonObject object = doc.createNestedObject();
+    object["type"] = (entry.isDirectory()) ? "dir" : "file";
+    object["name"] = String(entry.name());
+ //   array.add(object);
+		
+    if (entry.isDirectory()) {
+      listDirectoryJson(entry, numTabs + 1);
+    }
+		
+    entry.close();
+  }
+	
+  String response = "";
+	serializeJson(doc, response);
+	SerialPort.println("");
+	SerialPort.println(response);
+}
+ 
+/*************************************
+void printDirectoryToJson(void) {
+/*************************************
+  if (!server.hasArg("dir")) {
+    return returnFail("BAD ARGS");
+  }
+
+  String path = server.arg("dir");
+  if(path != "/" && !SDHAL.exists((char *)path.c_str())) return returnFail("BAD PATH");
+  File dir = SDHAL.open((char *)path.c_str());
+  path = String();
+  if(!dir.isDirectory()){
+    dir.close();
+    return returnFail("NOT DIR");
+  }
+	
+	DynamicJsonDocument jsonBuffer(1024);
+	JsonArray array = jsonBuffer.to<JsonArray>();
+	
+  dir.rewindDirectory();
+  File entry;
+  while(entry = dir.openNextFile()){		
+    JsonObject object = jsonBuffer.createNestedObject();
+    object["type"] = (entry.isDirectory()) ? "dir" : "file";
+    object["name"] = String(entry.name());
+		
+    entry.close();
+  }  
+  String response = "";
+	serializeJson(jsonBuffer, response);
+  server.send(200, "application/json", response);
+  dir.close();
+}
+
+/*************************************
+void printDirectoryToJson(String directory) {
+/*************************************
+	
+	DynamicJsonDocument jsonBuffer(1024);
+	JsonArray array = jsonBuffer.to<JsonArray>();
+
+  String path = directory;
+  if(path != "/" && !SDHAL.exists((char *)path.c_str())) {
+		SerialPort.println("BAD PATH");
+//		return returnFail("BAD PATH");
+	}
+  File dir = SDHAL.open((char *)path.c_str());
+	dir.rewindDirectory();
+	
+  SerialPort.print("path : ");
+	SerialPort.print(path);
+	
+  if(!dir.isDirectory()){
+    dir.close();
+		SerialPort.println("NOT DIR");
+//    return returnFail("NOT DIR");
+  }
+
+  File entry;
+  while(entry = dir.openNextFile()){		
+		if (!entry.isDirectory()) {
+			JsonObject object = jsonBuffer.createNestedObject();
+//			object["type"] = (entry.isDirectory()) ? "dir" : "file";
+			object["name"] = String(entry.name());
+		}
+    entry.close();
+  }  
+  String response = "";
+	serializeJson(jsonBuffer, response);
+  SerialPort.print("Repertoire : ");
+	SerialPort.print(directory);
+	SerialPort.println(response);
+  dir.close();
+}
+ 
+ //server.on("/list", HTTP_GET, printDirectory);
+ 
+ /*
+ JsonObject obj1 = doc.createNestedObject();
+obj1["key"] = "a1";
+obj1["value"] = analogRead(A1);
+
+// Convert the JsonDocument to an array
+JsonArray arr = doc.to<JsonArray>();
+ 
+arr[0] = 666;
+arr[1] = 667; 
+ 
+ void printDirectory(AsyncWebServerRequest *request) {
+  if( ! request->hasParam("dir")) return returnFail(request, "BAD ARGS");
+  String path = request->arg("dir");
+  if(path != "/" && !SD.exists((char *)path.c_str())) return returnFail(request, "BAD PATH");
+  File dir = SD.open((char *)path.c_str());
+  path = String();
+  if(!dir.isDirectory()){
+    dir.close();
+    return returnFail(request, "NOT DIR");
+  }
+  DynamicJsonBuffer jsonBuffer;
+  JsonArray& array = jsonBuffer.createArray();
+  dir.rewindDirectory();
+  File entry;
+  while(entry = dir.openNextFile()){
+    JsonObject& object = jsonBuffer.createObject();
+    object["type"] = (entry.isDirectory()) ? "dir" : "file";
+    object["name"] = String(entry.name());
+    array.add(object);
+    entry.close();
+  }  
+  String response = "";
+  array.printTo(response);
+  request->send(200, "application/json", response);
+  dir.close();
+}
+ 
+ 
+ https://arduinojson.org/v6/doc/serialization/
+ */
+ 
