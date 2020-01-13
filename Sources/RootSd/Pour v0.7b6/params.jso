@@ -1,0 +1,50 @@
+{
+    "gnuvarioe": {
+        "version": "1.0"
+    },
+    "systeme": {
+        "BT_ENABLE": 0,
+        "NO_RECORD": 0,
+        "ALARM_SDCARD": 1,
+        "BEEP_GPSFIX": 1,
+        "BEEP_FLYBEGIN": 0,
+				"BEEP_VARIOBEGIN": 0,
+				"COMPENSATION_TEMP": -6.0,
+				"COMPENSATION_GPSALTI": -30,
+				"SLEEP_TIMEOUT_MINUTES": 20,
+				"SLEEP_THRESHOLD_CPS": 0.5,
+				"MULTIDISPLAY_DURATION": 2000
+    },
+    "general": {
+        "PILOT_NAME": "Magali",
+				"GLIDER": {
+				  "GLIDER_SELECT": 0,
+					"GLIDER_NAME1": "MAC-PARA Muse 3",
+					"GLIDER_NAME2": "",
+					"GLIDER_NAME3": "",
+					"GLIDER_NAME4": ""
+				},
+        "TIME_ZONE": 1
+    },
+    "vario": {
+        "SINKING_THRESHOLD": -2.0,
+        "CLIMBING_THRESHOLD": 0.2,
+        "NEAR_CLIMBING_SENSITIVITY": 0.5,
+        "ENABLE_NEAR_CLIMBING_ALARM": 0,
+        "ENABLE_NEAR_CLIMBING_BEEP": 0,
+        "DISPLAY_INTEGRATED_CLIMB_RATE": 0,
+        "CLIMB_PERIOD_COUNT": 10,
+        "SETTINGS_GLIDE_RATIO_PERIOD_COUNT": 20,
+        "RATIO_MAX_VALUE": 30.0,
+        "RATIO_MIN_SPEED": 10.0,
+        "RATIO_CLIMB_RATE": 2,
+        "SENT_LXNAV_SENTENCE": 1
+   },
+    "flightstart": {
+        "FLIGHT_START_MIN_TIMESTAMP": 15000,
+        "FLIGHT_START_VARIO_LOW_THRESHOLD": -0.5,
+        "FLIGHT_START_VARIO_HIGH_THRESHOLD": 0.5,
+        "FLIGHT_START_MIN_SPEED": 8.0,
+        "RECORD_WHEN_FLIGHT_START": 1
+    }
+}
