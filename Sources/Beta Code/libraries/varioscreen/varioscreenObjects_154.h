@@ -55,6 +55,16 @@
  *    1.1.4  14/10/19   Modification affichage titre champs screendigit          *
  *    1.1.5  15/10/19   Modification affichage des satellites                    *
  *    1.1.6  03/11/19		Modification d'TUnit																		 *
+ *    1.1.7  28/01/20   Correction leftAlign                                     *
+ *                      Ajout ALIGNCENTER                                        *
+ *                      Ajout Objet ScreenText                                   *
+ *    1.1.8  09/02/20   Modif font screenText                                    *
+ *    1.0.9  17/02/20   Ajout large (font) varioscreenDigit                      *
+ *    1.0.10 19/02/20   Ajout variolog                                           *
+ *    1.0.11 21/02/20   Correction Bug d'affichage batterie                      *
+ *    1.0.12 05/03/20   Ajout affichage AGL                                      *
+ *    1.0.13 06/03/20   Ajout gestion icone DISPLAY_OBJECT_TREND                 *
+ *    1.0.14 09/03/20   Modification de l'effacement digit left                  *
  *                                                                               *
  *********************************************************************************/
 
@@ -70,7 +80,7 @@
 #include <digit.h>
 #include <variostat.h>
 
-#include <GxEPD2_BWU.h>
+#include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
 
 // FreeFonts from Adafruit_GFX
@@ -78,6 +88,8 @@
 #include <Fonts/FreeSansBold12pt7b.h>
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold24pt7b.h>
+
+#include <Fonts/FreeSerifBold18pt7b.h>
 
 /* minimum drift to update digit */
 #define VARIOSCREEN_DIGIT_DISPLAY_THRESHOLD 0.65
@@ -89,8 +101,8 @@
 #define VARIOSCREEN_BAT_PIXEL_COUNT 10
 #define VARIOSCREEN_BAT_MULTIPLIER 6
 
-#define ColorScreen    GxEPD_BLACK
-#define ColorText      GxEPD_WHITE
+#define ColorScreen    GxEPD_WHITE
+#define ColorText      GxEPD_BLACK
 
 #define STATE_OK									0x00
 #define STATE_BUSY                0x01
@@ -127,15 +139,30 @@
 #define DISPLAY_OBJECT_LINE									28
 #define DISPLAY_OBJECT_CIRCLE								29
 #define DISPLAY_OBJECT_WIND                 30
+#define DISPLAY_OBJECT_LAT                  31
+#define DISPLAY_OBJECT_LONG                 32  
+#define DISPLAY_OBJECT_BEARING							33
+#define DISPLAY_OBJECT_BEARING_TEXT         34
+#define DISPLAY_OBJECT_LAT_DIR              35
+#define DISPLAY_OBJECT_LONG_DIR             36  
+#define DISPLAY_OBJECT_HEIGHT							  37
 
-#define MAXW_OBJECT_VARIO 								 	85
+#define MAXW_OBJECT_VARIO 								 	86
 #define MAXW_OBJECT_TIME									 	50
 #define MAXW_OBJECT_SPEED								 		48
-#define MAXW_OBJECT_ALTI									 	105
+#define MAXW_OBJECT_ALTI									 	110
 #define MAXW_OBJECT_DURATION							 	20
-#define MAXW_OBJECT_RATIO       						20
-#define MAXW_OBJECT_TREND      							20
+#define MAXW_OBJECT_RATIO       						100
+#define MAXW_OBJECT_TREND      							100
 #define MAXW_OBJECT_TEMPERATURE							20
+//#define MAXW_OBJECT_LAT 									 	160
+//#define MAXW_OBJECT_LONG									 	160
+#define MAXW_OBJECT_LAT_DIR                 32
+#define MAXW_OBJECT_LONG_DIR                32
+#define MAXW_OBJECT_BEARING_TEXT            110
+#define MAXW_OBJECT_BEARING      						80
+#define MAXW_OBJECT_LAT 									 	185
+#define MAXW_OBJECT_LONG									 	185
 
 #include <VarioSettings.h>
 extern VarioSettings GnuSettings;
@@ -180,12 +207,16 @@ class VarioScreenObject {
 
 /* screen digit */
 
-#define ALIGNNONE  0
-#define ALIGNSPACE 1
-#define ALIGNZERO  2
+#define ALIGNNONE  		0
+#define ALIGNSPACE 		1
+#define ALIGNZERO  		2
 
-#define ALIGNLEFT  true
-#define ALIGNRIGHT false
+#define ALIGNRIGHT  	0
+#define ALIGNLEFT   	1
+#define ALIGNCENTER		2
+
+#define FONTLARGE			true
+#define FONTNORMAL    false
 
 class ScreenDigit: public VarioScreenObject {
 // anchorX			Position en X
@@ -195,14 +226,14 @@ class ScreenDigit: public VarioScreenObject {
 // precision  	nombre de chiffre après la virgule
 // plusDisplay 	affichage du + et du -
 // zero 				affichage des zero en début de nombre
-// leftAlign 		Alignement à gauche
+// Align     		Alignement 
 // showtitle 		Affichage du titre
 // TypeDigit		Type d'affichege (DISPLAY_OBJECT_VARIO, DISPLAY_OBJECT_TIME, ....)
 // TitleX       Position du titre eb X
 // TitleY       Position du titre en Y
 
  public :
-   ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uint16_t precision, boolean plusDisplay = false, boolean zero = false, boolean leftAlign = false, boolean showtitle = true, 	int8_t displayTypeID = 0);
+   ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uint16_t precision, boolean plusDisplay = false, boolean zero = false, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0, bool large = FONTLARGE);
  //  : VarioScreenObject(0), anchorX(anchorX), anchorY(anchorY), width(width), precision(precision), plusDisplay(plusDisplay), zero(zero), leftAlign(leftAlign), showtitle(showtitle)
  // { lastDisplayWidth = 0; }
   void show(void);
@@ -213,8 +244,43 @@ class ScreenDigit: public VarioScreenObject {
   char * dtostrf2(double number, signed char width, unsigned char prec, char *s, boolean zero);
   double value;
   double oldvalue=-1;
-  const uint16_t anchorX, anchorY, precision, width;
-  boolean plusDisplay, zero, leftAlign, showtitle;
+  const uint16_t anchorX, anchorY, width, precision;
+  boolean plusDisplay, zero;
+	int8_t Align;
+  boolean showtitle;
+  uint8_t lastDisplayWidth;
+	int16_t oldw=0, oldh=0, oldx=0, oldy=0;
+	uint16_t Zwidth, Zheight;
+	uint16_t MaxWidth, MaxHeight;
+	int8_t displayTypeID;
+  boolean large;
+};
+
+class ScreenText: public VarioScreenObject {
+// anchorX			Position en X
+// anchorY			Position en Y
+// width				Nombre de caractère
+// large        normal / large
+// Align     		Alignement 
+// showtitle 		Affichage du titre
+// TypeDigit		Type d'affichege (DISPLAY_OBJECT_VARIO, DISPLAY_OBJECT_TIME, ....)
+// TitleX       Position du titre en X
+// TitleY       Position du titre en Y
+
+ public :
+   ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, bool large = FONTLARGE, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0);
+ //  : VarioScreenObject(0), anchorX(anchorX), anchorY(anchorY), width(width), precision(precision), plusDisplay(plusDisplay), zero(zero), leftAlign(leftAlign), showtitle(showtitle)
+ // { lastDisplayWidth = 0; }
+  void show(void);
+  void setValue(String value);
+   
+ private:
+  String value;
+  String oldvalue="";
+  const uint16_t anchorX, anchorY, width;
+  boolean large;
+	int8_t Align;
+  boolean showtitle;
   uint8_t lastDisplayWidth;
 	int16_t oldw=0, oldh=0, oldx=0, oldy=0;
 	uint16_t Zwidth, Zheight;
@@ -419,9 +485,9 @@ class ScreenTime : public VarioScreenObject {
  protected:
   const uint8_t posX;
   const uint8_t posY;
+  ScreenDigit& hour, minute;
   int8_t time[3];
   bool dot_or_h = false;
-  ScreenDigit& hour, minute;
 };
 
 
@@ -483,8 +549,7 @@ class BGLine : public VarioScreenObject {
 	void toDisplay(void);
   
  private :
-  const uint8_t posX1, posX2;
-  const uint8_t posY1, posY2;
+    const uint8_t posX1, posY1, posX2, posY2;
 };
 
 class BGCircle : public VarioScreenObject {

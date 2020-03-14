@@ -141,23 +141,28 @@ void Vertaccel::init(void) {
   fastMPUInit(false);
 
 #ifndef VERTACCEL_STATIC_CALIBRATION
-  /* read calibration coeff from EEPROM if needed */
-  settings = readEEPROMSettings();
-
-  /* set gyro calibration in the DMP */
-  fastMPUSetGyroBias(settings.gyroCal);
-#else
+  uint8_t gyroCalArray[12] = {GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_00,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_01,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_02,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_03,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_04,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_05,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_06,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_07,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_08,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_09,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_10,
+			      GnuSettings.VARIO_VERTACCEL_GYRO_CAL_BIAS_11 };
+#endif
   /* set gyro calibration in the DMP */
   fastMPUSetGyroBias(gyroCalArray);
-#endif
-
   
 
 #ifndef VERTACCEL_STATIC_CALIBRATION
   /* set accel calibration in the DMP */
-  int32_t accelBias[3];
-  for(int i = 0; i<3; i++) 
-    accelBias[i] = (int32_t)settings.accelCal.bias[i] << (15 - VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER);
+  int32_t accelBias[3] = { GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_00 << (15 - GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER),
+			   GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_01 << (15 - GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER),
+			   GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_02 << (15 - GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER)};
 
   fastMPUSetAccelBiasQ15(accelBias);
 #else
@@ -184,12 +189,22 @@ void Vertaccel::compute(int16_t *imuAccel, int32_t *imuQuat, double* vertVector,
   double quat[4];
   
 #ifndef VERTACCEL_STATIC_CALIBRATION
-  for(int i = 0; i<3; i++) {
-    int64_t calibratedAccel = (int64_t)imuAccel[i] << VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER;
-    calibratedAccel -= (int64_t)settings.accelCal.bias[i];
-    calibratedAccel *= ((int64_t)settings.accelCal.scale + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
-    accel[i] = ((double)calibratedAccel)/((double)((int64_t)1 << (VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_ACCEL_SCALE_SHIFT)));
-  }
+  
+  int64_t calibratedAccel = (int64_t)imuAccel[0] << GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER;
+  calibratedAccel -= (int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_00;
+  calibratedAccel *= ((int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  accel[0] = ((double)calibratedAccel)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_ACCEL_SCALE_SHIFT)));
+
+  calibratedAccel = (int64_t)imuAccel[1] << GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER;
+  calibratedAccel -= (int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_01;
+  calibratedAccel *= ((int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  accel[1] = ((double)calibratedAccel)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_ACCEL_SCALE_SHIFT)));
+
+  calibratedAccel = (int64_t)imuAccel[2] << GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER;
+  calibratedAccel -= (int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_02;
+  calibratedAccel *= ((int64_t)GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  accel[2] = ((double)calibratedAccel)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_ACCEL_SCALE_SHIFT)));
+
 #else
   /* inline for optimization */
   int64_t calibratedAccel;
@@ -242,12 +257,22 @@ void Vertaccel::computeNorthVector(double* vertVector, int16_t* mag, double* nor
   double n[3];
 
 #ifndef VERTACCEL_STATIC_CALIBRATION
-  for(int i = 0; i<3; i++) {
-    int64_t calibratedMag = ((int64_t)mag[i]) << VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
-    calibratedMag -= (int64_t)settings.magCal.bias[i];
-    calibratedMag *= ((int64_t)settings.magCal.scale + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
-    n[i] = ((double)calibratedMag)/((double)((int64_t)1 << (VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
-  }
+  int64_t calibratedMag;
+  calibratedMag = ((int64_t)mag[0]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_00;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[0] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[1]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_01;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[1] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[2]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_02;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[2] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+  
 #else
   /* inline for optimization */
   int64_t calibratedMag;
@@ -305,4 +330,3 @@ uint8_t Vertaccel::readRawMag(int16_t* mag) {
   return haveValue;
 }  
 #endif //AK89xx_SECONDARY
-

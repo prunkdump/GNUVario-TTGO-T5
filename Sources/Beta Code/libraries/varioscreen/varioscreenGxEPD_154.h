@@ -32,11 +32,28 @@
  *    1.0.4  07/11/19   Modif updateScreen																			 *
  *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
  *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
+ *    1.0.6  17/01/20   Desactivation effacement ligne 1427                      *
+ *    1.0.7  20/01/20   Modif ScreenViewReboot																	 *
+ *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
+ *    1.0.9  09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
+ *    1.0.10 17/02/20   Ajout large (font) varioscreenDigit                      *
+ *    1.0.11 25/02/20   Ajout ScreenBackground                                   *
+ *    1.0.12 04/03/20   Ajout affichage alti agl                                 *
+ *    1.0.13 07/03/20   Correction xSemaphore                                    *
+ *    1.0.14 09/03/20   Modification ScreenViewSound                             *
  *                                                                               *
  *********************************************************************************/
 
+
+
+
 #ifndef VARIOSCREENGXEPD_154_H
 #define VARIOSCREENGXEPD_154_H
+
+#include <Arduino.h>
+#include <VarioSettings.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
@@ -44,6 +61,11 @@
 #if (VARIOSCREEN_SIZE == 154)
 
 #include <varioscreenObjects_154.h>
+
+/* task parameters */
+#define SCREEN_STACK_SIZE 2000
+#define SCREEN_CORE 1
+#define SCREEN_PRIORITY 10
 
 /************************/
 /* The screen scheduler */
@@ -66,7 +88,7 @@ class ScreenScheduler {
  ScreenScheduler(ScreenSchedulerObject* displayList, uint8_t objectCount, int8_t startPage, int8_t endPage);
 //   : displayList(displayList), objectCount(objectCount), pos(0), currentPage(startPage), endPage(endPage); // {};
   
-  void displayStep(void);
+  boolean displayStep(void);
   int8_t getPage(void);
   int8_t getMaxPage(void);
   void setPage(int8_t page, boolean forceUpdate = false);
@@ -143,6 +165,7 @@ class VarioScreen {
 	ScreenDigit* tempratureDigit; 
 	
 	ScreenDigit* altiDigit;
+	ScreenDigit* heightDigit;
 	
 	MUnit* munit;
 	ScreenDigit* varioDigit;
@@ -176,6 +199,8 @@ class VarioScreen {
 	BGLine* bgline3;
 	BGLine* bgline4;
 	BGCircle* bgcircle; */
+
+
 	
 //object page 10 - calibrate GPS 	
 	
@@ -185,12 +210,19 @@ class VarioScreen {
 	
 //object page 1  	
 	
-	ScreenDigit*  tempDigit; 	
-	TUnit* tunit;
-		
+//	ScreenDigit*  tempDigit; 	
+//	TUnit* tunit;
+//	ScreenText*   gpsLatDir;
+//	ScreenText*   gpsLongDir;
+	ScreenText*   gpsBearingText;
+//	ScreenDigit*  gpsLat; 
+//	ScreenDigit*  gpsLong; 
+	ScreenDigit*  gpsBearing;
+	ScreenText*   gpsLat;
+	ScreenText*   gpsLong;
 	
 //  ScreenSchedulerObject* displayList;
-	ScreenSchedulerObject displayList[30];  //17];
+	ScreenSchedulerObject displayList[40];  //17];
 	ScreenScheduler* schedulerScreen; 
 	uint8_t MaxObjectList = 0;
 	
@@ -217,24 +249,34 @@ class VarioScreen {
 	void ScreenViewStatPage(int PageStat);
 	void ScreenViewPage(int8_t page, boolean clear, boolean refresh = false);
 	void ScreenViewWifi(String SSID, String IP);
-	void ScreenViewReboot(void);
-  void ScreenViewSound(int volume);	
+	void ScreenViewReboot(String message = "");
+  boolean ScreenViewSound(void);
+	void SetViewSound(int volume);	
 	void ScreenViewMessage(String message, int delai);
+	void ScreenBackground(int8_t page);
 		
 	void CreateObjectDisplay(int8_t ObjectDisplayTypeID, VarioScreenObject* object, int8_t page, int8_t multiDisplayID, boolean actif); 
 	void updateData(int8_t ObjectDisplayTypeID, double data);
 		
  /* void beginClear(void); //multi step clear
   bool clearStep(void); //return true while clearing*/
-  
+ 
+	 static SemaphoreHandle_t screenMutex;
+ 
  private:
    unsigned long timerShow = 0;
+   static uint8_t volatile status;
+   static TaskHandle_t screenTaskHandler;
+   static void screenTask(void* param);
+	 int    viewSound;
+
 //  uint8_t clearingStep;
 };
 
 extern VarioScreen screen;
 extern volatile uint8_t stateDisplay;
-extern GxEPD2_BW<GxEPD2_154U, GxEPD2_154U::HEIGHT> display;
+//extern GxEPD2_BW<GxEPD2_154U, GxEPD2_154U::HEIGHT> display;
+extern GxEPD2_BW<GxEPD2_154, GxEPD2_154::HEIGHT> display;
 
 #endif
 #endif

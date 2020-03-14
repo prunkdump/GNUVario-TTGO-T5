@@ -33,9 +33,21 @@
  *    1.0.4  07/11/19   Modif updateScreen																			 *
  *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
  *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
+ *    1.0.6  17/01/20   Desactivation effacement ligne 1427                      *
+ *    1.0.7  20/01/20   Modif ScreenViewReboot																	 *
+ *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
+ *    1.0.9  09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
+ *    1.0.10 17/02/20   Ajout large (font) varioscreenDigit                      *
+ *    1.0.11 25/02/20   Ajout ScreenBackground                                   *
+ *    1.0.12 04/03/20   Ajout affichage alti agl                                 *
+ *    1.0.13 07/03/20   Correction xSemaphore                                    *
+ *    1.0.14 09/03/20   Modification ScreenViewSound                             *
  *                                                                               *
  *********************************************************************************/
  
+
+
+
  /*
  *********************************************************************************
  *                    conversion image to cpp code                               *
@@ -55,7 +67,7 @@
 #include <Arduino.h>
 
 #if defined(ESP32)
-static const char* TAG = "VarioScreen";
+//static const char* TAG = "VarioScreen";
 #include "esp_log.h"
 #endif //ESP32
 
@@ -75,6 +87,11 @@ static const char* TAG = "VarioScreen";
 #include <Utility.h>
 
 #include <SysCall.h>
+
+#include <AglManager.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 #ifdef __AVR__
   #include <avr/pgmspace.h>
@@ -118,11 +135,22 @@ volatile unsigned long oldtime;
 volatile uint8_t led1stat = 0; 
 volatile uint8_t stateMulti = 0;
 
+/*********************/
+/* static class data */
+/*********************/
+SemaphoreHandle_t VarioScreen::screenMutex;
+TaskHandle_t VarioScreen::screenTaskHandler;
+
 #define VARIOSCREEN_DOT_WIDTH 6
 #define VARIOSCREEN_DIGIT_WIDTH 11
 
+#ifndef ColorScreen
 #define ColorScreen    GxEPD_WHITE
+#endif
+
+#ifndef ColorText
 #define ColorText      GxEPD_BLACK
+#endif
 
 #define VARIOSCREEN_TENSION_ANCHOR_X 140
 #define VARIOSCREEN_TENSION_ANCHOR_Y 170
@@ -159,7 +187,7 @@ volatile uint8_t stateMulti = 0;
 #define VARIOSCREEN_SAT_ANCHOR_X 164
 #define VARIOSCREEN_SAT_ANCHOR_Y 0
 #define VARIOSCREEN_SAT_FIX_ANCHOR_X 176
-#define VARIOSCREEN_SAT_FIX_ANCHOR_Y 32
+#define VARIOSCREEN_SAT_FIX_ANCHOR_Y 38    //32
 #define VARIOSCREEN_TIME_ANCHOR_X 198
 #define VARIOSCREEN_TIME_ANCHOR_Y 190
 #define VARIOSCREEN_ELAPSED_TIME_ANCHOR_X 198
@@ -171,12 +199,24 @@ volatile uint8_t stateMulti = 0;
 #define VARIOSCREEN_WIND_ANCHOR_X 200
 #define VARIOSCREEN_WIND_ANCHOR_Y 33
 
+
+
 /*****************************************/
 /* screen objets Page 1                  */
 /*****************************************/
-#define VARIOSCREEN_TEMP_ANCHOR_X 90
-#define VARIOSCREEN_TEMP_ANCHOR_Y 190
-#define VARIOSCREEN_TEMP_UNIT_ANCHOR_X 160
+//#define VARIOSCREEN_TEMP_ANCHOR_X 115
+//#define VARIOSCREEN_TEMP_ANCHOR_Y 190
+//#define VARIOSCREEN_TEMP_UNIT_ANCHOR_X 170
+#define VARIOSCREEN_LONG_ANCHOR_X 10 //150
+//#define VARIOSCREEN_LONGDIR_ANCHOR_X 165
+#define VARIOSCREEN_LONG_ANCHOR_Y 135 //90
+#define VARIOSCREEN_LAT_ANCHOR_X 10 //150
+//#define VARIOSCREEN_LATDIR_ANCHOR_X 165
+#define VARIOSCREEN_LAT_ANCHOR_Y 85 //135
+#define VARIOSCREEN_BEARING_TEXT_ANCHOR_X 10
+#define VARIOSCREEN_BEARING_TEXT_ANCHOR_Y 190
+#define VARIOSCREEN_BEARING_ANCHOR_X 190 //115
+#define VARIOSCREEN_BEARING_ANCHOR_Y 192
 
 /*****************************************/
 /* screen objets Page 10 - Calibrate GPS */
@@ -235,6 +275,16 @@ void VarioScreen::init(void)
 #endif //SCREEN_DEBUG
 	
   display.setTextColor(GxEPD_BLACK);
+	
+  screenMutex = xSemaphoreCreateBinary();
+  xSemaphoreGive(screenMutex);
+
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("int : Give");	
+#endif //SCREEN_DEBUG
+
+  xTaskCreatePinnedToCore(screenTask, "TaskDisplay", SCREEN_STACK_SIZE, NULL, SCREEN_PRIORITY, &screenTaskHandler,SCREEN_CORE);
+	
 }
 	
 //****************************************************************************************************************************
@@ -273,15 +323,17 @@ void VarioScreen::createScreenObjects(void)
 //****************************************************************************************************************************
 void VarioScreen::createScreenObjectsPage0(void) {
 //****************************************************************************************************************************
-	altiDigit = new ScreenDigit(VARIOSCREEN_ALTI_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y, 4, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_ALTI);
+	altiDigit = new ScreenDigit(VARIOSCREEN_ALTI_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y, 4, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_ALTI, FONTLARGE);
+	heightDigit = new ScreenDigit(VARIOSCREEN_ALTI_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y, 4, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_HEIGHT, FONTLARGE);
+
 	munit = new MUnit(VARIOSCREEN_ALTI_UNIT_ANCHOR_X, VARIOSCREEN_ALTI_ANCHOR_Y);
-	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNRIGHT, true, DISPLAY_OBJECT_VARIO);
-//	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNLEFT, true, DISPLAY_OBJECT_VARIO);
+	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNRIGHT, true, DISPLAY_OBJECT_VARIO, FONTLARGE);
+//	varioDigit = new ScreenDigit(VARIOSCREEN_VARIO_ANCHOR_X, VARIOSCREEN_VARIO_ANCHOR_Y, 4, 1, true, false,  ALIGNLEFT, true, DISPLAY_OBJECT_VARIO, FONTLARGE);
 	msunit = new MSUnit(VARIOSCREEN_VARIO_UNIT_ANCHOR_X, VARIOSCREEN_VARIO_UNIT_ANCHOR_Y);
 	kmhunit = new KMHUnit(VARIOSCREEN_SPEED_UNIT_ANCHOR_X, VARIOSCREEN_SPEED_UNIT_ANCHOR_Y);
-	speedDigit = new ScreenDigit(VARIOSCREEN_SPEED_ANCHOR_X, VARIOSCREEN_SPEED_ANCHOR_Y, 2, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_SPEED);
-	ratioDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 2, 0, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_RATIO);
-	trendDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 3, 1, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_TREND);
+	speedDigit = new ScreenDigit(VARIOSCREEN_SPEED_ANCHOR_X, VARIOSCREEN_SPEED_ANCHOR_Y, 2, 0, false, false, ALIGNRIGHT, true, DISPLAY_OBJECT_SPEED, FONTLARGE);
+	ratioDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 2, 0, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_RATIO, FONTLARGE);
+	trendDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 3, 1, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_TREND, FONTLARGE);
 
 	infoLevel = new INFOLevel(VARIOSCREEN_INFO_ANCHOR_X, VARIOSCREEN_INFO_ANCHOR_Y);
 	volLevel = new VOLLevel(VARIOSCREEN_VOL_ANCHOR_X, VARIOSCREEN_VOL_ANCHOR_Y);
@@ -292,8 +344,8 @@ void VarioScreen::createScreenObjectsPage0(void) {
 
 	satLevel = new SATLevel(VARIOSCREEN_SAT_ANCHOR_X, VARIOSCREEN_SAT_ANCHOR_Y);
 
-	timeMDigit = new ScreenDigit (VARIOSCREEN_TIME_ANCHOR_X-55, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, true, ALIGNLEFT, false, DISPLAY_OBJECT_DURATION);
-	timeHDigit = new ScreenDigit (VARIOSCREEN_TIME_ANCHOR_X-73, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, true, ALIGNRIGHT, true, DISPLAY_OBJECT_TIME);
+	timeMDigit = new ScreenDigit (VARIOSCREEN_TIME_ANCHOR_X-55, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, true, ALIGNLEFT, false, DISPLAY_OBJECT_DURATION, FONTLARGE);
+	timeHDigit = new ScreenDigit (VARIOSCREEN_TIME_ANCHOR_X-73, VARIOSCREEN_TIME_ANCHOR_Y, 2, 0, false, true, ALIGNRIGHT, true, DISPLAY_OBJECT_TIME, FONTLARGE);
 
 	screenTime = new ScreenTime(VARIOSCREEN_TIME_ANCHOR_X, VARIOSCREEN_TIME_ANCHOR_Y, *timeHDigit, *timeMDigit,false);
 	screenElapsedTime = new ScreenElapsedTime(VARIOSCREEN_ELAPSED_TIME_ANCHOR_X, VARIOSCREEN_ELAPSED_TIME_ANCHOR_Y, *timeHDigit, *timeMDigit);
@@ -301,6 +353,7 @@ void VarioScreen::createScreenObjectsPage0(void) {
 	fixgpsinfo = new FIXGPSInfo(VARIOSCREEN_SAT_FIX_ANCHOR_X, VARIOSCREEN_SAT_FIX_ANCHOR_Y);
 	btinfo = new BTInfo(VARIOSCREEN_BT_ANCHOR_X, VARIOSCREEN_BT_ANCHOR_Y);
 	
+
 	/*
   display.drawLine(130, 26, 295, 26, GxEPD_BLACK);
   display.drawLine(130, 26, 130, 0, GxEPD_BLACK);
@@ -321,16 +374,25 @@ void VarioScreen::createScreenObjectsPage0(void) {
 //****************************************************************************************************************************
 void VarioScreen::createScreenObjectsPage10(void) {
 //****************************************************************************************************************************
-	gpsPeriodDigit 			= new ScreenDigit(VARIOSCREEN_GPS_PERIOD_ANCHOR_X, VARIOSCREEN_GPS_PERIOD_ANCHOR_Y, 6, 1, false, false, ALIGNRIGHT, true);
-	gpsMeanPeriodDigit 	= new ScreenDigit(VARIOSCREEN_GPS_MEAN_PERIOD_ANCHOR_X, VARIOSCREEN_GPS_MEAN_PERIOD_ANCHOR_Y, 6, 1, false, false,  ALIGNRIGHT, true);
-	gpsDurationDigit	 	= new ScreenDigit(VARIOSCREEN_GPS_DURATION_ANCHOR_X, VARIOSCREEN_GPS_DURATION_ANCHOR_Y, 6, 1, false, false,  ALIGNRIGHT, true);
+/*	gpsPeriodDigit 			= new ScreenDigit(VARIOSCREEN_GPS_PERIOD_ANCHOR_X, VARIOSCREEN_GPS_PERIOD_ANCHOR_Y, 6, 1, false, false, ALIGNRIGHT, true, FONTLARGE);
+	gpsMeanPeriodDigit 	= new ScreenDigit(VARIOSCREEN_GPS_MEAN_PERIOD_ANCHOR_X, VARIOSCREEN_GPS_MEAN_PERIOD_ANCHOR_Y, 6, 1, false, false,  ALIGNRIGHT, true, FONTLARGE);
+	gpsDurationDigit	 	= new ScreenDigit(VARIOSCREEN_GPS_DURATION_ANCHOR_X, VARIOSCREEN_GPS_DURATION_ANCHOR_Y, 6, 1, false, false,  ALIGNRIGHT, true, FONTLARGE);*/
 }
 
 //****************************************************************************************************************************
 void VarioScreen::createScreenObjectsPage1(void) {
 //****************************************************************************************************************************	
-	tempDigit 					= new ScreenDigit(VARIOSCREEN_TEMP_ANCHOR_X, VARIOSCREEN_TEMP_ANCHOR_Y, 2, 0, false, false, ALIGNLEFT, false, DISPLAY_OBJECT_TEMPERATURE);
-	tunit 							= new TUnit(VARIOSCREEN_TEMP_UNIT_ANCHOR_X, VARIOSCREEN_TEMP_ANCHOR_Y);
+//  gpsLatDir 					= new ScreenText(VARIOSCREEN_LATDIR_ANCHOR_X, VARIOSCREEN_LAT_ANCHOR_Y, 1, FONTLARGE, ALIGNLEFT, false, DISPLAY_OBJECT_LAT_DIR);
+//	gpsLongDir					= new ScreenText(VARIOSCREEN_LONGDIR_ANCHOR_X, VARIOSCREEN_LONG_ANCHOR_Y, 1, FONTLARGE, ALIGNLEFT, false, DISPLAY_OBJECT_LONG_DIR);
+	gpsBearingText			= new ScreenText(VARIOSCREEN_BEARING_TEXT_ANCHOR_X, VARIOSCREEN_BEARING_TEXT_ANCHOR_Y, 3, FONTNORMAL, ALIGNLEFT, false, DISPLAY_OBJECT_BEARING_TEXT);
+	gpsBearing 					= new ScreenDigit(VARIOSCREEN_BEARING_ANCHOR_X, VARIOSCREEN_BEARING_ANCHOR_Y, 3, 0, false, false, ALIGNRIGHT, false, DISPLAY_OBJECT_BEARING, FONTLARGE);
+//	gpsLat    					= new ScreenDigit(VARIOSCREEN_LAT_ANCHOR_X, VARIOSCREEN_LAT_ANCHOR_Y, 6, 3, false, false, ALIGNRIGHT, false, DISPLAY_OBJECT_LAT);
+//	gpsLong   					= new ScreenDigit(VARIOSCREEN_LONG_ANCHOR_X, VARIOSCREEN_LONG_ANCHOR_Y, 6, 3, false, false, ALIGNRIGHT, false, DISPLAY_OBJECT_LONG);
+  gpsLat 						  = new ScreenText(VARIOSCREEN_LAT_ANCHOR_X, VARIOSCREEN_LAT_ANCHOR_Y, 11, FONTNORMAL, ALIGNLEFT, false, DISPLAY_OBJECT_LAT);
+	gpsLong							= new ScreenText(VARIOSCREEN_LONG_ANCHOR_X, VARIOSCREEN_LONG_ANCHOR_Y, 11, FONTNORMAL, ALIGNLEFT, false, DISPLAY_OBJECT_LONG);
+
+//	tempDigit 					= new ScreenDigit(VARIOSCREEN_TEMP_ANCHOR_X, VARIOSCREEN_TEMP_ANCHOR_Y, 2, 0, false, false, ALIGNLEFT, false, DISPLAY_OBJECT_TEMPERATURE);
+//	tunit 							= new TUnit(VARIOSCREEN_TEMP_UNIT_ANCHOR_X, VARIOSCREEN_TEMP_ANCHOR_Y);
 }
 	
 //****************************************************************************************************************************
@@ -338,13 +400,23 @@ void VarioScreen::createScreenObjectsDisplayPage0(void) {
 //****************************************************************************************************************************
 //	CreateObjectDisplay(DISPLAY_OBJECT_TENSION, tensionDigit, 0, 0, true); 
 //	CreateObjectDisplay(DISPLAY_OBJECT_TEMPRATURE, tempratureDigit, 0, 2, true); 
-		CreateObjectDisplay(DISPLAY_OBJECT_ALTI							, altiDigit					, 0, 0, true); 
+
+/*detection dossier AGL et AGL enable*/
+
+		if (GnuSettings.VARIOMETER_ENABLE_AGL && aglManager.IsOk()) {
+			CreateObjectDisplay(DISPLAY_OBJECT_ALTI							, altiDigit					, 0, 1, true);
+			CreateObjectDisplay(DISPLAY_OBJECT_HEIGHT						, heightDigit				, 0, 2, true);
+		} else {
+			CreateObjectDisplay(DISPLAY_OBJECT_ALTI							, altiDigit					, 0, 0, true);
+		}
+		
 		CreateObjectDisplay(DISPLAY_OBJECT_MUNIT						, munit							, 0, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_VARIO						, varioDigit				, 0, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_MSUNIT						, msunit						, 0, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_KMHUNIT					, kmhunit						, 0, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_SPEED						, speedDigit				, 0, 0, true); 
 	
+
 #ifdef SCREEN_DEBUG
 		SerialPort.print("RATIO_CLIMB_RATE : ");	
 		SerialPort.println(GnuSettings.RATIO_CLIMB_RATE);	
@@ -369,8 +441,6 @@ void VarioScreen::createScreenObjectsDisplayPage0(void) {
 		CreateObjectDisplay(DISPLAY_OBJECT_FIXGPSINFO				, fixgpsinfo				, 0, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_BTINFO						, btinfo						, 0, 0, true); 
 		
-		CreateObjectDisplay(DISPLAY_OBJECT_BTINFO						, btinfo						, 0, 0, true); 
-
 /*		CreateObjectDisplay(DISPLAY_OBJECT_LINE	          	, bgline1           , 0, 0, true);
 		CreateObjectDisplay(DISPLAY_OBJECT_LINE	          	, bgline2           , 0, 0, true);
 		CreateObjectDisplay(DISPLAY_OBJECT_LINE	          	, bgline3           , 0, 0, true);
@@ -384,21 +454,72 @@ void VarioScreen::createScreenObjectsDisplayPage0(void) {
 //****************************************************************************************************************************
 void VarioScreen::createScreenObjectsDisplayPage10(void) {
 //****************************************************************************************************************************
-		CreateObjectDisplay(DISPLAY_OBJECT_GPS_PERIOD				, gpsPeriodDigit		, 10, 0, true); 
+/*		CreateObjectDisplay(DISPLAY_OBJECT_GPS_PERIOD				, gpsPeriodDigit		, 10, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_GPS_MEAN_PERIOD	, gpsMeanPeriodDigit, 10, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_GPS_DURATION			, gpsDurationDigit	, 10, 0, true); 
 
 		CreateObjectDisplay(DISPLAY_OBJECT_VOLLEVEL					, volLevel					, 10, 0, true); 
 		CreateObjectDisplay(DISPLAY_OBJECT_BATLEVEL					, batLevel					, 10, 0, true); 
-		CreateObjectDisplay(DISPLAY_OBJECT_SATLEVEL					, satLevel					, 10, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_SATLEVEL					, satLevel					, 10, 0, true); */
 }	
 
 //****************************************************************************************************************************
 void VarioScreen::createScreenObjectsDisplayPage1(void) {
 //****************************************************************************************************************************
-		CreateObjectDisplay(DISPLAY_OBJECT_TEMPERATURE			, tempDigit		, 1, 0, true); 
-		CreateObjectDisplay(DISPLAY_OBJECT_TUNIT						, tunit				, 1, 0, true); 
+//		CreateObjectDisplay(DISPLAY_OBJECT_ALTI							, altiDigit					, 1, 0, true); 
+//		CreateObjectDisplay(DISPLAY_OBJECT_MUNIT						, munit							, 1, 0, true); 
+    CreateObjectDisplay(DISPLAY_OBJECT_LAT							, gpsLat					  , 1, 0, true);    
+    CreateObjectDisplay(DISPLAY_OBJECT_LONG							, gpsLong						, 1, 0, true);
+    //CreateObjectDisplay(DISPLAY_OBJECT_LAT_DIR					, gpsLatDir				  , 1, 0, true);    
+    //CreateObjectDisplay(DISPLAY_OBJECT_LONG_DIR 				, gpsLongDir				, 1, 0, true);
+    CreateObjectDisplay(DISPLAY_OBJECT_BEARING_TEXT			, gpsBearingText		, 1, 0, true);       
+    CreateObjectDisplay(DISPLAY_OBJECT_BEARING    			, gpsBearing    		, 1, 0, true);       
+//		CreateObjectDisplay(DISPLAY_OBJECT_TEMPERATURE			, tempDigit					, 1, 0, true); 
+//		CreateObjectDisplay(DISPLAY_OBJECT_TUNIT						, tunit							, 1, 0, true); 
+
+		CreateObjectDisplay(DISPLAY_OBJECT_INFOLEVEL				, infoLevel					, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_VOLLEVEL					, volLevel					, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_RECORDIND				, recordIndicator		, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_BATLEVEL					, batLevel					, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_SATLEVEL					, satLevel					, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_FIXGPSINFO				, fixgpsinfo				, 1, 0, true); 
+		CreateObjectDisplay(DISPLAY_OBJECT_BTINFO						, btinfo						, 1, 0, true); 
+
 }	
+
+
+//****************************************************************************************************************************
+void VarioScreen::ScreenBackground(int8_t page)
+//****************************************************************************************************************************
+{
+	switch (page) {
+	  case 0:
+//			display.drawLine(0, 35, 200, 35, GxEPD_BLACK);
+			break;
+	  case 1:
+			display.drawLine(0, 35, 200, 35, GxEPD_BLACK);
+			break;
+	  default:
+			break;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //****************************************************************************************************************************
 void VarioScreen::begin(void)
@@ -452,7 +573,7 @@ void VarioScreen::CreateObjectDisplay(int8_t ObjectDisplayTypeID, VarioScreenObj
 	
 }
 
-TaskHandle_t taskDisplay;
+/*TaskHandle_t taskDisplay;
 
 //****************************************************************************************************************************
 void genericTask( void * parameter ){
@@ -469,10 +590,51 @@ void genericTask( void * parameter ){
 		delay(1);
 // Passes control to other tasks when called
 		SysCall::yield();
-	}*/
+	}*
 //	display.
   stateDisplay = STATE_OK;
   vTaskDelete(taskDisplay);
+}*/
+
+//****************************************************************************************************************************
+void VarioScreen::screenTask( void * parameter ){
+//****************************************************************************************************************************
+
+  while( true ) {
+
+    /* wait */
+    xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+ 
+#ifdef SCREEN_DEBUG2
+	SerialPort.println("screenTask : wake");	
+#endif //SCREEN_DEBUG
+ 
+    /* launch interrupt */
+	 xSemaphoreTake(screenMutex, portMAX_DELAY);	
+
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("screenTask : take");	
+#endif //SCREEN_DEBUG
+
+	 display.setFullWindow();
+	 display.display(true); // partial update
+	 
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("screenTask : display");	
+#endif //SCREEN_DEBUG
+	 
+	 display.epd2.powerOff();
+	 
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("screenTask : poweroff");	
+#endif //SCREEN_DEBUG
+
+   xSemaphoreGive(screenMutex);
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("screenTask : Give");	
+#endif //SCREEN_DEBUG
+
+  }
 }
 
 //****************************************************************************************************************************
@@ -482,7 +644,20 @@ void VarioScreen::updateScreen (void)
 #ifdef SCREEN_DEBUG2
 	SerialPort.println("screen update");	
 #endif //SCREEN_DEBUG
+
+//  BaseType_t xHigherPriorityTaskWoken = 0;
+
+	if( xSemaphoreTake( screen.screenMutex, ( TickType_t ) 0 )  == pdTRUE) {
+    xSemaphoreGive(screen.screenMutex);
+    xTaskNotify(screenTaskHandler, 0, eNoAction);
+	 
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("updateScreen : wake");	
+#endif //SCREEN_DEBUG
+	}
+}
 	
+/*	
   if (stateDisplay != STATE_OK) {
 #ifdef SCREEN_DEBUG2
 		SerialPort.println("Task en cours");	
@@ -529,10 +704,10 @@ void VarioScreen::updateScreen (void)
 	SerialPort.println("screen update : create task");	
 #endif //SCREEN_DEBUG
 
-//	display.updateWindow(0, 0, display.width(), display.height(), false);*/
+//	display.updateWindow(0, 0, display.width(), display.height(), false);
 	//display.display(true); // partial update
 
-}
+}*/
 
 //****************************************************************************************************************************
 void VarioScreen::updateScreenNB (void)
@@ -630,7 +805,9 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 	unsigned long TmplastDisplayTimestamp = millis();
 	int compteur = 0;
 	while (compteur < 3) {
+
 		ButtonScheduleur.update();
+
 		if (ButtonScheduleur.Get_StatePage() == STATE_PAGE_CALIBRATION) break;
 		
 		if( millis() - TmplastDisplayTimestamp > 1000 ) {
@@ -696,6 +873,7 @@ void VarioScreen::ScreenViewPage(int8_t page, boolean clear, boolean refresh)
 
 	if (refresh) {
 		altiDigit->update(true);
+		heightDigit->update(true);
 		varioDigit->update(true);
 		speedDigit->update(true);
 		ratioDigit->update(true);
@@ -713,9 +891,19 @@ void VarioScreen::ScreenViewPage(int8_t page, boolean clear, boolean refresh)
 
 		fixgpsinfo->update(true);
 		btinfo->update(true);
+		
+		gpsLat->update(true);
+		gpsLong->update(true);
+		gpsBearing->update(true);
+		gpsBearingText->update(true);
+		
+//		gpsLatDir->update(true);
+//		gpsLongDir->update(true);
+
 	}
 	else {		
 		altiDigit->setValue(9999);
+		heightDigit->setValue(9999);
 		varioDigit->setValue(0.0);
 		speedDigit->setValue(0);
 		ratioDigit->setValue(0);
@@ -737,6 +925,15 @@ void VarioScreen::ScreenViewPage(int8_t page, boolean clear, boolean refresh)
 
 		fixgpsinfo->unsetFixGps();
 		btinfo->unsetBT();
+		
+	//	gpsLat->setValue(0.0);
+	//	gpsLatDir->setValue("N");
+	//	gpsLong->setValue(0.0);
+	//	gpsLongDir->setValue("E");
+		gpsLat->setValue("000*00'00'' X");
+		gpsLong->setValue("000*00'00'' X");
+		gpsBearingText->setValue("XXX");
+		gpsBearing->setValue(0);
 	}
 		
 	munit->toDisplay();
@@ -755,14 +952,14 @@ void VarioScreen::ScreenViewPage(int8_t page, boolean clear, boolean refresh)
 
 bool VarioScreen::clearStep(void) {
 
-  /* check if clear is needed *
+  // * check if clear is needed *
   if( clearingStep == LCDHEIGHT ) {
     return false;
   }
 
-  /* clear one line *
+  // * clear one line *
 
-  /* next *
+  // * next *
   clearingStep++;
   return true;
 }*/
@@ -772,7 +969,7 @@ bool VarioScreen::clearStep(void) {
 void VarioScreen::ScreenViewStat(void)
 //****************************************************************************************************************************
 {
-	
+	delay(100);
   display.setFullWindow();
   display.clearScreen(ColorScreen);
   display.fillScreen(ColorScreen);
@@ -799,7 +996,7 @@ void VarioScreen::ScreenViewStat(void)
 		}
 	}
 
-/*  altiDigit.setValue(flystat.GetAlti());
+// *  altiDigit.setValue(flystat.GetAlti());
   altiDigit.update();
   altiDigit.display();
   varioDigit.setValue(flystat.GetVarioMin());
@@ -891,11 +1088,16 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 	 display.print(tmpbuffer);
 }
 
+
+
+
+
+
 //****************************************************************************************************************************
 void VarioScreen::ScreenViewWifi(String SSID, String IP)
 //****************************************************************************************************************************
 {
-  char tmpbuffer[100];
+//  char tmpbuffer[100];
 	
 	if ((SSID == "") && (IP == "")) {
 		display.setFullWindow();
@@ -950,10 +1152,10 @@ void VarioScreen::ScreenViewWifi(String SSID, String IP)
 }
 
 //****************************************************************************************************************************
-void VarioScreen::ScreenViewReboot(void)
+void VarioScreen::ScreenViewReboot(String message)
 //****************************************************************************************************************************
 {
-  char tmpbuffer[100];
+//  char tmpbuffer[100];
 	
   display.setFullWindow();
   display.firstPage();
@@ -974,7 +1176,11 @@ void VarioScreen::ScreenViewReboot(void)
 		display.setFont(&FreeSansBold12pt7b);
 		display.setTextSize(1);
 		display.setCursor(20, 140);
-		display.print("Redemarrage");
+		if (message == "")
+			display.print("Redemarrage");
+		else 
+			display.print(message);
+			
  		display.setCursor(40, 170);
 		display.print("en cours");
   }
@@ -985,7 +1191,7 @@ void VarioScreen::ScreenViewReboot(void)
 void VarioScreen::ScreenViewMessage(String message, int delai)
 //****************************************************************************************************************************
 {
-  char tmpbuffer[100];
+//  char tmpbuffer[100];
 	
   display.setFullWindow();
   display.firstPage();
@@ -1026,7 +1232,7 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 		display.getTextBounds(message, 0, 0, &tbx, &tby, &tbw, &tbh); // it works for origin 0, 0, fortunately (negative tby!)
   // center bounding box by transposition of origin:
 		uint16_t x = ((display.width() - tbw) / 2) - tbx;
-		uint16_t y = ((display.height() - tbh) / 2) - tby;
+//		uint16_t y = ((display.height() - tbh) / 2) - tby;
     display.setCursor(x, VARIOSCREEN_TENSION_ANCHOR_Y); // set the postition to start printing text
 		display.print(message);
   }
@@ -1042,7 +1248,7 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 	display.getTextBounds(message, 0, 0, &tbx, &tby, &tbw, &tbh); // it works for origin 0, 0, fortunately (negative tby!)
 // center bounding box by transposition of origin:
 	uint16_t x = ((display.width() - tbw) / 2) - tbx;
-	uint16_t y = ((display.height() - tbh) / 2) - tby;
+//	uint16_t y = ((display.height() - tbh) / 2) - tby;
 	
 	while (compteur < delai) {
 		ButtonScheduleur.update();
@@ -1279,7 +1485,7 @@ const unsigned char volume75_4_icons[] = {
 
 
 //****************************************************************************************************************************
-void VarioScreen::ScreenViewSound(int volume)
+boolean VarioScreen::ScreenViewSound(void)
 //****************************************************************************************************************************
 {
 	
@@ -1290,13 +1496,20 @@ void VarioScreen::ScreenViewSound(int volume)
 // 	  display.fillScreen(ColorScreen);
 //		display.clearScreen(ColorScreen);
 
-#ifdef SCREEN_DEBUG
+	int volume = viewSound;
+#ifdef SCREEN_DEBUG2
 		SerialPort.println("Show : VolLevel");
 #endif //SCREEN_DEBUG
 
-#ifdef SCREEN_DEBUG
+#ifdef SCREEN_DEBUG2
 		SerialPort.print("Volume : ");
 		SerialPort.println(volume);
+#endif //SCREEN_DEBUG
+
+	if( xSemaphoreTake( screen.screenMutex, ( TickType_t ) 0 )  == pdTRUE) {
+
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("ScreenViewSound : Take");	
 #endif //SCREEN_DEBUG
   
 		display.fillRect(60, 30, 60+75, 30+75, GxEPD_WHITE);
@@ -1325,8 +1538,23 @@ void VarioScreen::ScreenViewSound(int volume)
 			display.fillTriangle(45,130,25,145,45,160,GxEPD_BLACK);
 		}
 		
+    xSemaphoreGive(screen.screenMutex);
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("ScreenViewSound : Give");	
+#endif //SCREEN_DEBUG
+		return true;
+	}
+	else {
+		return false;
+	}			
  /* }
   while (display.nextPage());*/
+}
+
+//****************************************************************************************************************************
+void VarioScreen::SetViewSound(int volume) {
+//****************************************************************************************************************************
+	viewSound = volume;
 }
 
 /************************/
@@ -1392,10 +1620,22 @@ ScreenScheduler::ScreenScheduler(ScreenSchedulerObject* displayList, uint8_t obj
 }
 		 
 //****************************************************************************************************************************
-void ScreenScheduler::displayStep(void) {
+boolean ScreenScheduler::displayStep(void) {
 //****************************************************************************************************************************
 
-	if (currentPage == endPage+1) return;
+ /* if (stateDisplay != STATE_OK) {
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("Task en cours");	
+#endif //SCREEN_DEBUG
+	  return;
+	}*/
+
+#ifdef SCREEN_DEBUG2
+	SerialPort.println("displayStep");	
+#endif //SCREEN_DEBUG
+
+	if (currentPage == endPage+1) 
+		return(screen.ScreenViewSound());
 
 #ifndef TIMER_DISPLAY
 
@@ -1414,37 +1654,45 @@ void ScreenScheduler::displayStep(void) {
 
   /* next try to find something to display */
   /* for the current page                  */
-#ifdef SCREEN_DEBUG
+#ifdef SCREEN_DEBUG2
   SerialPort.print("displaystep - objectCount  : ");
   SerialPort.println(objectCount);
 #endif //SCREEN_DEBUG
 
-  display.setFullWindow();
+  if( xSemaphoreTake( screen.screenMutex, ( TickType_t ) 0 )  == pdTRUE) {
+
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("DisplayStep : Take");	
+#endif //SCREEN_DEBUG
+
+		display.setFullWindow();
  	
-	if (millis() - oldtimeAllDisplay >= 30000)	{
-		oldtimeAllDisplay  = millis();	
-		ShowDisplayAll = true;
-		display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
+		if (millis() - oldtimeAllDisplay >= 30000)	{
+			oldtimeAllDisplay  = millis();	
+			ShowDisplayAll = true;
+//		display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
+//			display.clearScreen();
+//			display.writeScreenBuffer();
 		
-#ifdef SCREEN_DEBUG
-		SerialPort.println("displaystep - showDisplayAll");
+#ifdef SCREEN_DEBUG2
+			SerialPort.println("displaystep - showDisplayAll");
 #endif //SCREEN_DEBUG
 		
-	}
+		}
 
-	uint8_t n = 0;
-	while( n <= objectCount ) {
+		uint8_t n = 0;
+		while( n <= objectCount ) {
 /*   if( displayList[pos].page == currentPage && displayList[pos].actif == true && displayList[pos].object->update() ) {
 	return;
 }*/
 #ifdef SCREEN_DEBUG
-  SerialPort.print("displaylist number : ");
-  SerialPort.println(n);
-  SerialPort.print("displaylist / Page : ");
+		SerialPort.print("displaylist number : ");
+		SerialPort.println(n);
+		SerialPort.print("displaylist / Page : ");
 //  SerialPort.println(displayList[pos].page);
-  SerialPort.print(displayList[n].page);
-  SerialPort.print(" - Pageactive : ");
-  SerialPort.println(currentPage);
+		SerialPort.print(displayList[n].page);
+		SerialPort.print(" - Pageactive : ");
+		SerialPort.println(currentPage);
 	
 #endif //SCREEN_DEBUG
 
@@ -1453,38 +1701,41 @@ void ScreenScheduler::displayStep(void) {
 		tmppointeur->update(); 
 	}*/
 
-  currentMultiDisplay = 1 + stateMulti;
+		currentMultiDisplay = 1 + stateMulti;
 	
 #ifdef SCREEN_DEBUG
-  SerialPort.print("Current Multidisplay : ");
-  SerialPort.println(currentMultiDisplay);
+		SerialPort.print("Current Multidisplay : ");
+		SerialPort.println(currentMultiDisplay);
 #endif //SCREEN_DEBUG
 
-	if (ShowDisplayAll && displayList[n].page == currentPage && displayList[n].actif == true ) {
-		displayList[n].object->reset();
-		displayList[n].object->update(true);
+		if (ShowDisplayAll && displayList[n].page == currentPage && displayList[n].actif == true ) {
+			displayList[n].object->reset();
+			displayList[n].object->update(true);
 #ifdef SCREEN_DEBUG
-		SerialPort.println("displaystep - reset");
+			SerialPort.println("displaystep - reset");
 #endif //SCREEN_DEBUG
-  }
-	else if ( displayList[n].page == currentPage && displayList[n].actif == true && (displayList[n].multiDisplayID == 0 || displayList[n].multiDisplayID == currentMultiDisplay))	displayList[n].object->update();
+		}
+		else if ( displayList[n].page == currentPage && displayList[n].actif == true && (displayList[n].multiDisplayID == 0 || displayList[n].multiDisplayID == currentMultiDisplay))	displayList[n].object->update();
 
 /* next */
-		pos++;
-		if( pos == objectCount) {
-			pos = 0;
+			pos++;
+			if( pos == objectCount) {
+				pos = 0;
+			}
+			n++;
 		}
-		n++;
-	}
 
-  if (ShowDisplayAll == true) {
-		ShowDisplayAll = false;
+		if (ShowDisplayAll == true) {
+			ShowDisplayAll = false;
 //		display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
 		//.clearScreen();
-	}
+		}
+
+	
+		screen.ScreenBackground(currentPage);
 	
 #ifdef SCREEN_DEBUG
-  SerialPort.println("displayStep : Display");
+		SerialPort.println("displayStep : Display");
 #endif //SCREEN_DEBUG
 
 /*  display.setCursor(10, 150);
@@ -1493,7 +1744,15 @@ void ScreenScheduler::displayStep(void) {
 //    display.displayWindow(box_x, box_y, box_w, box_h);
 
 //  display.display(true); // partial update
-	
+    xSemaphoreGive(screen.screenMutex);
+#ifdef SCREEN_DEBUG2
+		SerialPort.println("DisplayStep : Give");	
+#endif //SCREEN_DEBUG
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 
 //****************************************************************************************************************************
@@ -1535,7 +1794,8 @@ void ScreenScheduler::setPage(int8_t page, boolean forceUpdate)  {
 
 	if (currentPage == endPage+1) {
 		displayStat = true;
-		screen.ScreenViewSound(toneHAL.getVolume());
+		screen.SetViewSound(toneHAL.getVolume());
+//		  screen.updateScreen ();
 	} else if ((currentPage == endPage+2) && (displayStat)) {
 		displayStat = false;
 		screen.ScreenViewStatPage(0);
@@ -1634,3 +1894,30 @@ void MultiDisplay::displayStep(void) {
 }
 
 #endif //VARIOSCREEN_SIZE
+
+/*
+
+500/portTICK_PERIOD_MS  = 500ms
+
+    if (xSemaphore! = NULL)
+    {
+        / * Voyez si nous pouvons obtenir le sémaphore. Si le sémaphore n'est pas
+        disponible attendez 10 ticks pour voir s'il devient gratuit. * /
+        if (xSemaphoreTake (xSemaphore, (TickType_t) 10) == pdTRUE)
+        {
+            / * Nous avons pu obtenir le sémaphore et pouvons maintenant accéder au
+            ressource partagée. * /
+
+            / * ... * /
+
+            / * Nous avons fini d'accéder à la ressource partagée. Relâchez le
+            sémaphore. * /
+            xSemaphoreGive (xSemaphore);
+        }
+        autre
+        {
+            / * Nous n'avons pas pu obtenir le sémaphore et ne pouvons donc pas accéder
+            la ressource partagée en toute sécurité. * /
+        }
+    }
+*/
