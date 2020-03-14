@@ -57,17 +57,22 @@
 #if defined(ESP32)
 // select one and adapt to your mapping, can use full buffer size (full HEIGHT)
 #if (VARIOSCREEN_SIZE == 154)
-GxEPD2_BW_U<GxEPD2_154U, GxEPD2_154U::HEIGHT> display(GxEPD2_154U(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
-//GxEPD2_BW<GxEPD2_154, GxEPD2_154::HEIGHT> display(GxEPD2_154(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
+//GxEPD2_BW_U<GxEPD2_154U, GxEPD2_154U::HEIGHT> display(GxEPD2_154U(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
+GxEPD2_BW<GxEPD2_154, GxEPD2_154::HEIGHT> display(GxEPD2_154(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
 #endif //VARIOSCREEN_SIZE == 154
 
-#if (VARIOSCREEN_SIZE == 213)
-GxEPD2_BW_U<GxEPD2_213, GxEPD2_213::HEIGHT> display(GxEPD2_213(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
+//#if (VARIOSCREEN_SIZE == 213)
+//GxEPD2_BW_U<GxEPD2_213, GxEPD2_213::HEIGHT> display(GxEPD2_213(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
 //GxEPD2_BW<GxEPD2_213_flex, GxEPD2_213_flex::HEIGHT> display(GxEPD2_213_flex(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEW0213I5F
-#endif //VARIOSCREEN_SIZE == 213
+//#endif //VARIOSCREEN_SIZE == 213
 
 #if (VARIOSCREEN_SIZE == 290)
-GxEPD2_BW_U<GxEPD2_290U, GxEPD2_290U::HEIGHT> display(GxEPD2_290U(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
+GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display(GxEPD2_290(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
+//GxEPD2_BW<GxEPD2_290_T5, GxEPD2_290_T5::HEIGHT> display(GxEPD2_290_T5(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEW029T5
+#endif //VARIOSCREEN_SIZE == 29
+
+#if (VARIOSCREEN_SIZE == 291)
+GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display(GxEPD2_290(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4));
 //GxEPD2_BW<GxEPD2_290_T5, GxEPD2_290_T5::HEIGHT> display(GxEPD2_290_T5(/*CS=5*/ SS, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEW029T5
 #endif //VARIOSCREEN_SIZE == 29
 

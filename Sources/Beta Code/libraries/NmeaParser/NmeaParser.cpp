@@ -27,13 +27,29 @@
  *  version    Date     Description                                              *
  *    1.0                                                                        *
  *    1.0.1  04/01/20   Ajout décodage Compas                                    *
+ *    1.0.2  27/01/20   Ajout décodage Long / Lat                                *
+ *    1.0.3  09/02/20   Ajout getLongDegree, getLatDegree et DegreesToDegMinSec  *
+ *    1.0.4  10/02/20   Correction getlongDegree et DegreesToDegMinSec           *
+ *    1.0.5  12/02/20   Ajout tracedebug                                         *
+ *    1.0.6  25/02/20   Correction calcul long /lat                              *
+ *    1.0.7  28/02/20   Correction DegreesToDegMinSec                            *
+ *    1.0.8  01/03/20   Modification affichage lat/long                          *
  *                                                                               *
  *********************************************************************************/
 
 #include <NmeaParser.h>
 
 #include <Arduino.h>
-#include <DebugConfig.h>.
+#include <DebugConfig.h>
+
+#ifdef NMEAPARSER_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
 
 #define parserState_set(bit) state |= (1 << bit)
 #define parserState_unset(bit) state &= ~(1 << bit)
@@ -46,6 +62,8 @@
 #define HAVE_NEW_ALTI_VALUE 4
 #define HAVE_DATE 5
 #define HAVE_BEARING 7
+#define HAVE_LONG 8
+#define HAVE_LAT  9
 
 #define KNOTS_TO_KMH 1.852 
 
@@ -65,6 +83,7 @@ void NmeaParser::beginGGA(void) {
   parserState_unset(DIGIT_PARSED);
 }
 
+ 
 void NmeaParser::feed(uint8_t c) {
 
   /* maybe we need to stop parsing */
@@ -83,7 +102,14 @@ void NmeaParser::feed(uint8_t c) {
       value *= 10;
       value += c - '0';
       parserState_set(DIGIT_PARSED);
-    }
+			comptdec++;
+      char tmpchar = c;
+			tmpstr = tmpstr + tmpchar;
+    } else if ( c != '.') {
+			valuechar = c;
+		} else {
+			comptdec = 0;
+	  }
   }
 
   /* comma case */
@@ -124,37 +150,92 @@ void NmeaParser::feed(uint8_t c) {
 					track = value;
 					parserState_set(HAVE_BEARING);
 				}
-      }
+				
+				else if( commaCount == NMEA_PARSER_RMC_LONG_POS ) {
+					longitude = value;
+//          longitude = tmpstr.toInt();
+					NMEA_RMC_LONG_PRECISION = 1;
+					for (int i=0; i < comptdec; i++) NMEA_RMC_LONG_PRECISION *= 10;				
+					NMEA_RMC_LONG_PRECISION *= 100;
+
+#ifdef NMEAPARSER_DEBUG
+          SerialPort.println("");
+					SerialPort.print("comptdec : ");
+					SerialPort.println(comptdec);					
+					SerialPort.print("longitude : ");
+					SerialPort.print(longitude);
+					SerialPort.print(" / ");
+					double tmpdouble = longitude /NMEA_RMC_LONG_PRECISION;
+					SerialPort.println(tmpdouble);
+					DUMP(NMEA_RMC_LONG_PRECISION);
+					SerialPort.println(tmpstr);
+					SerialPort.println(value);
+#endif //NMEAPARSER_DEBUG
+				}
+
+				else if( commaCount == NMEA_PARSER_RMC_LAT_POS ) {
+					latitude = value;
+					NMEA_RMC_LAT_PRECISION = 1;
+					for (int i=0; i < comptdec; i++) NMEA_RMC_LAT_PRECISION *= 10;				
+					NMEA_RMC_LAT_PRECISION *= 100;
+					
+#ifdef NMEAPARSER_DEBUG
+          SerialPort.println("");
+					SerialPort.print("comptdec : ");
+					SerialPort.println(comptdec);					
+					SerialPort.print("latitude : ");
+					SerialPort.print(latitude);
+					SerialPort.print(" / ");
+					double tmpdouble = latitude /NMEA_RMC_LAT_PRECISION;					
+					SerialPort.println(tmpdouble);
+					DUMP(NMEA_RMC_LONG_PRECISION);
+					SerialPort.println(tmpstr);
+					SerialPort.println(value);
+#endif //NMEAPARSER_DEBUG
+				}
+     }
 
       /* GGA case */
       else {
 
-	/* GGA time */
-	if( commaCount == NMEA_PARSER_GGA_TIME_POS ) {
-	  time = value/NMEA_GGA_TIME_PRECISION;
-	}
+				/* GGA time */
+				if( commaCount == NMEA_PARSER_GGA_TIME_POS ) {
+					time = value/NMEA_GGA_TIME_PRECISION;
+				}
 
-	/* GGA satellite count */
-	else if( commaCount == NMEA_PARSER_GGA_SATELLITE_COUNT_POS ) {
-	  satelliteCount = value;
-	}
+				/* GGA satellite count */
+				else if( commaCount == NMEA_PARSER_GGA_SATELLITE_COUNT_POS ) {
+					satelliteCount = value;
+				}
 
-	/* GGA precision */
-	else if( commaCount == NMEA_PARSER_GGA_PRECISION_POS ) {
-	  precision = value;
-	}
+				/* GGA precision */
+				else if( commaCount == NMEA_PARSER_GGA_PRECISION_POS ) {
+					precision = value;
+				}
 
-	/* GGA altitude */
-	else if( commaCount == NMEA_PARSER_GGA_ALTITUDE_POS ) {
-	  altitude = value;
-	  parserState_set(HAVE_NEW_ALTI_VALUE);
-	}
-
+				/* GGA altitude */
+				else if( commaCount == NMEA_PARSER_GGA_ALTITUDE_POS ) {
+					altitude = value;
+					parserState_set(HAVE_NEW_ALTI_VALUE);
+				}
       }
-    }
+    } else {
+      if( parserState_isset(PARSE_RMC) ) {
+				if( commaCount == NMEA_PARSER_RMC_LONG_DIR_POS ) {
+					longDir = valuechar;
+					parserState_set(HAVE_LONG);
+				}
+				else 	if( commaCount == NMEA_PARSER_RMC_LAT_DIR_POS ) {
+					latDir = valuechar;
+					parserState_set(HAVE_LAT);
+				}
+			}
+		}
 
     /* reset value */
     value = 0;
+		comptdec = 0;
+		tmpstr = "";
     parserState_unset(DIGIT_PARSED);
   }
 }	
@@ -207,6 +288,16 @@ double NmeaParser::getBearing(void) {
 
   parserState_unset(HAVE_BEARING);
   return ((double)track)/NMEA_RMC_TRACK_PRECISION;
+}
+
+bool NmeaParser::haveLongitude(void) {
+
+  return parserState_isset(HAVE_LONG);
+}
+
+bool NmeaParser::haveLatitude(void) {
+
+  return parserState_isset(HAVE_LAT);
 }
 
 double NmeaParser::getSpeed_no_unset(void) {
@@ -271,3 +362,135 @@ NW   303.75  326.25
 NNW  326.25  348.75
 */
 
+double NmeaParser::getLong(void) {
+  parserState_unset(HAVE_LONG);
+  return ((double)longitude)/NMEA_RMC_LONG_PRECISION;
+}
+
+char NmeaParser::getLongDir() {
+	return longDir;
+}
+
+String NmeaParser::getLongitude(boolean majState) {
+	if (majState) parserState_unset(HAVE_LONG);
+	double f_val = ((double)longitude)/NMEA_RMC_LONG_PRECISION;
+	char outstr[15];
+	dtostrf(f_val,7, 3, outstr);
+	String tmp = String(outstr) + " " + String(longDir);
+	return tmp;
+}
+
+String NmeaParser::getLongDegree(void) {
+  parserState_unset(HAVE_LONG);
+	double f_val = ((double)longitude)/NMEA_RMC_LONG_PRECISION;
+//	char outstr[15];
+//	dtostrf(f_val,7, 3, outstr);
+//	String tmp = String(outstr) + " " + String(longDir);
+  String tmp = DegreesToDegMinSec(f_val);
+	tmp +=  " " + String(longDir);
+	return tmp;
+}
+
+double NmeaParser::getLat(void) {
+  parserState_unset(HAVE_LAT);
+  return ((double)latitude)/NMEA_RMC_LAT_PRECISION;
+}
+	
+char NmeaParser::getLatDir(void) {
+	return latDir;
+}
+
+String NmeaParser::getLatitude(boolean majState) {
+  if (majState) parserState_unset(HAVE_LAT);
+	double f_val = ((double)latitude)/NMEA_RMC_LAT_PRECISION;
+	char outstr[15];
+	dtostrf(f_val,7, 3, outstr);
+	String tmp = String(outstr) + " " + String(latDir);
+	return tmp;	
+}
+
+String NmeaParser::getLatDegree(void) {
+  parserState_unset(HAVE_LAT);
+	double f_val = ((double)latitude)/NMEA_RMC_LAT_PRECISION;
+//	char outstr[15];
+//	dtostrf(f_val,7, 3, outstr);
+//	String tmp = String(outstr) + " " + String(latDir);
+  String tmp = DegreesToDegMinSec(f_val);
+	tmp += " " + String(latDir);
+	return tmp;	
+}
+
+String NmeaParser::DegreesToDegMinSec(double x)
+{
+/*  int deg=x;
+  float minutesRemainder = abs(x - deg) * 60;
+  int arcMinutes = minutesRemainder;
+  float arcSeconds = (minutesRemainder - arcMinutes) * 60;
+#ifdef NMEAPARSER_DEBUG
+  SerialPort.print("Coordonnée : ");
+  SerialPort.print(deg);
+	SerialPort.print("*");
+  SerialPort.print(arcMinutes);
+	SerialPort.print("'");
+  SerialPort.print(arcSeconds,4);
+	SerialPort.print('"');
+  SerialPort.println();
+#endif //NMEAPARSER_DEBUG*/
+
+	DUMP(x);
+	char outchar[15];
+		
+	dtostrf(x,7, 3, outchar);
+	DUMP(outchar);
+	String outstr = String(outchar);
+	DUMP(outstr);
+	int pos = outstr.indexOf('.');
+//	String tmpString = outstr.substring(0,pos-1);
+	DUMP(pos);
+	
+	String chaineSansEspace = "";
+	unsigned int lastStringLength = outstr.length();
+	
+	for(int i=0; i < lastStringLength; i++) {
+    if(outstr[i] == '.') break;
+    if(outstr[i] != ' ') chaineSansEspace += outstr[i];
+	}
+	
+	DUMP(chaineSansEspace);
+	String tmpResult = chaineSansEspace + "*";
+	
+	String tmpString = "0" + outstr.substring(pos);
+	DUMP(tmpString);
+
+	double tmpdouble = tmpString.toDouble();
+/*	int deg = x - tmpdouble;
+	DUMP(deg);
+	String tmpStr = String(deg) + "*";
+	*/
+
+/*  float tmpfloat = round(deg*1000);
+	int tmpint   = tmpfloat / 1000;
+	String tmpStr = String(tmpint) + "*";*/
+	
+/*  tmpfloat = round(arcMinutes*100);
+	tmpint   = tmpfloat / 100;
+	tmpStr += String(tmpint) + "'";*/
+  float minutesRemainder = tmpdouble * 100;
+  int arcMinutes = minutesRemainder;
+  float arcSeconds = (minutesRemainder - arcMinutes) * 100;
+
+	tmpResult += String(arcMinutes) + ".";
+	
+/*  tmpfloat = round(arcSeconds*100);
+	tmpint   = tmpfloat / 100;
+	tmpStr += String(tmpint) + "''";*/
+	int tmpint = arcSeconds;
+	tmpResult += String(tmpint); // + "''";	
+	
+#ifdef NMEAPARSER_DEBUG
+  SerialPort.print("Coordonnée : ");
+  SerialPort.println(tmpResult);
+#endif
+	
+	return tmpResult;
+}

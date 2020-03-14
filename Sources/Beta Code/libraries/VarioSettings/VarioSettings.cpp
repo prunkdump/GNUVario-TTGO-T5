@@ -54,6 +54,9 @@
 /*    1.2.1 12/12/19    Ajout set get version et get screenmodel                 */
 /*    1.3   28/12/19    Ajout read log.cfg                                       */ 
 /*    1.3.1 11/01/20		Modif VARIOSCREEN_SIZE == 290														 */
+/*    1.3.2 17/01/20    Ajout DISPLAY_STAT_DURATION - passage en v1.1 					 */
+/*    1.3.3 19/01/20    Ajout DEEPSLEEP_DEBUG                                    */
+/*    1.3.4 04/02/20    Ajout URL_UPDATE passage en version 1.2 de params.json   */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -261,7 +264,7 @@ boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
     VARIOMETER_RECORD_WHEN_FLIGHT_START=toBoolean(settingValue);
    }
  /*  else if(settingName == "VARIOMETER_SENT_LXNAV_SENTENCE") {
-  /* What type of vario NMEA sentence is sent by bluetooth. */
+  / * What type of vario NMEA sentence is sent by bluetooth. */
   /* Possible values are :                                  */
   /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
   /*  - VARIOMETER_SENT_LK8000_SENTENCE                     *
@@ -539,8 +542,14 @@ boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
    else if(settingName == "WIFI_DEBUG") {
 		 varioLog.setDebug(WIFI_DEBUG_LOG,toBoolean(settingValue));
     }	 
-   else if(settingName == "SOUND_DEBUG") {
-		 varioLog.setDebug(SOUND_DEBUG_LOG,toBoolean(settingValue));
+   else if(settingName == "DEEPSLEEP_DEBUG") {
+		 varioLog.setDebug(DEEPSLEEP_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "VOLTAGE_DEBUG") {
+		 varioLog.setDebug(VOLTAGE_DEBUG_LOG,toBoolean(settingValue));
+    }	 
+   else if(settingName == "DATA_DEBUG") {
+		 varioLog.setDebug(DATA_DEBUG_LOG,toBoolean(settingValue));
     }	 
   else {       
    }  
@@ -992,7 +1001,7 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   }
 
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
-	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 1040;
+	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
   DynamicJsonDocument doc(capacity);
 
   SerialPort.println("deserialisation");
@@ -1156,6 +1165,31 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 	VARIOMETER_MULTIDISPLAY_DURATION = tmpValue; 
   SerialPort.print("MULTIDISPLAY_DURATION : ");
   SerialPort.println(VARIOMETER_MULTIDISPLAY_DURATION);
+
+  if (Systeme.containsKey("DISPLAY_STAT_DURATION")) {	
+		   tmpValue = Systeme["DISPLAY_STAT_DURATION"];
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_DISPLAY_STAT_DURATION;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+	DISPLAY_STAT_DURATION = tmpValue;
+  SerialPort.print("DISPLAY_STAT_DURATION : ");
+  SerialPort.println(DISPLAY_STAT_DURATION);
+
+  if (Systeme.containsKey("URL_UPDATE")) {	
+		String Systeme_URL_UPDATE = Systeme["URL_UPDATE"];
+		tmpValueString = Systeme_URL_UPDATE;
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueString = DEFAULT_URL_UPDATE;
+		MajFileParams = true;
+		SerialPort.print("Defaut Recup - ");
+	}
+	URL_UPDATE = tmpValueString;
+  SerialPort.print("URL_UPDATE : ");
+  SerialPort.println(URL_UPDATE);
 
 	//*****    GENERAL *****
 
@@ -1399,6 +1433,19 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SerialPort.print("RATIO_MIN_SPEED : ");
   SerialPort.println(RATIO_MIN_SPEED);
 
+	if (Vario.containsKey("VARIOMETER_ENABLE_AGL")) {
+		     tmpValue = Vario["VARIOMETER_ENABLE_AGL"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_ENABLE_AGL;
+		MajFileParams = true;												
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_ENABLE_AGL = true;
+  else              VARIOMETER_ENABLE_AGL = false;
+  SerialPort.print("VARIOMETER_ENABLE_AGL : ");
+  SerialPort.println(VARIOMETER_ENABLE_AGL);
+
 /*  tmpValue = Systeme["SENT_LXNAV_SENTENCE"]; 
   if (tmpValue = 1) VARIOMETER_SENT_LXNAV_SENTENCE = true;
   else              VARIOMETER_SENT_LXNAV_SENTENCE = false;
@@ -1553,7 +1600,7 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/assistant to compute the capacity.
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
-	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 1040;
+	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
 	DynamicJsonDocument doc(capacity);
 
   SerialPort.println("****** GnuvarioE *******");
@@ -1596,8 +1643,11 @@ void VarioSettings::saveConfigurationVario(char *filename) {
 	Systeme["SLEEP_THRESHOLD_CPS"] = SLEEP_THRESHOLD_CPS;
 	
 	Systeme["MULTIDISPLAY_DURATION"] = VARIOMETER_MULTIDISPLAY_DURATION;
+
+	Systeme["DISPLAY_STAT_DURATION"] = DISPLAY_STAT_DURATION;
 	
-	
+	Systeme["URL_UPDATE"] = URL_UPDATE;
+		
 	//*****    GENERAL *****
 
   SerialPort.println("****** General *******");
@@ -1648,6 +1698,9 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   Vario["RATIO_MAX_VALUE"] = RATIO_MAX_VALUE;
 
   Vario["RATIO_MIN_SPEED"] = RATIO_MIN_SPEED;
+
+  if (VARIOMETER_ENABLE_AGL) Vario["VARIOMETER_ENABLE_AGL"] = 1;
+  else              				 Vario["VARIOMETER_ENABLE_AGL"] = 0;
 
 /*  
   if (VARIOMETER_SENT_LXNAV_SENTENCE) Systeme["SENT_LXNAV_SENTENCE"] = 1;
@@ -1843,12 +1896,13 @@ double Statistic::getGain(void) {
         "ALARM_SDCARD": 1,
         "BEEP_GPSFIX": 1,
         "BEEP_FLYBEGIN": 1,
-	"BEEP_VARIOBEGIN": 0,
-	"COMPENSATION_TEMP": -6.1,
-	"COMPENSATION_GPSALTI": -70,
-	"SLEEP_TIMEOUT_MINUTES": 20,
-	"SLEEP_THRESHOLD_CPS": 50,
-	"ALTERNATE_DATA_DURATION": 2000
+				"BEEP_VARIOBEGIN": 0,
+				"COMPENSATION_TEMP": -6.1,
+				"COMPENSATION_GPSALTI": -70,
+				"SLEEP_TIMEOUT_MINUTES": 20,
+				"SLEEP_THRESHOLD_CPS": 50,
+				"ALTERNATE_DATA_DURATION": 2000,
+				"URL_UPDATE": "http://gnuvario-e.yj.fr/webupdate/checkversion"
     },
     "General": {
         "PILOT_NAME": "MagaliXXXXXXXXXXXXXX",
@@ -1873,7 +1927,8 @@ double Statistic::getGain(void) {
         "RATIO_MAX_VALUE": 30.1,
         "RATIO_MIN_SPEED": 10.1,
         "RATIO_CLIMB_RATE": 2,
-        "SENT_LXNAV_SENTENCE": 1
+        "SENT_LXNAV_SENTENCE": 1,
+				"VARIOMETER_ENABLE_AGL": 1
    },
     "Flight start": {
         "FLIGHT_START_MIN_TIMESTAMP": 15000,

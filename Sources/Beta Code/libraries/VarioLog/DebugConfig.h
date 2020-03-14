@@ -58,7 +58,7 @@
 /* pour désactiver les messages   */
 /**********************************/
 
-#define ENABLE_DEBUG
+//#define ENABLE_DEBUG
 
 #if defined(ENABLE_DEBUG)
 
@@ -90,6 +90,7 @@
 //#define BT_DEBUG
 #define WIFI_DEBUG
 //#define SOUND_DEBUG
+#define AGL_DEBUG
 
 #endif //ENABLE_DEBUG
 #endif

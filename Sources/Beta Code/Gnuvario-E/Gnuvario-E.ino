@@ -12,7 +12,7 @@
 //#include "myassert.h"
 
 #if defined(ESP32)
-static const char* TAG = "GnuvarioE";
+//static const char* TAG = "GnuvarioE";
 #include "esp_log.h"
 #endif //ESP32
 
@@ -61,6 +61,10 @@ static const char* TAG = "GnuvarioE";
 #define SDCARD_STATE_ERROR -1
 #endif //HAVE_GPS
 
+#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
+#include <AglManager.h>
+#endif //HAVE_SDCARD && HAVE_GPS
+
 #include <FlightHistory.h>
 #include <variostat.h>
 #include <VarioButton.h>
@@ -74,6 +78,7 @@ static const char* TAG = "GnuvarioE";
 
 #ifdef HAVE_WIFI
 #include <VarioWifiServer.h>
+#include <esp32fota2.h>
 #endif //HAVE_WIFI
 
 #ifdef HAVE_BLUETOOTH
@@ -94,7 +99,7 @@ SimpleBLE ble;
 
 #define VERSION      0
 #define SUB_VERSION  7
-#define BETA_CODE    6
+#define BETA_CODE    8
 #define DEVNAME      "JPG63"
 #define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
 
@@ -257,40 +262,98 @@ SimpleBLE ble;
 *                                    Ajout direction via GPS - degré et texte                         *
 * v0.7  beta 6  11/01/20             Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE                       *
 *                                    Correction de bug d'affichage mineur                             *
-*                                                                                                     * 
+* v0.7  beta 7  17/01/20             Correction problème affichage Alti quand on sort du deep sleep   *                                                               
+*                                    Desactivation effacement de l'écran toute les 30 sec             * 
+*                                    ligne 1427 varioscreenGxEPD_154.cpp et                           *
+*                                    varioscreenGxEPD_290.cpp (ligne 1534)                            *
+*                                    Ajout DISPLAY_STAT_DURATION - passage en v1.1 du fichier         * 
+*                                    param.json - Configuration du delai d'affichage de l'écran de    *
+*                                    statistique                                                      *
+*                                    Correction Probleme consommation - SDcard - deep slepp           *
+*                                    Modification affichage deep_sleep                                *
+*                                    Correction upload wifi                                           *
+*                                    Nouvel écran vol dans la page web                                *
+*                                    Ajout de la configuration du delai de la page stat de démarrage  *
+*                                    Ajout librairie Esp32Fota                                        *
+*                                    Ajout décodage lat / long GPS                                    *
+*                                    Ajout écran d'info lors de l'upgrade via la sdcard               *
+* v0.7  beta 8  31/01/20             Correction mise à jour via internet                              *
+*                                    Passage à la librairie varioWebserver                            *
+*                                    Ajout de la barre de status sur l'écran 2                        *
+*                                    Ajout Affichage du cap, longitude et latitude sur l'écran 2      *
+*                                    Amélioration de la page de vol (serveur Web)                     *
+*                                    Ajout écran info lors de l'update via internet                   *
+*                                    Nettoyage des librairie et compatibilité avec vscode             *
+*                                    Ajout Update via site Internet                                   *
+*                                    Correction bug, seul de monté/descente sur la SDcard non pris en *
+*                                    compte                                                           *
+*               10/02/20             Correction ecran 2                                               *
+*               12/02/20             Correction affichage lat / long sur écran 2                      *
+*                                    Correction time out Gxepd à l'affichage de l'écran de stat       *
+*               15/02/20             Correction BUG seuils de monte / descente non pris en compte     *
+*                                    ajout beeper.init                                                *
+*                                    Correction Bug rotation du fichier de log                        *
+*                                    Mise à jour via internet - site Web + firmware                   *
+*               19/02/20             Ajout gestion écran 2.90'' en mode portrait                      *
+*               21/02/20             Correction Bug affichage batterie                                *
+*                                    Correction rotation fichier log                                  *
+*               25/02/20             Correction precision Lat/long                                    *                     
+*                                    Ajout ScreenBackground                                           *
+*                                    Correction Bug   - Affichage long - lat                          *                     
+*                                    reccupération long / lat sur 6 ou 7 digits après la virgule      *
+*               28/02/20             Correction calcul lat/long                                       *
+*               29/02/20             Modification Mise à jour auto internet                           *
+*                                    Nouveau site web embarqué                                        *
+*                                    Mise à jour calibration                                          *
+*               01/03/20             Correction affichage lat/long                                    *
+*               04/03/20             Ajout AGL                                                        *
+*               05/03/20             Correction ecran qui clignote                                    *
+*                                    AJOUT - Champs enable AGL                                        *
+*               07/03/20             Correction gestion AGL                                           *
+*                                    Correction screenGxEpd2 - xSemaphore                             *
+*               08/03/20             Mise à jour GxEpd2                                               *
+*               09/03/20             Correction bug ViewSound                                         *
+*                                    correction bug effacement GR / TR                                *
+*                                    correction Bug affichage titre GR/TR                             *
+*                                    Calibration manuel du baromètre via l'AGL                        *
+*                                    Déclenchement manuel de l'enregistrement du vol                  *
+*               14/03/20             Calibration de compensation du GPS via l'AGL                     *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
 *                                                                                                     *
-* V0.5                                                                                                *    
-* voir réactivité des données GPS                                                                     *
-* Probleme consommasion - SDcard - deep slepp                                                         *
-*                                                                                                     *
 * v0.6                                                                                                *   
 * MODIF - Refaire gestion Eeprom avec preference                                                      *
-* AJOUT - Calibration MPU                                                                             *                                 
 * BUG   - temperature                                                                                 *
 * BUG   - DISPLAY_OBJECT_LINE object ligne ne fonctionne pas                                          *
-* BUG   - Alti erreur deep sleep avorté                                                               *
 *                                                                                                     *
 * v0.7                                                                                                *
-* BUG   - Upload webserver                                                                            *                                                                                                     
-* BUG   - Affichage barres GPS - problème de raffraichissement                                        *
-* AJOUT - Update via internet                                                                         *
+* BUG   - upload wifi - ne se termine pas  - bug espressif le buffer n'est pas vidé à la fin          *
+* BUG   - update manuelle - doit être lancée 2 fois                                                   *
+* BUG   - download à verifier                                                                         *
+* BUG   - stat affichage temps de vol                                                                 *
+* VERIF - Seuil déclenchement début du vol                                                            *
+* VERIF - Sensibilité du vario                                                                        *
+* BUG   - blocage du MPU                                                                              *
+* AJOUT - effacement ecran 1 fois / min                                                               *
+*                                                                                                     *        
+* v0.8                                                                                                *       
+* MODIF - Réecrire loop                                                                               *
+* AJOUT - Récupération du cap depuis le capteur baromètrique                                          *
+* AJOUT - Espaces aeriens                                                                             *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
 * Gérer le son via le DAC                                                                             *
 * revoir volume du son ToneESP32                                                                      *
 * Refaire gestion du son (parametrage via xctracer)                                                   *
-* Ecran position afficher les coordonées GPS, la boussole, et l'altitude                              *                                                                       
+* Boussole graphique                                                                                  *                                                                       
 * Création dynamique des objets screen                                                                *
 * Sens et vitesse du vent                                                                             *
 * Carnet de vol (10 derniers vols)                                                                    *
 *     10 zones d'eeprom - reduit le nombre d'écriture et économise la mémoire flash                   *
 * verifier fonctionnement BT                                                                          *
 * Recupération vol via USB                                                                            *                                                                                        
-* Ecran 2.9'' en vertical                                                                             *
 * Espaces aeriens                                                                                     *
 *******************************************************************************************************/
 
@@ -338,23 +401,28 @@ SimpleBLE ble;
  * - 3 fichiers de paramètrage params.jso, wifi.cfg, variocal.cfg       *  
  * - Gestion automatique de la mise à jour du fichier params.jso en cas *
  *   d'ajout ou de suppréssion de champs                                *
- *   Mise en veille en cas d'inactivité, paramètrable - 0 infini        *
+ * - Mise en veille en cas d'inactivité, paramètrable - 0 infini        *
  *                                                                      *
  * Version 0.7                                                          *                                                                     
- *   Ajout de fichiers de log                                           *
- ************************************************************************
+ * - Ajout de fichiers de log                                           *
+ * - Ajout configuration du delai d'affichage de l'écran de stat au     *
+ *   démmarage                                                          *
+ * - Ajout Update via internet                                          *
+ * - Ajout affichage du cap, longitude, latitude                        *
+ * - Calibration des accèlerometres                                     *
+ * - AGL                                                                *
+ * - Calibration manuel du baro via l'AGL                               *
+ * - Declenchement de vol manuellement                                  *
+ * - Compensation du GPS via l'AGL                                      *
+ *                                                                      *
+ ************************************************************************/
  
 /************************************************************************
 *                          Recommandation                               *    
  *                                                                      *
- * Dans DebugConfig.h commanter #define ENABLE_DEBUG pour eviter les    *                                                                      
- *                    ralentissement et dans le cas ou le BlueTooth est *
- *                    activé                                            *
- * Vous ne pouvez pas activer en même temps le Wifi et le BlueTooth, si *
- *                    vous activez le BT vous ne pourrez plus utiliser  *
- *                    les services Web du Gnuvario                      *                                                             
- * A chaque nouvelle mise à jour, verifiez la version du fichier        *
- *                   SETTINGS.TXT il peut avoir évolué                  *
+ * Dans DebugConfig.h commanter #define ENABLE_DEBUG pour desactiver    *                                                                      
+ *                    les message de debug et éviter certains           *
+ *                    ralentissements                                   *
  ************************************************************************/
 
 /************************************************************************
@@ -365,6 +433,11 @@ SimpleBLE ble;
 *                                                                       *
 * https://dl.espressif.com/dl/package_esp32_index.json                  *
 *                                                                       *
+* version beta                                                          *
+* https://dl.espressif.com/dl/package_esp32_dev_index.json              *
+*                                                                       *
+* Installer la carte Esp32 by Espressif system                          * 
+*                                                                       *
 * Type de carte    : ESP32 dev Module                                   *
 * CPU frequency    : 240Mhz                                             *
 * Partition scheme : Minimal SPIFFS (1.9Mb APP with OTA / 190kb spiffs) *
@@ -373,12 +446,17 @@ SimpleBLE ble;
 /************************************************************************
 *               Fichiers de configuration                               *
 *                                                                       *
-* SETTINGS.TXT             parametres utilisateur VERSION 1.5           *
+* params.jso               parametres utilisateur                       *
+* wifi.cfg                 paramètres de configuration du wifi          *
+* log.cfg                  paramètres de configuration du fichier de log*
+* variocal.cfg             paramètres de calibration du MPU             *
+* record00cal.igc          fichier contenant les mesures utiles au      *
+*                          calcul de la calibration                     *
 * HardwareConfig.h         parametres matériels communs                 *
 * HardwareConfigESP32.h    parametre spécifique à l'ESP32               *
 * DebugConfig.h            parametre de debuggage                       *
 * VarioSettings.h          parametres par defaut (utilisé si il n'y a   *
-*                          pas de SDcard ou de fichier SETTINGS.TXT     *
+*                          pas de SDcard ou de fichier params.jso       *
 *************************************************************************/
 
 /***********************************************************************
@@ -421,6 +499,8 @@ SimpleBLE ble;
   *   Vario         Centre 3s   Mode veille                                                                   *
   *   Vario         Gauche      écran précédent                                                               *
   *   Vario         Droite      écran suivant                                                                 *
+  *   Vario         Gauche 2s   Calibrarion manuel du baro via l'AGL                                          *
+  *   Vario         Gauche 0    Déclenchement de l'enregistrement du vol si en attente                        *
   *                                                                                                           *
   *   Wifi          Gauche      Sort du mode Wifi                                                             *
   *                                                                                                           *
@@ -443,7 +523,9 @@ SimpleBLE ble;
   *                                                                                                           *
   * TRACE();                  Affiche sur le moniteur serie le numero de ligne, le nom du fichier             *
   * DUMP(someValue);          Affcihe sur le moniteur serie la variable ainsi que le fichier et la ligne      *
+  * SDUMP(someText);          Affiche sur le moniteur serie le texte ainsi que le fichier et la ligne         *
   *                                                                                                           *
+  * TRACELOG(type, module)           Enregistre dans le fichier de log le fichier et la ligne                 *
   * DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne    * 
   * MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne *
   * INFOLOG(Text)                    Enregistre dans le fichier de log un texte                               *                                                                                                     
@@ -505,7 +587,7 @@ Vertaccel vertaccel;
 #define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.6
 #endif //HAVE_ACCELEROMETER 
 
-kalmanvert kalmanvert;
+Kalmanvert kalmanvert;
 
 /**********************/
 /* SDCARD objects     */
@@ -540,6 +622,10 @@ boolean lastSentence = false;
 #endif //HAVE_BLUETOOTH
 
 #endif //HAVE_GPS
+
+#ifdef AGL_MANAGER_H
+  AglManager aglManager;
+#endif
 
 /*********************/
 /* bluetooth objects */
@@ -580,16 +666,23 @@ String webpage = "";
 #elif defined(ESPASYNCWEBSERVER)
   AsyncWebServer server(80); 
 #elif defined(ETHERNETWEBSERVER)
-  EthernetServer server(80);   
+  EthernetServer server(80); 
+#elif defined(ESPRESSIFWEBSERVEUR)
+  WebServer server(80);    
 #else //ESP32WEBSERVEUR
   VarioWebServer server(80);
 #endif //ESP32WEBSERVEUR
 #endif
+
+esp32FOTA2 esp32FOTA("Gnuvario" + String(VARIOSCREEN_SIZE), VERSION, SUB_VERSION , BETA_CODE);   //esp32-fota-http", 0,6,0);
+
 #endif //HAVE_WIFI
 
-/*************************************************
+
+
+/* *************************************************
 Internal TEMPERATURE Sensor
-/*************************************************
+   *************************************************/
 
 /* 
  *  https://circuits4you.com
@@ -615,6 +708,8 @@ double gpsAlti = 0;
 long MaxVoltage   = 0;
 
 long compteurInt = 0;
+
+int compteurBoucle = 0;
 
 void IRAM_ATTR isr() {
   compteurInt++;  
@@ -686,9 +781,9 @@ void setup() {
 
 ///  while (!SerialPort) { ;}
   char tmpbuffer[100];
-  sprintf(tmpbuffer,"GNUVARIO compiled on %s\0", __DATE__); // at %s", __DATE__, __TIME__);
+  sprintf(tmpbuffer,"GNUVARIO compiled on %s", __DATE__); // at %s", __DATE__, __TIME__);
   SerialPort.println(tmpbuffer);
-  sprintf(tmpbuffer,"VERSION %i.%i - %s\0", VERSION,SUB_VERSION,DEVNAME); 
+  sprintf(tmpbuffer,"VERSION %i.%i - %s", VERSION,SUB_VERSION,DEVNAME); 
   SerialPort.println(tmpbuffer);
   if (BETA_CODE > 0) {
     SerialPort.print("Beta ");
@@ -732,7 +827,7 @@ void setup() {
 #ifdef SDCARD_DEBUG
     SerialPort.println("initialization done.");
     SerialPort.flush();
-#endif //PROG_DEBUG
+#endif //SDCARD_DEBUG
 
 #if defined(ESP32)
     ESP_LOGI("SDCARD", "initialization done.");
@@ -748,7 +843,8 @@ void setup() {
     GnuSettings.setVersion(VERSION, SUB_VERSION, BETA_CODE);
 
     SerialPort.println("Chargement des parametres depuis le fichier params.jso");
-    GnuSettings.loadConfigurationVario("params.jso");
+    char tmpchar[20] = "params.jso";
+    GnuSettings.loadConfigurationVario(tmpchar);
     
 #ifdef SDCARD_DEBUG
    //Debuuging Printing
@@ -770,7 +866,8 @@ void setup() {
     SerialPort.print("__dataPilotName = ");
     SerialPort.print(__dataPilotName);
     SerialPort.print(" - ");
-    SerialPort.print(sizeof(__dataPilotName));
+    int tmpint = sizeof(__dataPilotName);
+    SerialPort.print(tmpint);
     SerialPort.print(" / ");
     SerialPort.print(GnuSettings.VARIOMETER_PILOT_NAME);
     SerialPort.print(" - ");
@@ -785,7 +882,8 @@ void setup() {
     SerialPort.print("__dataGliderName = ");
     SerialPort.print(__dataGliderName);
     SerialPort.print(" - ");
-    SerialPort.print(sizeof(__dataGliderName));
+    tmpint = sizeof(__dataGliderName);
+    SerialPort.print(tmpint);
     SerialPort.print(" / ");
     SerialPort.print(GnuSettings.VARIOMETER_GLIDER_NAME);
     SerialPort.print(" - ");
@@ -905,13 +1003,11 @@ void setup() {
   INFOLOG(tmpStr);
   TRACELOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG);
 
-/********************/
-/** Update Firmware */
-/********************/
- 
-#ifdef HAVE_SDCARD
-  updateFromSDCARD();
-#endif //HAVE_SDCARD
+//***********************************************
+// INIT AGL
+//***********************************************
+
+  aglManager.init();
   
   /***************/
   /* init screen */
@@ -930,6 +1026,23 @@ void setup() {
   screen.createScreenObjects();
   screen.begin();
 #endif
+
+/********************/
+/** Update Firmware */
+/********************/
+ 
+#ifdef HAVE_SDCARD
+  updateFromSDCARD();
+#endif //HAVE_SDCARD
+
+
+/*****************************/
+/** Update Site web embarqué */
+/*****************************/
+
+#ifdef HAVE_SDCARD
+  esp32FOTA.UpdateWwwDirectory();
+#endif //HAVE_SDCARD
 
   /***************/
   /* init button */
@@ -969,7 +1082,15 @@ void setup() {
   
 #endif //HAVE_SCREEN
 
+//***********************************************
+// INIT Sound
+//      init Beeper avec les valeurs personnelles
+//      init Volume
+//***********************************************
+
 #ifdef HAVE_SPEAKER
+  beeper.init(GnuSettings.VARIOMETER_SINKING_THRESHOLD, GnuSettings.VARIOMETER_CLIMBING_THRESHOLD, GnuSettings.VARIOMETER_NEAR_CLIMBING_SENSITIVITY);
+
   GnuSettings.VARIOMETER_BEEP_VOLUME = GnuSettings.soundSettingRead();
   beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
   toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
@@ -1158,7 +1279,7 @@ void setup() {
 
   unsigned long TmplastDisplayTimestamp = millis();
   int compteur = 0;
-  while (compteur < 6) {
+  while (compteur < GnuSettings.DISPLAY_STAT_DURATION) {
           
     if( millis() - TmplastDisplayTimestamp > 1000 ) {
 
@@ -1274,6 +1395,8 @@ void setup() {
 }
 
 double temprature=0;
+double currentHeight = 0;
+int    compteurErrorMPU = 0;
 
 #if defined(HAVE_SDCARD) && defined(HAVE_GPS)
 void createSDCardTrackFile(void);
@@ -1325,11 +1448,11 @@ void loop() {
 //**********************************************************
 //  ACQUISITION DES DONNEES
 //**********************************************************
-
 #ifdef HAVE_ACCELEROMETER
 #ifdef TWOWIRESCHEDULER
   if( twScheduler.havePressure() && twScheduler.haveAccel() ) {
 
+    compteurErrorMPU = 0;
     double tmpAlti, tmpTemp, tmpAccel;
     twScheduler.getTempAlti(tmpTemp, tmpAlti);
     tmpAccel = twScheduler.getAccel(NULL);
@@ -1396,9 +1519,13 @@ void loop() {
     double tmpAlti, tmpTemp, tmpAccel;
 
     long realPressure = ms5611.readPressure();
+//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,realPressure);
     tmpAlti = ms5611.getAltitude(realPressure);
+//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpAlti);
     tmpTemp = ms5611.readTemperature();
+ //   DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
     tmpTemp += MPU_COMP_TEMP;
+//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
 
 #endif //TWOWIRESCHEDULER
 
@@ -1414,9 +1541,13 @@ void loop() {
                        millis() );
 #endif //HAVE_ACCELEROMETER
   
+ #ifdef PROG_DEBUG
+    //SerialPort.println("Kalman Update");
+#endif //PROG_DEBUG
+ 
     if (displayLowUpdateState) {
-      screen.tempDigit->setValue(tmpTemp);
-      screen.tunit->toDisplay();
+//      screen.tempDigit->setValue(tmpTemp);
+//      screen.tunit->toDisplay();
     }
 
 //**********************************************************
@@ -1443,7 +1574,9 @@ void loop() {
      SerialPort.flush();
 #endif          
      indicatePowerDown(); 
-     deep_sleep();
+//     TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG);
+     MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,"Deep sleep - inactivite");
+     deep_sleep("Power off");
    }   
 
 //**********************************************************
@@ -1457,6 +1590,8 @@ void loop() {
 
 		double currentalti  = kalmanvert.getCalibratedPosition();
 		double currentvario = kalmanvert.getVelocity();
+//    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentalti);
+//    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentvario);
 
 #ifdef DATA_DEBUG
     SerialPort.print("Kalman Alti : ");
@@ -1480,12 +1615,17 @@ void loop() {
 //  DISPLAY ALTI
 //**********************************************************
 
-#ifdef PROG_DEBUG
+#ifdef DATA_DEBUG
  //   SerialPort.print("altitude : ");
  //   SerialPort.println(currentalti);
-#endif //PROG_DEBUG
+#endif //DATA_DEBUG
 
-    if (displayLowUpdateState) screen.altiDigit->setValue(currentalti);
+    if (displayLowUpdateState) {
+      screen.altiDigit->setValue(currentalti);
+      #ifdef AGL_MANAGER_H
+      aglManager.setAlti(currentalti);
+      #endif
+    }
 
 //**********************************************************
 //  DISPLAY VARIO
@@ -1506,10 +1646,10 @@ void loop() {
     if( history.haveNewClimbRate() ) {
       double TmpTrend;
       TmpTrend = history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT);
-#ifdef PROG_DEBUG
+#ifdef DATA_DEBUG
       SerialPort.print("Trend value : ");
       SerialPort.println(TmpTrend);
-#endif //PROG_DEBUG
+#endif //DATA_DEBUG
       
       if (displayLowUpdateState) {
         if (GnuSettings.RATIO_CLIMB_RATE > 1) {
@@ -1517,9 +1657,9 @@ void loop() {
           else                    screen.trendDigit->setValue(9.9);
         }
 
-#ifdef PROG_DEBUG
+#ifdef DATA_DEBUG
         SerialPort.println("display trendLevel");
-#endif //PROG_DEBUG
+#endif //DATA_DEBUG
 
         if (TmpTrend == 0)     screen.trendLevel->stateTREND(0);
         else if (TmpTrend > 0) screen.trendLevel->stateTREND(1);
@@ -1537,8 +1677,35 @@ void loop() {
 #endif //HAVE_SCREEN
      
   } else {
-/*    SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");   
 
+    /**************************************************************/
+    /*   ERREUR BAROMETRE / MPU                                   */
+    /**************************************************************/
+    
+    SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");   
+
+    compteurErrorMPU++;
+    if (compteurErrorMPU > 20) {
+      compteurErrorMPU = 20;
+
+ //**********************************************************
+//  DISABLE BEEPER
+//**********************************************************
+
+#ifdef HAVE_SPEAKER
+      beeper.setVelocity( 0 );
+#endif //HAVE_SPEAKER
+
+      if (displayLowUpdateState) {
+        screen.altiDigit->setValue(0);
+        #ifdef AGL_MANAGER_H
+        aglManager.setAlti(0);
+        #endif
+      }
+      
+      if (displayLowUpdateState) screen.varioDigit->setValue(0);    
+    }
+/*
 #ifdef TWOWIRESCHEDULER
     if( twScheduler.havePressure() ) {
     
@@ -1665,6 +1832,11 @@ void loop() {
         /* parse sentence */        
         nmeaParser.feed( c );
 
+#ifdef NMEAPARSER_DEBUG
+        char tmpchar = c;
+        SerialPort.print(tmpchar);
+#endif //NMEAPARSER_DEBUG
+
 #ifdef HAVE_SDCARD          
         /* if GGA, convert to IGC and write to sdcard */
         if( sdcardState == SDCARD_STATE_READY && nmeaParser.isParsingGGA() ) {
@@ -1676,7 +1848,11 @@ void loop() {
         }
 #endif //HAVE_SDCARD
       }
-      
+
+#ifdef NMEAPARSER_DEBUG
+          SerialPort.println("");
+#endif //NMEAPARSER_DEBUG
+
       serialNmea.release();
 #ifdef HAVE_SDCARD          
       fileIgc.flush();
@@ -1738,6 +1914,9 @@ void loop() {
 
           compteurGpsFix++;
           double tmpGpsAlti = nmeaParser.getAlti();
+          aglManager.setAltiGps(tmpGpsAlti);
+
+ //         DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,tmpGpsAlti);
 
           //Moyenne alti gps
           if (compteurGpsFix > 5) gpsAlti = (gpsAlti + tmpGpsAlti) / 2;
@@ -1779,6 +1958,8 @@ void loop() {
         //  recordIndicator->stateRECORD();
 #endif //HAVE_SCREEN
             kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
+/*            if (currentHeight == 0) kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
+            else                    kalmanvert.calibratePosition(gpsAlti+currentHeight);*/
 
 #ifdef DATA_DEBUG
             SerialPort.print("Gps Alti : ");
@@ -1819,6 +2000,11 @@ void loop() {
       else {  //variometerState == VARIOMETER_STATE_CALIBRATED
         
         /* check flight start condition */
+
+        DUMP(kalmanvert.getVelocity());
+        DUMP(GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD);
+        DUMP(GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD);
+        
         if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
             ((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&   
              ((kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD)) 
@@ -1853,9 +2039,11 @@ void loop() {
         (kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD) ) {
       variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
       enableflightStartComponents();*/
+
+
       if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
           (((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&   
-           (kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD)) || 
+           ((kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD))) || 
            (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START))) {
 //        variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
         enableflightStartComponents();      
@@ -1889,6 +2077,8 @@ void loop() {
       SerialPort.println(nmeaParser.time);
 #endif //GPS_DEBUG
 
+//      DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.time);
+
       screen.screenTime->setTime( nmeaParser.time );
       screen.screenTime->correctTimeZone( GnuSettings.VARIOMETER_TIME_ZONE );
       screen.screenElapsedTime->setCurrentTime( screen.screenTime->getTime() );
@@ -1902,6 +2092,7 @@ void loop() {
     SerialPort.print("Sat : ");
     SerialPort.println(nmeaParser.satelliteCount);
 #endif //GPS_DEBUG
+//    DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.satelliteCount);
   }    
 #endif //HAVE_GPS  
 
@@ -1925,6 +2116,8 @@ void loop() {
           SerialPort.print("GpsSpeed : ");
           SerialPort.println(currentSpeed);
 #endif //GPS_DEBUG
+
+//     DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,currentSpeed);
 
      flystat.SetSpeed(currentSpeed);
 
@@ -2000,21 +2193,38 @@ void loop() {
 //  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
 
       /* update battery level */
+
+      
 #if defined(VOLTAGE_DIVISOR_DEBUG)
     int val = adc1_get_raw(ADC1_CHANNEL_7);
 
     SerialPort.print("Tension : ");
     SerialPort.println(val);
+    if (compteurBoucle == 5) DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG,val);
 #endif //VOLTAGE_DIVISOR_DEBUG
 
-  int TmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);  
+  long TmpVoltage = 0;
+  for(int i=0; i<10; i++) TmpVoltage += analogRead(VOLTAGE_DIVISOR_PIN);  
+  TmpVoltage = TmpVoltage / 10;
+
+  if (compteurBoucle == 4) {
+    DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG,TmpVoltage);
+    compteurBoucle = 0;
+  }
+  else {
+    compteurBoucle++;
+  }
+  
   if (TmpVoltage > MaxVoltage) MaxVoltage = TmpVoltage;
   
     if (MaxVoltage < 1750) {
       if (millis() - time_deep_sleep > 10000) {
-        screen.ScreenViewMessage("En veille",3);
+        screen.ScreenViewMessage("Bat Low",3);
         indicatePowerDown(); 
-        deep_sleep();  //protection batterie
+//        TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG);
+        MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,"Deep sleep - Batterie low");
+        DUMPLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,MaxVoltage);
+        deep_sleep("Batt Low");  //protection batterie
       }
     } else {
       time_deep_sleep = millis();        
@@ -2033,7 +2243,7 @@ void loop() {
 
     screen.recordIndicator->stateRECORD();
 #ifdef PROG_DEBUG
-    SerialPort.println("Record Indicator : staterecord ");
+//    SerialPort.println("Record Indicator : staterecord ");
     SerialPort.print("VarioState : ");
     SerialPort.println(variometerState);
 #endif //PROG_DEBUG
@@ -2063,16 +2273,58 @@ void loop() {
     
     if (nmeaParser.haveBearing()) {
 
-      double bearing = nmeaParser.getBearing();
-#ifdef PROG_DEBUG
+      double bearing    = nmeaParser.getBearing();
+      String bearingStr = nmeaParser.Bearing_to_Ordinal(bearing);
+#ifdef DATA_DEBUG
       SerialPort.print("Compas : ");
       SerialPort.print(bearing);
       SerialPort.print(" - ");
-      SerialPort.print(nmeaParser.Bearing_to_Ordinal(bearing));
-#endif //PROG_DEBUG     
-      DUMPLOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG, bearing);
-      DUMPLOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG, nmeaParser.Bearing_to_Ordinal(bearing));
+      SerialPort.println(bearingStr);
+#endif //DATA_DEBUG     
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearing);
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearingStr);
+
+     screen.gpsBearing->setValue(bearing); 
+     screen.gpsBearingText->setValue(bearingStr); 
     }
+
+    if (nmeaParser.haveLongitude()) {
+      String longitude = nmeaParser.getLongitude();      
+#ifdef DATA_DEBUG
+      SerialPort.print("Longitude : ");
+      SerialPort.println(longitude);
+#endif //DATA_DEBUG     
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, longitude);
+      #ifdef AGL_MANAGER_H
+      aglManager.setLongitude(nmeaParser.getLong());
+      #endif
+//      screen.gpsLongDir->setValue(String(nmeaParser.getLongDir()));
+//      screen.gpsLong->setValue(nmeaParser.getLong());
+      screen.gpsLong->setValue(nmeaParser.getLongDegree());
+    }
+
+    if (nmeaParser.haveLatitude()) {
+      String latitude = nmeaParser.getLatitude();
+#ifdef DATA_DEBUG
+      SerialPort.print("Latitude : ");
+      SerialPort.println(latitude);
+#endif //DATA_DEBUG     
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, latitude);
+      #ifdef AGL_MANAGER_H
+      aglManager.setLatitude(nmeaParser.getLat());
+      #endif
+//      screen.gpsLatDir->setValue(String(nmeaParser.getLatDir()));
+//      screen.gpsLat->setValue(nmeaParser.getLat());
+      screen.gpsLat->setValue(nmeaParser.getLatDegree());
+    }
+    #ifdef AGL_MANAGER_H
+      currentHeight = aglManager.getHeight();
+#ifdef PROG_DEBUG
+      SerialPort.print("Height : ");
+      SerialPort.println(currentHeight);
+#endif //PROG_DEBUG     
+      screen.heightDigit->setValue(currentHeight);
+      #endif
   }
    
   displayLowUpdateState = false;
@@ -2084,8 +2336,14 @@ void loop() {
 //  UPDATE DISPLAY
 //**********************************************************
 
-  screen.schedulerScreen->displayStep();
-  screen.updateScreen(); 
+#ifdef PROG_DEBUG
+    //SerialPort.println("Update Screen");
+#endif //PROG_DEBUG
+
+  if (screen.schedulerScreen->displayStep()) {
+    screen.updateScreen(); 
+  }
+ 
 #endif //HAVE_SCREEN
 
 //**********************************************************
@@ -2237,65 +2495,3 @@ if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP) {
   }
   flystat.Enable(); 
 }
-
-//$GNGGA,064607.000,4546.2282,N,00311.6590,E,1,05,2.6,412.0,M,0.0,M,,*77
-//$GNGGA,055828.000,4546.2305,N,00311.6597,E,1,09,1.8,385.2,M,0.0,M,,*75
-
-//$GNRMC,064607.000,A,4546.2282,N,00311.6590,E,0.76,0.00,230619,,,A*7D
-//$GNRMC,055828.000,A,4546.2305,N,00311.6597,E,0.25,0.00,070120,,,A*78
-
-//$LXWP0,Y,,189.0,-0.11,,,,,,,,*67
-
-/*
- $GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68
-225446 = Heure du Fix 22:54:46 UTC
-A = Alerte du logiciel de navigation ( A = OK, V = warning (alerte)
-4916.45,N = Latitude 49 deg. 16.45 min North
-12311.12,W = Longitude 123 deg. 11.12 min West
-000.5 = vitesse sol, Noeuds
-054.7 = cap (vrai)
-191194 = Date du fix 19 Novembre 1994
-020.3,E = Déclinaison Magnétique 20.3 deg Est
-*68 = checksum obligatoire
-
-
-$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
-
-Where:
-     RMC          Recommended Minimum sentence C
-     123519       Fix taken at 12:35:19 UTC
-     A            Status A=active or V=Void.
-     4807.038,N   Latitude 48 deg 07.038' N
-     01131.000,E  Longitude 11 deg 31.000' E
-     022.4        Speed over the ground in knots
-     084.4        Track angle in degrees True
-     230394       Date - 23rd of March 1994
-     003.1,W      Magnetic Variation
-     *6A          The checksum data, always begins with *
-
- $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
-
-Where:
-     GGA          Global Positioning System Fix Data
-     123519       Fix taken at 12:35:19 UTC
-     4807.038,N   Latitude 48 deg 07.038' N
-     01131.000,E  Longitude 11 deg 31.000' E
-     1            Fix quality: 0 = invalid
-                               1 = GPS fix (SPS)
-                               2 = DGPS fix
-                               3 = PPS fix
-             4 = Real Time Kinematic
-             5 = Float RTK
-                               6 = estimated (dead reckoning) (2.3 feature)
-             7 = Manual input mode
-             8 = Simulation mode
-     08           Number of satellites being tracked
-     0.9          Horizontal dilution of position
-     545.4,M      Altitude, Meters, above mean sea level
-     46.9,M       Height of geoid (mean sea level) above WGS84
-                      ellipsoid
-     (empty field) time in seconds since last DGPS update
-     (empty field) DGPS station ID number
-     *47          the checksum data, always begins with *
-
-*/
