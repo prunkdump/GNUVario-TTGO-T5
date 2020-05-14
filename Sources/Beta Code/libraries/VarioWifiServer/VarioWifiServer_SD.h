@@ -113,6 +113,8 @@ void handleSaveParams();
 void handleSaveWifi();
 void handleFirmwareVersion();
 void handleUpgradeWeb();
+void handleWebConfig();
+void handleSaveWebConfig();
 
 //////////////////////////////////////
 //              HELPERS            //

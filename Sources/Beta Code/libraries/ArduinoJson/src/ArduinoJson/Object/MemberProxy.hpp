@@ -24,6 +24,9 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
   FORCE_INLINE MemberProxy(TObject variant, TStringRef key)
       : _object(variant), _key(key) {}
 
+  FORCE_INLINE MemberProxy(const MemberProxy &src)
+      : _object(src._object), _key(src._key) {}
+
   FORCE_INLINE operator VariantConstRef() const {
     return getUpstreamMember();
   }
@@ -70,6 +73,11 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
     return getUpstreamMember().template as<TValue>();
   }
 
+  template <typename T>
+  FORCE_INLINE operator T() const {
+    return getUpstreamMember();
+  }
+
   template <typename TValue>
   FORCE_INLINE bool is() const {
     return getUpstreamMember().template is<TValue>();
@@ -104,8 +112,7 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
   }
 
   template <typename TValue>
-  FORCE_INLINE typename enable_if<!is_array<TValue>::value, bool>::type set(
-      const TValue &value) {
+  FORCE_INLINE bool set(const TValue &value) {
     return getOrAddUpstreamMember().set(value);
   }
 
@@ -113,7 +120,7 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
   // set(const char*) const
   // set(const __FlashStringHelper*) const
   template <typename TChar>
-  FORCE_INLINE bool set(const TChar *value) {
+  FORCE_INLINE bool set(TChar *value) {
     return getOrAddUpstreamMember().set(value);
   }
 
@@ -126,9 +133,12 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
     return getOrAddUpstreamMember().addElement();
   }
 
-  // getElement(size_t) const
   FORCE_INLINE VariantRef getElement(size_t index) const {
     return getUpstreamMember().getElement(index);
+  }
+
+  FORCE_INLINE VariantRef getOrAddElement(size_t index) const {
+    return getOrAddUpstreamMember().getOrAddElement(index);
   }
 
   // getMember(char*) const

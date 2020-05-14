@@ -60,6 +60,8 @@
 #include "HardwareConfig.h"
 #include "Button.h"
 
+#include <VarioData.h>
+
 #ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
 #endif //HAVE_SDCARD
@@ -90,17 +92,6 @@ public:
 private:
 	uint8_t _wakeupPin;
 };
-
-#define STATE_PAGE_INIT 0
-#define STATE_PAGE_VARIO 1
-#define STATE_PAGE_CONFIG 2
-#define STATE_PAGE_STAT 3
-#define STATE_PAGE_GPSCAL 4
-#define STATE_PAGE_WEBSERV 5
-#define STATE_PAGE_CONFIG_SOUND 6
-#define STATE_PAGE_DEEP_SLEEP 7
-#define STATE_PAGE_CALIBRATION 8
-#define STATE_PAGE_CALIBRATE 9
 
 class VARIOButtonScheduleur
 {

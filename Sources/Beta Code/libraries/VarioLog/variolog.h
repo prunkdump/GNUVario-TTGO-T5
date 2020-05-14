@@ -57,7 +57,7 @@
 #include <Arduino.h>
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
-#include <./../ArduinoTrace/ArduinoTrace.h>
+#include <ArduinoTrace.h>
 
 #include <sdcardHAL.h>
 #include <VarioSettings.h>

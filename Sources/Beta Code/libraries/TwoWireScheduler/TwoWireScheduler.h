@@ -189,6 +189,8 @@ class TWScheduler {
 #else
   static void ms5611Interrupt(void);
   static void ms5611TempCallback(void);
+  static void errorRelaunch(void);
+  static void errorRelaunchCallback(void);
   static void ms5611OutputCallback(void);
 #endif
 #ifdef HAVE_ACCELEROMETER

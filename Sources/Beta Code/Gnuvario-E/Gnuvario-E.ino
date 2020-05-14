@@ -1,107 +1,14 @@
 #include <Arduino.h>
-#include <DebugConfig.h>
-
-#ifdef PROG_DEBUG
-#define ARDUINOTRACE_ENABLE 1
-#else
-#define ARDUINOTRACE_ENABLE 0
-#endif
-
-#define ARDUINOTRACE_SERIAL SerialPort
-#include <ArduinoTrace.h>
-//#include "myassert.h"
-
-#if defined(ESP32)
-//static const char* TAG = "GnuvarioE";
-#include "esp_log.h"
-#endif //ESP32
-
-#include <HardwareConfig.h>
-
-#ifdef HAVE_SDCARD
-#include <sdcardHAL.h>
-#endif //HAVE_SDCARD
-
-#include <VarioSettings.h>
-
-#include <VarioLog.h>
-
-#ifdef HAVE_SPEAKER
-#include <toneHAL.h>
-#include <beeper.h>
-#endif //HAVE_SPEAKER
-
-#ifdef TWOWIRESCHEDULER
-#include <IntTW.h>
-#include <ms5611TW.h>
-#include <vertaccel.h>
-#include <LightInvensense.h>
-#include <TwoWireScheduler.h>
-#else
-#include <MS5611-Ext.h>
-#include <Wire.h>
-#include <vertaccel2.h>
-//#include <SparkFunMPU9250-DMP.h>
-#include <MPU9250-DMP_SF_EXT.h>
-#endif
-
-#include <kalmanvert.h>
-
-#ifdef HAVE_GPS
-#include <SerialNmea.h>
-#include <NmeaParser.h>
-#include <LxnavSentence.h>
-#include <LK8Sentence.h>
-#include <IGCSentence.h>
-#include <GPSSentence.h>
-#else
-#define SDCARD_STATE_INITIAL 0
-#define SDCARD_STATE_INITIALIZED 1
-#define SDCARD_STATE_READY 2
-#define SDCARD_STATE_ERROR -1
-#endif //HAVE_GPS
-
-#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
-#include <AglManager.h>
-#endif //HAVE_SDCARD && HAVE_GPS
-
-#include <FlightHistory.h>
-#include <variostat.h>
-#include <VarioButton.h>
-
-#include <Utility.h>
-
-#include <driver/adc.h>
-
-#include <Update.h>
-#include <SD_Update.h>
-
-#ifdef HAVE_WIFI
-#include <VarioWifiServer.h>
-#include <esp32fota2.h>
-#endif //HAVE_WIFI
-
-#ifdef HAVE_BLUETOOTH
-#include "SimpleBLE.h"
-
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-#endif
-
-SimpleBLE ble;
-#endif //HAVE_BLUETOOTH
-
-#include <SysCall.h>
 
 /*******************/
 /* Version         */
 /*******************/
 
 #define VERSION      0
-#define SUB_VERSION  7
-#define BETA_CODE    8
-#define DEVNAME      "JPG63"
-#define AUTHOR "J"    //J=JPG63  P=PUNKDUMP
+#define SUB_VERSION  8
+#define BETA_CODE    1
+#define DEVNAME      "JPG63/MICELPA/RATAMUSE"
+#define AUTHOR       "J"    //J=JPG63  P=PUNKDUMP  M=MICHELPA
 
 /******************************************************************************************************/
 /*                                              VERSION                                               */
@@ -318,6 +225,23 @@ SimpleBLE ble;
 *                                    Calibration manuel du baromètre via l'AGL                        *
 *                                    Déclenchement manuel de l'enregistrement du vol                  *
 *               14/03/20             Calibration de compensation du GPS via l'AGL                     *
+* v0.8 Beta 1   21/03/20             Réécriture Main prog                                             *
+*               23/03/20             Maj lib json et arduinotrace                                     *
+*               05/04/20             Correction problème maj compensation alti via AGL                *
+*                                    Correction blocage du MPU                                        *
+*               08/04/20             Maj titre en français                                            *                     
+*               09/04/20             Maj aduinoJson                                                   *
+*                                    Ajout parametre language, sensibilité vario                      *
+*               11/04/20             Nouvelle classe Language                                         *
+*                                    Nouvelle font                                                    *
+*               18/04/20             Ajout reglage de la sensibilité du vario - reglage kalman        *
+*               27/04/20             Correction écran 1.54''                                          *
+*               29/04/20             Changement de font - modification screenDigit                    *
+*               03/05/20             Correction bug d'affichage                                       *
+*               06/05/20             Correction déclenchement du vol                                  *
+*               08/05/20             Compas Magnetique                                                *
+*                                    Correction affichage écran 2.91''                                *
+*                                    correction champs trop grand dans statistique                    *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -331,16 +255,15 @@ SimpleBLE ble;
 * BUG   - upload wifi - ne se termine pas  - bug espressif le buffer n'est pas vidé à la fin          *
 * BUG   - update manuelle - doit être lancée 2 fois                                                   *
 * BUG   - download à verifier                                                                         *
-* BUG   - stat affichage temps de vol                                                                 *
-* VERIF - Seuil déclenchement début du vol                                                            *
-* VERIF - Sensibilité du vario                                                                        *
-* BUG   - blocage du MPU                                                                              *
 * AJOUT - effacement ecran 1 fois / min                                                               *
 *                                                                                                     *        
 * v0.8                                                                                                *       
-* MODIF - Réecrire loop                                                                               *
-* AJOUT - Récupération du cap depuis le capteur baromètrique                                          *
 * AJOUT - Espaces aeriens                                                                             *
+* AJOUT - Réglage sensibilité filtre kalman et vario                                                  *                                         
+* BUG   - Grésillement Buzzer                                                                         * 
+* BUG   - Affichage Heure ":" 291                                                                     *
+* BUG   - Affichage vario dans version 1.54                                                           *
+* BUG   - affichage alternatif finesse / taux de chute                                                *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -354,7 +277,6 @@ SimpleBLE ble;
 *     10 zones d'eeprom - reduit le nombre d'écriture et économise la mémoire flash                   *
 * verifier fonctionnement BT                                                                          *
 * Recupération vol via USB                                                                            *                                                                                        
-* Espaces aeriens                                                                                     *
 *******************************************************************************************************/
 
 /************************************************************************
@@ -409,14 +331,21 @@ SimpleBLE ble;
  *   démmarage                                                          *
  * - Ajout Update via internet                                          *
  * - Ajout affichage du cap, longitude, latitude                        *
+ * - Ajout du mode écran 2.9'' en portrait                              *
  * - Calibration des accèlerometres                                     *
  * - AGL                                                                *
  * - Calibration manuel du baro via l'AGL                               *
  * - Declenchement de vol manuellement                                  *
  * - Compensation du GPS via l'AGL                                      *
  *                                                                      *
+ * Version 0.8                                                          *
+ *  - Gestion Multilangue                                               *
+ *  - Nouvelle font d'affichage                                         *
+ *  - Sensibilité du vario réglable                                     *
+ *  - Compas Magnétique                                                 *
+ *                                                                      *
  ************************************************************************/
- 
+
 /************************************************************************
 *                          Recommandation                               *    
  *                                                                      *
@@ -465,11 +394,8 @@ SimpleBLE ble;
 *               /                                                      *
 *               LOGS/                   - repertoire de log            *                                                       
 *                      GNUVARIO.LOG     - Fichier de log               *
-*               RECORD00.CAL            - fichier de calibration       *
-*               PARAMS.JSO              - fichier de configuration     *
-*               LOG.CFG                 - Paramètres de debug          *
-*               VARIOCAL.CFG            - Paramètres de calibration    *
-*               WIFI.CFG                - Paramètres Wifi              *
+*               AGL/                                                   *
+*                               ..      - Fichier topo                 *
 *               VOLS/                   - repertoire des traces        *
 *                       19101200.IGC                                   *
 *                       19101201.IGC                                   *
@@ -477,6 +403,11 @@ SimpleBLE ble;
 *                       INDEX.HTM                                      *
 *                       INDEXB.JS                                      *
 *                       INDEXB~1.MAP                                   *
+*               RECORD00.CAL            - fichier de calibration       *
+*               PARAMS.JSO              - fichier de configuration     *
+*               LOG.CFG                 - Paramètres de debug          *
+*               VARIOCAL.CFG            - Paramètres de calibration    *
+*               WIFI.CFG                - Paramètres Wifi              *
 *                                                                      *
 ************************************************************************/
 
@@ -485,9 +416,11 @@ SimpleBLE ble;
  *                                                                                                            *
  * https://learn.sparkfun.com/tutorials/9dof-razor-imu-m0-hookup-guide/all#libraries-and-example-firmware     *        
  *                                                                                                            *
+ * AGL : https://vps.skybean.eu/agl/                                                                          *
+ *                                                                                                            *
  **************************************************************************************************************/
 
- /*************************************************************************************************************
+/*************************************************************************************************************
   *                                                                                                           *
   *                                            UTILISATION DES TOUCHES                                        *                                                                                       
   *   Ecran         Touche      Fonction                                                                      *
@@ -529,23 +462,72 @@ SimpleBLE ble;
   * DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne    * 
   * MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne *
   * INFOLOG(Text)                    Enregistre dans le fichier de log un texte                               *                                                                                                     
-  *************************************************************************************************************/  
+  *************************************************************************************************************/
+
+//*****************************
+// DEBBUGAGE                  *
+//*****************************
+#include <DebugConfig.h>
+#include <VarioLog.h>
+
+#ifdef PROG_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#ifndef ARDUINOTRACE_SERIAL
+#define ARDUINOTRACE_SERIAL SerialPort
+#endif
+
+#include <ArduinoTrace.h>
+//#include "myassert.h"
+
+#if defined(ESP32)
+//static const char* TAG = "GnuvarioE";
+#include "esp_log.h"
+#endif //ESP32
+
+//#include <SysCall.h>
 
 //#define TEST_SD
 
-/*******************/
-/* General objects */
-/*******************/
-#define VARIOMETER_STATE_INITIAL 0
-#define VARIOMETER_STATE_DATE_RECORDED 1
-#define VARIOMETER_STATE_CALIBRATED 2
-#define VARIOMETER_STATE_FLIGHT_STARTED 3
 
-#ifdef HAVE_GPS
-uint8_t variometerState = VARIOMETER_STATE_INITIAL;
-#else
-uint8_t variometerState = VARIOMETER_STATE_CALIBRATED;
-#endif //HAVE_GPS
+//*******************************
+// GESTION DU MATERIEL          *
+//*******************************
+
+#include <HardwareConfig.h>
+
+#ifdef HAVE_SDCARD
+#include <sdcardHAL.h>
+#endif //HAVE_SDCARD
+
+#include <Update.h>
+#include <SD_Update.h>
+
+#include <VarioHardwareManager.h>
+
+#ifdef HAVE_SPEAKER
+#include <toneHAL.h>
+#include <beeper.h>
+#endif //HAVE_SPEAKER
+
+#include <GPSSentence.h>
+
+/*#ifdef HAVE_GPS
+#include <SerialNmea.h>
+#include <LxnavSentence.h>
+#include <LK8Sentence.h>
+#include <IGCSentence.h>
+#include <NmeaParser.h>
+#endif //HAVE_GPS*/
+
+#include <VarioButton.h>
+
+//#include <Utility.h>
+
+//#include <driver/adc.h>
 
 /*****************/
 /* screen        */
@@ -553,462 +535,166 @@ uint8_t variometerState = VARIOMETER_STATE_CALIBRATED;
 
 #include <varioscreenGxEPD.h>
 
-/***************/
-/* IMU objects */
-/***************/
-#ifdef TWOWIRESCHEDULER
-#ifdef HAVE_BMP280
-Bmp280 TWScheduler::bmp280;
-#else
-Ms5611 TWScheduler::ms5611;
-#endif
-#ifdef HAVE_ACCELEROMETER
-Vertaccel TWScheduler::vertaccel;
-#endif //HAVE_ACCELEROMETER
-#else
+//*******************************
+// GESTION DES DONNES           *
+//*******************************
 
-MS5611 ms5611;
-double referencePressure;
+#include <VarioData.h>
+VarioData varioData;
 
-MPU9250_DMP imu;
-Vertaccel vertaccel;
+#include <VarioSettings.h>
+#include <VarioLanguage.h>
 
-#endif
+/*#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
+#include <AglManager.h>
+#endif //HAVE_SDCARD && HAVE_GPS*/
 
-//Vertaccel vertaccel;
+//#include <FlightHistory.h>
+//#include <variostat.h>
 
-/**********************/
-/* alti/vario objects */
-/**********************/
-#define POSITION_MEASURE_STANDARD_DEVIATION 0.1
-#ifdef HAVE_ACCELEROMETER 
-#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.3
-#else
-#define ACCELERATION_MEASURE_STANDARD_DEVIATION 0.6
-#endif //HAVE_ACCELEROMETER 
+//#include <kalmanvert.h>
 
-Kalmanvert kalmanvert;
 
-/**********************/
-/* SDCARD objects     */
-/**********************/
+//*******************************
+// GESTION WIFI                 *
+//*******************************
 
-int8_t sdcardState = SDCARD_STATE_INITIAL;
 
-VarioSettings GnuSettings;
-
-/************************************/
-/* glide ratio / average climb rate */
-/************************************/
-
-/* two minutes history */
-#ifdef HAVE_GPS
-constexpr double historyGPSPeriodCountF = (double)(GPS_PERIOD) / 500.0;
-constexpr int8_t historyGPSPeriodCount = (int8_t)(0.5 + historyGPSPeriodCountF);
-SpeedFlightHistory<500, 120, historyGPSPeriodCount> history;
-#else 
-FlightHistory<500, 120> history;
-#endif
-
-/***************/
-/* gps objects */
-/***************/
-#ifdef HAVE_GPS
-
-//NmeaParser nmeaParser;
-
-#ifdef HAVE_BLUETOOTH
-boolean lastSentence = false;
-#endif //HAVE_BLUETOOTH
-
-#endif //HAVE_GPS
-
-#ifdef AGL_MANAGER_H
-  AglManager aglManager;
-#endif
-
-/*********************/
-/* bluetooth objects */
-/*********************/
-#ifdef HAVE_BLUETOOTH
-#if defined(VARIOMETER_SENT_LXNAV_SENTENCE)
-LxnavSentence bluetoothNMEA;
-#elif defined(VARIOMETER_SENT_LK8000_SENTENCE)
-LK8Sentence bluetoothNMEA;
-#else
-#error No bluetooth sentence type specified !
-#endif
-
-#ifndef HAVE_GPS
-unsigned long lastVarioSentenceTimestamp = 0;
-#endif // !HAVE_GPS
-#endif //HAVE_BLUETOOTH
-
-unsigned long lastDisplayTimestamp, time_deep_sleep, sleepTimeoutSecs, lastDisplayTimestamp2;
-boolean displayLowUpdateState=true;
-boolean displayUpdateState=true;
-
-VarioStat flystat;
+#ifdef HAVE_WIFI
+#include <VarioWifiServer.h>
+#include <esp32fota2.h>
+#endif //HAVE_WIFI
 
 /*************************************************
  Serveur Web
  *************************************************/
-#ifdef HAVE_WIFI 
+#ifdef HAVE_WIFI
 String webpage = "";
 
 #ifdef ESP8266
-  ESP8266WiFiMulti wifiMulti; 
-  ESP8266WebServer server(80);
+ESP8266WiFiMulti wifiMulti;
+ESP8266WebServer server(80);
 #else
-  WiFiMulti wifiMulti;
-#ifdef ESP32WEBSERVEUR 
-  VarioESP32WebServer server(80);
+WiFiMulti wifiMulti;
+#ifdef ESP32WEBSERVEUR
+VarioESP32WebServer server(80);
 #elif defined(ESPASYNCWEBSERVER)
-  AsyncWebServer server(80); 
+AsyncWebServer server(80);
 #elif defined(ETHERNETWEBSERVER)
-  EthernetServer server(80); 
+EthernetServer server(80);
 #elif defined(ESPRESSIFWEBSERVEUR)
-  WebServer server(80);    
-#else //ESP32WEBSERVEUR
-  VarioWebServer server(80);
+WebServer server(80);
+#else  //ESP32WEBSERVEUR
+VarioWebServer server(80);
 #endif //ESP32WEBSERVEUR
 #endif
 
-esp32FOTA2 esp32FOTA("Gnuvario" + String(VARIOSCREEN_SIZE), VERSION, SUB_VERSION , BETA_CODE);   //esp32-fota-http", 0,6,0);
+esp32FOTA2 esp32FOTA("Gnuvario" + String(VARIOSCREEN_SIZE), VERSION, SUB_VERSION, BETA_CODE); //esp32-fota-http", 0,6,0);
 
 #endif //HAVE_WIFI
 
+//int compteurBoucle = 0;
 
+/*long compteurInt = 0;
 
-/* *************************************************
-Internal TEMPERATURE Sensor
-   *************************************************/
-
-/* 
- *  https://circuits4you.com
- *  ESP32 Internal Temperature Sensor Example
- */
-
- #ifdef __cplusplus
-  extern "C" {
- #endif
-
-  uint8_t temprature_sens_read();
-
-#ifdef __cplusplus
-}
-#endif
-
-uint8_t temprature_sens_read();
-
-int tmpint = 0;
-int compteurGpsFix = 0;
-double gpsAlti = 0;
-
-long MaxVoltage   = 0;
-
-long compteurInt = 0;
-
-int compteurBoucle = 0;
-
-void IRAM_ATTR isr() {
-  compteurInt++;  
-}
+void IRAM_ATTR isr()
+{
+  compteurInt++;
+}*/
 
 //****************************
 //****************************
-void setup() {
+void setup()
+{
 //****************************
-//****************************  
+//****************************
 
+#if defined(ENABLE_DEBUG)
   SerialPort.begin(115200);
 
   // Wait for USB Serial
-  while (!SerialPort) {
-    SysCall::yield();
+  while (!SerialPort)
+  {
+//    SysCall::yield();
   }
+#endif 
 
-// *******************************************************  
-// *   
-// ******************************************************* 
+// *******************************************************
+// *   TEST_SD
+// *******************************************************
 #ifdef TEST_SD
   delay(5000);
   TestSDCARD(true);
 #endif
- 
-/*****************************/
-/*  Init Alimentation        */
-/*****************************/
-#if defined(HAVE_POWER_ALIM) 
-    pinMode(POWER_PIN, OUTPUT);
-    digitalWrite(POWER_PIN, POWER_PIN_STATE);   // turn on POWER (POWER_PIN_STATE is the voltage level HIGH/LOW)
-#endif  
 
-/***********************************/
-/*  Init mesure tension batterie   */
-/***********************************/
-#if defined(HAVE_VOLTAGE_DIVISOR) 
-    pinMode(VOLTAGE_DIVISOR_PIN, INPUT);
-    analogReadResolution(12);
-
-#if defined(VOLTAGE_DIVISOR_DEBUG)
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
-#endif
-#endif  
+  /*****************************/
+  /*  Init Alimentation        */
+  /*****************************/
+  varioHardwareManager.initAlim();
 
   /*****************************/
   /* wait for devices power on */
   /*****************************/
 #ifdef PROG_DEBUG
-  delay (5000);
-#else  
+  delay(5000);
+#else
   delay(VARIOMETER_POWER_ON_DELAY);
-#endif  
+#endif
 
- /******************************/
- /* Eteint la led de la ttgo   */
- /******************************/
+  /************************/
+  /*    BOOT SEQUENCE     */
+  /************************/
 
-/*  pinMode(pinLED, OUTPUT);
-  digitalWrite(pinLED, HIGH); */
+  varioData.init(VERSION, SUB_VERSION, BETA_CODE, String(DEVNAME)); 
 
-/************************/
-/*    BOOT SEQUENCE     */
-/************************/
+  varioHardwareManager.init();
 
-#ifdef PROG_DEBUG
-
-///  while (!SerialPort) { ;}
-  char tmpbuffer[100];
-  sprintf(tmpbuffer,"GNUVARIO compiled on %s", __DATE__); // at %s", __DATE__, __TIME__);
-  SerialPort.println(tmpbuffer);
-  sprintf(tmpbuffer,"VERSION %i.%i - %s", VERSION,SUB_VERSION,DEVNAME); 
-  SerialPort.println(tmpbuffer);
-  if (BETA_CODE > 0) {
-    SerialPort.print("Beta ");
-    SerialPort.println(BETA_CODE);
-  }
-  SerialPort.flush();
-#endif //PRO_DEBBUG
-
-#if defined(ESP32)
-  if (BETA_CODE > 0) {
-    ESP_LOGI(TAG, "GnuVario-E version %d.%d Beta %d.", VERSION,SUB_VERSION,BETA_CODE);
-  } else {
-    ESP_LOGI(TAG, "GnuVario-E version %d.%d.", VERSION,SUB_VERSION);
-//  ESP_LOGE(TAG, "Failed to initialize the card (%d). Make sure SD card lines have pull-up resistors in place.", ret);
-  }
-#endif //ESP32
-
-  
   /******************/
   /* Init Speaker   */
   /******************/
-  
-#if defined( HAVE_SPEAKER)
-  toneHAL.init();
-  beeper.setVolume(10);
-  //beeper.generateTone(2000,300); 
-#endif
+  varioHardwareManager.initSpeaker();
 
   /******************/
   /* Init SDCARD    */
   /******************/
 
-#ifdef HAVE_SDCARD
 
 #ifdef TEST_SD
-  if (GnuSettings.initSettings(false)) {
-#else 
-  if (GnuSettings.initSettings(true)) {
+  varioData.initSettings(false);
+#else
+  varioData.initSettings(true);
+#endif //TEST_SD
+
+//**********************************************
+// Charge le fichier de langue
+//**********************************************
+  varioLanguage.init(GnuSettings.LANGUAGE);
+
+#ifdef HAVE_SDCARD
+  SerialPort.print("TITRE_TIME : ");
+  SerialPort.println(varioLanguage.getText(TITRE_TIME));
 #endif
-  
-#ifdef SDCARD_DEBUG
-    SerialPort.println("initialization done.");
-    SerialPort.flush();
-#endif //SDCARD_DEBUG
 
-#if defined(ESP32)
-    ESP_LOGI("SDCARD", "initialization done.");
-#endif //EPS32
-
-#ifdef HAVE_WIFI
-    SD_present = true; 
-#endif //HAVE_WIFI
-    sdcardState = SDCARD_STATE_INITIALIZED;
-/*    char FileName[15] = "SETTINGS.TXT";
-    GnuSettings.readSDSettings(FileName);*/
-
-    GnuSettings.setVersion(VERSION, SUB_VERSION, BETA_CODE);
-
-    SerialPort.println("Chargement des parametres depuis le fichier params.jso");
-    char tmpchar[20] = "params.jso";
-    GnuSettings.loadConfigurationVario(tmpchar);
-    
-#ifdef SDCARD_DEBUG
-   //Debuuging Printing
-    SerialPort.print("Pilot Name = ");
-    SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME);
-#endif //SDCARD_DEBUG
-
-#ifdef PROG_DEBUG
-   //Debuuging Printing
-    SerialPort.print("Pilot Name = ");
-    SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME);
-#endif //PROG_DEBUG
-
-    char __dataPilotName[GnuSettings.VARIOMETER_PILOT_NAME.length()];
-    GnuSettings.VARIOMETER_PILOT_NAME.toCharArray(__dataPilotName, sizeof(__dataPilotName)+1);
-
-#ifdef PROG_DEBUG
-   //Debuuging Printing
-    SerialPort.print("__dataPilotName = ");
-    SerialPort.print(__dataPilotName);
-    SerialPort.print(" - ");
-    int tmpint = sizeof(__dataPilotName);
-    SerialPort.print(tmpint);
-    SerialPort.print(" / ");
-    SerialPort.print(GnuSettings.VARIOMETER_PILOT_NAME);
-    SerialPort.print(" - ");
-    SerialPort.println(GnuSettings.VARIOMETER_PILOT_NAME.length());
-#endif //PROG_DEBUG
-
-    char __dataGliderName[GnuSettings.VARIOMETER_GLIDER_NAME.length()];
-    GnuSettings.VARIOMETER_GLIDER_NAME.toCharArray(__dataGliderName, sizeof(__dataGliderName)+1);
-
-#ifdef PROG_DEBUG
-   //Debuuging Printing
-    SerialPort.print("__dataGliderName = ");
-    SerialPort.print(__dataGliderName);
-    SerialPort.print(" - ");
-    tmpint = sizeof(__dataGliderName);
-    SerialPort.print(tmpint);
-    SerialPort.print(" / ");
-    SerialPort.print(GnuSettings.VARIOMETER_GLIDER_NAME);
-    SerialPort.print(" - ");
-    SerialPort.println(GnuSettings.VARIOMETER_GLIDER_NAME.length());
-#endif //PROG_DEBUG
-
-    header.saveParams(VARIOMETER_MODEL_NAME, __dataPilotName, __dataGliderName);
-
-    boolean ModifValue = false;
-    char tmpFileName[15] = "wifi.cfg";
-   
-    if (SDHAL_SD.exists(tmpFileName)) {
-      GnuSettings.readSDSettings(tmpFileName, &ModifValue);
-
-      SerialPort.println("");
-      SerialPort.println("Lecture du fichier wifi.cfg");
-
-      SerialPort.print("Wifi SSID 1 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_SSID_1);
-
-      SerialPort.print("Wifi Password 1 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_1);
-
-      SerialPort.print("Wifi SSID 2 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_SSID_2);
-
-      SerialPort.print("Wifi Password 2 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_2);
-
-      SerialPort.print("Wifi SSID 3 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_SSID_3);
-
-      SerialPort.print("Wifi Password 3 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_3);
-
-      SerialPort.print("Wifi SSID 4 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_SSID_4);
-
-      SerialPort.print("Wifi Password 4 : ");
-      SerialPort.println(GnuSettings.VARIOMETER_PASSWORD_4);  
-    }   
-
-    //lecture parametre de configuration
-    
-    strcpy(tmpFileName,"variocal.cfg");
-   
-    if (SDHAL_SD.exists(tmpFileName)) {
-      GnuSettings.readSDSettings(tmpFileName, &ModifValue);
-    }
-  }
-  else
-  {    
-#ifdef HAVE_WIFI
-    SD_present = false; 
-#endif //HAVE_WIFI
-
-#ifdef SDCARD_DEBUG
-      SerialPort.println("initialization failed!");
-#endif //SDCARD_DEBUG
-
-#if defined(ESP32)
-      ESP_LOGE("SDCARD", "initialization failed!");
-#endif //EPS32
-    
-  
+// *********************************************
+// Bip de démarrage 
+//**********************************************
 #ifdef HAVE_SPEAKER
-    if (GnuSettings.ALARM_SDCARD) {
-      indicateFaultSDCARD();
-    }
-#endif //HAVE_SPEAKER 
-  }
-#else //HAVE_SDCARD
-#ifdef HAVE_WIFI
-    SD_present = false; 
-#endif //HAVE_WIFI
-
-#ifdef SDCARD_DEBUG
-      SerialPort.println("initialization failed!");
-#endif //SDCARD_DEBUG
-
-#if defined(ESP32)
-      ESP_LOGE("SDCARD", "initialization failed!");
-#endif //EPS32
-    
-  
-#ifdef HAVE_SPEAKER
-    if (GnuSettings.ALARM_SDCARD) {
-      indicateFaultSDCARD();
-    }
-#endif //HAVE_SPEAKER 
-#endif //HAVE_SDCARD
-
-/*  uint8_t tmp[4];
-  tmp[0]=1;
-  tmp[1]=1;
-  tmp[2]=19;
-  tmp[3]=00;
-
-  flystat.SetDate(tmp);
-  flystat.ForceWrite();*/
-
-#ifdef HAVE_SPEAKER
-  if (GnuSettings.ALARM_VARIOBEGIN) beeper.generateTone(2000,300); 
-/*  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
-  toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);*/
+  if (GnuSettings.ALARM_VARIOBEGIN) beeper.generateTone(2000, 300);
 #endif //HAVE_SPEAKER
 
-/*********************/
-/*    init logger    */
-/*********************/
+  /*********************/
+  /*    init logger    */
+  /*********************/
 
-  varioLog.init();
-  String tmpStr;
-  tmpStr =   "FirmWare : " + String(VERSION) + "." + String(SUB_VERSION); 
-  if (BETA_CODE > 0) tmpStr = tmpStr + "b" + String(BETA_CODE);
+  varioData.initLog();
 
-  INFOLOG(tmpStr);
-  TRACELOG(LOG_TYPE_DEBUG, MAIN_DEBUG_LOG);
 
-//***********************************************
-// INIT AGL
-//***********************************************
+  //***********************************************
+  // INIT AGL
+  //***********************************************
 
-  aglManager.init();
-  
+  varioData.initAGL();
+
   /***************/
   /* init screen */
   /***************/
@@ -1019,7 +705,7 @@ void setup() {
 #endif //SCREEN_DEBUG
 
 #if defined(ESP32)
-      ESP_LOGI("SCREEN", "initialization screen");
+  ESP_LOGI("SCREEN", "initialization screen");
 #endif //EPS32
 
   screen.init();
@@ -1027,18 +713,17 @@ void setup() {
   screen.begin();
 #endif
 
-/********************/
-/** Update Firmware */
-/********************/
- 
+  /********************/
+  /** Update Firmware */
+  /********************/
+
 #ifdef HAVE_SDCARD
   updateFromSDCARD();
 #endif //HAVE_SDCARD
 
-
-/*****************************/
-/** Update Site web embarqué */
-/*****************************/
+  /*****************************/
+  /** Update Site web embarqué */
+  /*****************************/
 
 #ifdef HAVE_SDCARD
   esp32FOTA.UpdateWwwDirectory();
@@ -1048,319 +733,121 @@ void setup() {
   /* init button */
   /***************/
 
-#ifdef HAVE_BUTTON
-#ifdef BUTTON_DEBUG
-  SerialPort.println("initialization bouton");
-  SerialPort.flush();
-#endif //BUTTON_DEBUG
-
-#if defined(ESP32)
-      ESP_LOGI("BUTTON", "initialization button");
-#endif //EPS32
-
-  VarioButton.begin();
-  ButtonScheduleur.Set_StatePage(STATE_PAGE_INIT);
-#endif 
+  varioHardwareManager.initButton();
 
 #ifdef HAVE_SCREEN
-/*----------------------------------------*/
-/*                                        */
-/*             DISPLAY BOOT               */
-/*                                        */
-/*----------------------------------------*/
+  /*----------------------------------------*/
+  /*                                        */
+  /*             DISPLAY BOOT               */
+  /*                                        */
+  /*----------------------------------------*/
 
 #ifdef SCREEN_DEBUG
   SerialPort.println("Display boot");
 #endif //SCREEN_DEBUG
 
 #if defined(ESP32)
-      ESP_LOGI(TAG, "Display Boot");
+  ESP_LOGI(TAG, "Display Boot");
 #endif //EPS32
 
-  screen.ScreenViewInit(VERSION,SUB_VERSION, AUTHOR,BETA_CODE);
+  screen.ScreenViewInit(VERSION, SUB_VERSION, AUTHOR, BETA_CODE);
 
-  
 #endif //HAVE_SCREEN
 
-//***********************************************
-// INIT Sound
-//      init Beeper avec les valeurs personnelles
-//      init Volume
-//***********************************************
 
-#ifdef HAVE_SPEAKER
-  beeper.init(GnuSettings.VARIOMETER_SINKING_THRESHOLD, GnuSettings.VARIOMETER_CLIMBING_THRESHOLD, GnuSettings.VARIOMETER_NEAR_CLIMBING_SENSITIVITY);
+  //***********************************************
+  // INIT Sound
+  //      init Beeper avec les valeurs personnelles
+  //      init Volume
+  //***********************************************
 
-  GnuSettings.VARIOMETER_BEEP_VOLUME = GnuSettings.soundSettingRead();
-  beeper.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
-  toneHAL.setVolume(GnuSettings.VARIOMETER_BEEP_VOLUME);
+  varioHardwareManager.initSound();
 
-#ifdef SOUND_DEBUG
-  SerialPort.print("Volume SOUND : ");
-  SerialPort.println(GnuSettings.VARIOMETER_BEEP_VOLUME);
-#endif //SOUND_DEBUG
+  //***********************************************
+  // INIT MPU / MS5611
+  //***********************************************
 
-#endif //HAVE_SPEAKER
+  varioHardwareManager.initImu();
 
+  //***********************************************
+  // Première mesure d'altitude
+  //***********************************************
+
+  double firstAlti = varioHardwareManager.firstAlti();
+#ifdef DATA_DEBUG
+  SerialPort.print("first alti : ");
+  SerialPort.println(firstAlti);
+#endif //KALMAN_DEBUG
+
+  //***********************************************
+  // Calibration
+  //***********************************************
   
-#ifdef TWOWIRESCHEDULER
-  /**************************/
-  /* init Two Wires devices */
-  /**************************/
-  //!!!
-#ifdef HAVE_ACCELEROMETER
-  intTW.begin();
-  twScheduler.init();
-//  vertaccel.init();
+  if (ButtonScheduleur.Get_StatePage() == STATE_PAGE_CALIBRATION)
+    screen.ScreenViewMessage("Calibration", 5);
 
-#endif //HAVE_ACCELEROMETER
-#else //TWOWIRESCHEDULER
-#ifdef MS5611_DEBUG
-  SerialPort.println("Initialize MS5611 Sensor");
-#endif //MS5611_DEBUG
-
-#if defined(VARIO_SDA_PIN) && defined(VARIO_SCL_PIN)
-  while(!ms5611.begin(VARIO_SDA_PIN, VARIO_SCL_PIN))
-#else
-  while(!ms5611.begin())
-#endif
-  {
-    SerialPort.println("Could not find a valid MS5611 sensor, check wiring!");
-#if defined(ESP32)
-    ESP_LOGE(TAG, "Erreur capteur MS5611 introuvable");
-#endif //EPS32
-    delay(500);
-  }
-
-  // Get reference pressure for relative altitude
-  referencePressure = ms5611.readPressure();
-
-  SerialPort.print("Oversampling: ");
-  SerialPort.println(ms5611.getOversampling());
-
-  vertaccel.init();
-
-#ifdef HAVE_ACCELEROMETER
-#ifdef ACCEL_DEBUG
-  SerialPort.println("configuring device.");
-#endif //ACCEL_DEBUG
-
-#ifdef ACCEL_DEBUG
-    SerialPort.println("configured 9Axis I2C MPU9250");
-#endif //ACCEL_DEBUG
-
-  // Call imu.begin() to verify communication and initialize
-#if defined(VARIO_SDA_PIN) && defined(VARIO_SCL_PIN)
-  if (imu.begin(VARIO_SDA_PIN, VARIO_SCL_PIN) != INV_SUCCESS)
-#else
-  if (imu.begin() != INV_SUCCESS)
-#endif
-
-  {
-    while (1)
-    {
-      SerialPort.println("Unable to communicate with MPU-9250");
-      SerialPort.println("device error");
-      ESP_LOGE(TAG, "Erreur capteur MPU9250 introuvable");
-      while(1);
-    }
-  }
-
-  // Use setSensors to turn on or off MPU-9250 sensors.
-  // Any of the following defines can be combined:
-  // INV_XYZ_GYRO, INV_XYZ_ACCEL, INV_XYZ_COMPASS,
-  // INV_X_GYRO, INV_Y_GYRO, or INV_Z_GYRO
-  // Enable all sensors:
-  imu.setSensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
-
-/*  // Use setGyroFSR() and setAccelFSR() to configure the
-  // gyroscope and accelerometer full scale ranges.
-  // Gyro options are +/- 250, 500, 1000, or 2000 dps
-  imu.setGyroFSR(2000); // Set gyro to 2000 dps
-  // Accel options are +/- 2, 4, 8, or 16 g
-  imu.setAccelFSR(8); // Set accel to +/-2g
-  // Note: the MPU-9250's magnetometer FSR is set at 
-  // +/- 4912 uT (micro-tesla's)
-
-  // setLPF() can be used to set the digital low-pass filter
-  // of the accelerometer and gyroscope.
-  // Can be any of the following: 188, 98, 42, 20, 10, 5
-  // (values are in Hz).
-  imu.setLPF(5); // Set LPF corner frequency to 5Hz*/
-
-  // The sample rate of the accel/gyro can be set using
-  // setSampleRate. Acceptable values range from 4Hz to 1kHz
-  imu.setSampleRate(100); // Set sample rate to 10Hz
-
-  // Likewise, the compass (magnetometer) sample rate can be
-  // set using the setCompassSampleRate() function.
-  // This value can range between: 1-100Hz
-  imu.setCompassSampleRate(100); // Set mag rate to 10Hz
-  
-/*  imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
-               DMP_FEATURE_GYRO_CAL, // Use gyro calibration
-              10); // Set DMP FIFO rate to 10 Hz
-  // DMP_FEATURE_LP_QUAT can also be used. It uses the 
-  // accelerometer in low-power mode to estimate quat's.
-  // DMP_FEATURE_LP_QUAT and 6X_LP_QUAT are mutually exclusive*/
-
-    imu.dmpBegin(DMP_FEATURE_SEND_RAW_ACCEL | // Send accelerometer data
-//                 DMP_FEATURE_SEND_RAW_GYRO  | // Send raw gyroscope values to FIFO
-                 DMP_FEATURE_GYRO_CAL       | // Calibrate the gyro data
-                 DMP_FEATURE_SEND_CAL_GYRO  | // Send calibrated gyro data
-                 DMP_FEATURE_6X_LP_QUAT     , // Calculate quat's with accel/gyro
-                 100);                         // Set update rate to 10Hz.
-  
-#endif //HAVE_ACCELEROMETER
-
-#endif //TWOWIRESCHEDULER
-
-#ifdef HAVE_ACCELEROMETER
-  /******************/
-  /* get first data */
-  /******************/
-
-#ifdef MS5611_DEBUG
-    SerialPort.println("Attente premiere mesure alti");
-#endif //MS5611_DEBUG
-
-#ifdef TWOWIRESCHEDULER
-  /* wait for first alti and acceleration */
-  while( ! twScheduler.havePressure() ) { }
-#else //TWOWIRESCHEDULER
-#endif //TWOWIRESCHEDULER
-
-#ifdef MS5611_DEBUG
-    SerialPort.println("première mesure");
-#endif //MS5611_DEBUG
-
-#ifdef TWOWIRESCHEDULER
-  /* init kalman filter with 0.0 accel*/
-  double firstAlti = twScheduler.getAlti();
-#else //TWOWIRESCHEDULER
-  double firstAlti = ms5611.readPressure();
-#endif //TWOWIRESCHEDULER
-
-  if (isnan(firstAlti)) {
-    for (int i=0;i<4;i++) {
-      delay(1000);
-
-#ifdef TWOWIRESCHEDULER
-  /* init kalman filter with 0.0 accel*/
-      firstAlti = twScheduler.getAlti();
-#else //TWOWIRESCHEDULER
-      firstAlti = ms5611.readPressure();
-#endif //TWOWIRESCHEDULER
-
-      if (!isnan(firstAlti)) break;   
-    }
-  }
-  
-  if (isnan(firstAlti)) {
-    SerialPort.println("Fail firstAlti : ");
-    SerialPort.println("reinit");
-    ESP_LOGE(TAG, "Erreur Première mesure d'altitude");
-    ESP.restart();         
-  }
-  
-#ifdef MS5611_DEBUG
-    SerialPort.print("firstAlti : ");
-    SerialPort.println(firstAlti);
-#endif //MS5611_DEBUG
-
-  //Calibration
-  if (ButtonScheduleur.Get_StatePage() == STATE_PAGE_CALIBRATION) screen.ScreenViewMessage("Calibration",5);
+  //***********************************************
+  // Affiche l'écran de statistique 
+  //***********************************************
 
 #ifdef HAVE_SCREEN
-// Affichage Statistique
-  flystat.Display();
+  // Affichage Statistique
+  varioData.flystat.Display();
   screen.ScreenViewStat();
-
 
   unsigned long TmplastDisplayTimestamp = millis();
   int compteur = 0;
-  while (compteur < GnuSettings.DISPLAY_STAT_DURATION) {
-          
-    if( millis() - TmplastDisplayTimestamp > 1000 ) {
+  while (compteur < GnuSettings.DISPLAY_STAT_DURATION)
+  {
+
+    if (millis() - TmplastDisplayTimestamp > 1000)
+    {
 
       TmplastDisplayTimestamp = millis();
       compteur++;
 
 //    Messure d'altitude
-#if not defined (TWOWIRESCHEDULER)
-      firstAlti = ms5611.readPressure();
-#endif //TWOWIRESCHEDULER
-    
+      firstAlti = varioHardwareManager.getAlti();
     }
   }
-  
+
 #endif //HAVE_SCREEN
 
-  kalmanvert.init(firstAlti,
-                  0.0,
-                  POSITION_MEASURE_STANDARD_DEVIATION,
-                  ACCELERATION_MEASURE_STANDARD_DEVIATION,
-                  millis());
+  //***********************************************
+  // Initialise le filtre de Kalman
+  //***********************************************
 
-#ifdef KALMAN_DEBUG
-  SerialPort.println("kalman init");
-#endif //KALMAN_DEBUG
-#endif //HAVE_ACCELEROMETER
+  varioData.initKalman(firstAlti);
 
+  varioData.compteurGpsFix = 0;
 
-    TRACE();
-    SDUMP("Test INT MPU");
+  //***********************************************
+  // Initialise l'integration (climb rate)
+  //***********************************************
 
+  if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
+    varioData.history.init(firstAlti, millis());
 
+  //***********************************************
+  // Initialise GPS
+  //***********************************************
 
+  varioHardwareManager.initGps();
 
-/*  
- *   
-       
- ******************************************************      
- *      TEST INT MPU
- *****************************************************      
-       
-  pinMode(VARIO_MPUINT_PIN, INPUT_PULLUP);   //INPUT);
-
-  attachInterrupt(VARIO_MPUINT_PIN, isr, FALLING);
-   
-  while (1) {
-    SerialPort.print("valeur : ");
-    SerialPort.println(compteurInt);
-    delay(1);        // delay in between reads for stability
-  }
-
-*/
-
-
-
-
-
-  compteurGpsFix = 0;
-
-#if defined(HAVE_GPS) 
-  if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) history.init(firstAlti, millis());
-#endif //defined(HAVE_GPS) 
-
-#ifdef HAVE_GPS
-  serialNmea.begin(9600, true);
-#ifdef GPS_DEBUG
-  SerialPort.println("SerialNmea init");
-#endif //GPS_DEBUG
-#endif //HAVE_GPS
+  //***********************************************
+  // Affiche la première page 
+  //***********************************************
 
 #ifdef HAVE_SCREEN
- 
-  screen.ScreenViewPage(0,true);
-  screen.updateScreen ();
-  
+
+  screen.ScreenViewPage(0, true);
   screen.volLevel->setVolume(toneHAL.getVolume());
+  screen.updateScreen();
 
 #ifdef SOUND_DEBUG
   SerialPort.print("ToneHal Volume Sound : ");
   SerialPort.println(toneHAL.getVolume()); //GnuSettings.VARIOMETER_BEEP_VOLUME);
-#endif //SOUND_DEBUG
+#endif                                     //SOUND_DEBUG
 
 #ifdef SCREEN_DEBUG
   SerialPort.println("update screen");
@@ -1370,87 +857,127 @@ void setup() {
   screen.schedulerScreen->enableShow();
 #endif //HAVE_SCREEN
 
+
+  //***********************************************
+  // Initialisation BT 
+  //***********************************************
+
 #ifdef HAVE_BLUETOOTH
-  if (GnuSettings.VARIOMETER_ENABLE_BT) {
-#ifdef BT_DEBUG
-    SerialPort.setDebugOutput(true);
-//    pinMode(0, INPUT_PULLUP);
-    SerialPort.print("ESP32 SDK: ");
-    SerialPort.println(ESP.getSdkVersion());
-#endif //BT_DEBUG
-    ble.begin("GnuVario-E");
-    screen.btinfo->setBT();
-  }
+  if (varioHardwareManager.initBt()) screen.btinfo->setBT();
 #endif //HAVE_BLUETOOTH
 
   ButtonScheduleur.Set_StatePage(STATE_PAGE_VARIO);
+
+   //***********************************************
+  // Initialisation Time 
+  //***********************************************
+ 
   /* init time */
-  lastDisplayTimestamp  = millis(); 
-  lastDisplayTimestamp2 = millis();
-  time_deep_sleep       = lastDisplayTimestamp;
-  sleepTimeoutSecs      = lastDisplayTimestamp;
-  displayLowUpdateState = true; 
-  displayUpdateState = true;
-  MaxVoltage   = 0; 
+/*  varioData.lastDisplayTimestamp = millis();
+  varioData.lastDisplayTimestamp2 = millis();
+  varioHardwareManager.time_deep_sleep = varioData.lastDisplayTimestamp;
+  varioHardwareManager.sleepTimeoutSecs = varioData.lastDisplayTimestamp;
+  varioData.displayLowUpdateState = true;
+  varioData.displayUpdateState = true;*/
+
+  varioData.initTime();
+
+//  varioData.MaxVoltage = 0;
 }
 
-double temprature=0;
-double currentHeight = 0;
-int    compteurErrorMPU = 0;
+double temprature = 0;
+//double currentHeight = 0;
+//int compteurErrorMPU = 0;
 
-#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
+/*#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
 void createSDCardTrackFile(void);
 #endif //defined(HAVE_SDCARD) && defined(HAVE_GPS)
-void enableflightStartComponents(void);
+void enableflightStartComponents(void);*/
 
 //*****************************
 //*****************************
-void loop() {
-//****************************  
+void loop()
+{
+//****************************
 //****************************
 
- /* if( vertaccel.readRawAccel(accel, quat) ){
-    count++;
-  }*/
+  //****************************
+  // Gestion Des chrono      
+  //***************************
+  
+  /*  LOW UPDATE DISPLAY */
+  if (millis() - varioData.lastDisplayTimestamp > DISPLAY_LOW_UPDATE)
+  {
+    varioData.lastDisplayTimestamp = millis();
+    varioData.displayLowUpdateState = true;
+  }
 
-/*  LOW UPDATE DISPLAY */
-   if( millis() - lastDisplayTimestamp > DISPLAY_LOW_UPDATE ) {
+  // DISPLAY
+  if (millis() - varioData.lastDisplayTimestamp2 > DISPLAY_UPDATE)
+  {
+    varioData.lastDisplayTimestamp2 = millis();
+    varioData.displayUpdateState = true;
+  }
 
-     lastDisplayTimestamp = millis();
-     displayLowUpdateState = true;
- /*    if (tmpint == 0) tmpint = 1000;
-     else             tmpint = 0;*/
-   }
-
-// DISPLAY
-   if( millis() - lastDisplayTimestamp2 > DISPLAY_UPDATE ) {
-
-     lastDisplayTimestamp2 = millis();
-     displayUpdateState = true;
- /*    if (tmpint == 0) tmpint = 1000;
-     else             tmpint = 0;*/
-   }
-
-//**********************************************************
-//  TRAITEMENT APPUIE SUR LES BOUTONS
-//**********************************************************
-
-/*******************************/
-/*  Compute button             */
-/*******************************/
+  //**********************************************************
+  //  TRAITEMENT DES BOUTONS
+  //**********************************************************
 
   ButtonScheduleur.update();
-
-  /*****************************/
-  /* compute vertical velocity */
-  /*****************************/
 
 //**********************************************************
 //  ACQUISITION DES DONNEES
 //**********************************************************
+
+  varioData.update();
+
+  //**********************************************************
+  //  TEST INNACTIVITE
+  //**********************************************************
+  varioHardwareManager.testInactivity(varioData.getVelocity());
+
+  //**********************************************************
+  //  MISE A JOUR DE L'ECRAN
+  //**********************************************************
+
+  if (varioData.displayLowUpdateState)
+  {
+
+   //**********************************************************
+  //  DISPLAY ALTI
+  //**********************************************************
+   
+    screen.altiDigit->setValue(varioData.getCalibratedAlti());
+
+  //**********************************************************
+  //  DISPLAY VARIO
+  //**********************************************************
+
+    if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
+    {
+      if (varioData.haveNewClimbRate()) screen.varioDigit->setValue(varioData.getClimbRate());
+    }
+    else
+    {
+      screen.varioDigit->setValue(varioData.getVelocity());
+    }
+
+  //**********************************************************
+  //  DISPLAY FINESSE / TAUX DE CHUTE MOYEN
+  //**********************************************************
+
+    if (varioData.haveNewClimbRate())
+    {
+      if (GnuSettings.RATIO_CLIMB_RATE > 1)
+        screen.trendDigit->setValue(varioData.getTrend());
+      screen.trendLevel->stateTREND(varioData.getStateTrend());
+    }
+  }
+/*
 #ifdef HAVE_ACCELEROMETER
 #ifdef TWOWIRESCHEDULER
-  if( twScheduler.havePressure() && twScheduler.haveAccel() ) {
+  if (twScheduler.havePressure() && twScheduler.haveAccel())
+  {
 
     compteurErrorMPU = 0;
     double tmpAlti, tmpTemp, tmpAccel;
@@ -1458,7 +985,8 @@ void loop() {
     tmpAccel = twScheduler.getAccel(NULL);
 #else //TWOWIRESCHEDULER
 
-  if ( imu.fifoAvailable() ) {
+  if (imu.fifoAvailable())
+  {
 
     double tmpAlti, tmpTemp, tmpAccel;
     int16_t rawAccel[3];
@@ -1470,17 +998,17 @@ void loop() {
     tmpTemp += GnuSettings.COMPENSATION_TEMP; //MPU_COMP_TEMP;
 
     // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
-    if ( imu.dmpUpdateFifo() == INV_SUCCESS)
+    if (imu.dmpUpdateFifo() == INV_SUCCESS)
     {
       // computeEulerAngles can be used -- after updating the
       // quaternion values -- to estimate roll, pitch, and yaw
-//      imu.computeEulerAngles();
+      //      imu.computeEulerAngles();
 
       quat[0] = imu.qw;
       quat[1] = imu.qx;
       quat[2] = imu.qy;
       quat[3] = imu.qz;
-   
+
       rawAccel[0] = imu.ax;
       rawAccel[1] = imu.ay;
       rawAccel[2] = imu.az;
@@ -1488,11 +1016,11 @@ void loop() {
       double tmpVertVector[3];
       vertaccel.compute(rawAccel, quat, tmpVertVector, tmpAccel);
 
-//      tmpAccel = 0;
+      //      tmpAccel = 0;
     }
 
 #endif //TWOWIRESCHEDULER
-    
+
 #ifdef DATA_DEBUG
     SerialPort.print("Alti : ");
     SerialPort.println(tmpAlti);
@@ -1502,30 +1030,31 @@ void loop() {
     SerialPort.println(tmpAccel);
 #endif //DATA_DEBUG
 
-    kalmanvert.update( tmpAlti,
-                       tmpAccel,
-                       millis() );
+    varioData.kalmanvert.update(tmpAlti,
+                      tmpAccel,
+                      millis());
 #else
 #ifdef TWOWIRESCHEDULER
-  if( twScheduler.havePressure() ) {
-    
+  if (twScheduler.havePressure())
+  {
+
 #ifdef MS5611_DEBUG
 //    SerialPort.println("havePressure");
 #endif //MS5611_DEBUG
 
     double tmpAlti, tmpTemp;
     twScheduler.getTempAlti(tmpTemp, tmpAlti);
-#else //TWOWIRESCHEDULER
-    double tmpAlti, tmpTemp, tmpAccel;
+#else  //TWOWIRESCHEDULER
+  double tmpAlti, tmpTemp, tmpAccel;
 
-    long realPressure = ms5611.readPressure();
-//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,realPressure);
-    tmpAlti = ms5611.getAltitude(realPressure);
-//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpAlti);
-    tmpTemp = ms5611.readTemperature();
- //   DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
-    tmpTemp += MPU_COMP_TEMP;
-//    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
+  long realPressure = ms5611.readPressure();
+  //    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,realPressure);
+  tmpAlti = ms5611.getAltitude(realPressure);
+  //    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpAlti);
+  tmpTemp = ms5611.readTemperature();
+  //   DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
+  tmpTemp += MPU_COMP_TEMP;
+  //    DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpTemp);
 
 #endif //TWOWIRESCHEDULER
 
@@ -1536,62 +1065,64 @@ void loop() {
     SerialPort.println(tmpTemp);
 #endif //DATA_DEBUG
 
-    kalmanvert.update( tmpAlti,
-                       0.0,
-                       millis() );
+    varioData.kalmanvert.update(tmpAlti,
+                      0.0,
+                      millis());
 #endif //HAVE_ACCELEROMETER
-  
- #ifdef PROG_DEBUG
+
+#ifdef PROG_DEBUG
     //SerialPort.println("Kalman Update");
 #endif //PROG_DEBUG
- 
-    if (displayLowUpdateState) {
-//      screen.tempDigit->setValue(tmpTemp);
-//      screen.tunit->toDisplay();
+
+    if (varioData.displayLowUpdateState)
+    {
+      //      screen.tempDigit->setValue(tmpTemp);
+      //      screen.tunit->toDisplay();
     }
 
-//**********************************************************
-//  UPDATE BEEPER
-//**********************************************************
+    // **********************************************************
+    //  UPDATE BEEPER
+    // **********************************************************
 
 #ifdef HAVE_SPEAKER
-		beeper.setVelocity( kalmanvert.getVelocity() );
+    beeper.setVelocity(varioData.kalmanvert.getVelocity());
 #endif //HAVE_SPEAKER
 
-//**********************************************************
-//  TEST INNACTIVITE
-//**********************************************************
+    // **********************************************************
+    //  TEST INNACTIVITE
+    // **********************************************************
 
-   if (abs(kalmanvert.getVelocity()) > GnuSettings.SLEEP_THRESHOLD_CPS) { 
-     // reset sleep timeout watchdog if there is significant vertical motion
-     sleepTimeoutSecs = millis();
+    if (abs(varioData.kalmanvert.getVelocity()) > GnuSettings.SLEEP_THRESHOLD_CPS)
+    {
+      // reset sleep timeout watchdog if there is significant vertical motion
+      varioHardwareManager.sleepTimeoutSecs = millis();
+    }
+    else if ((GnuSettings.SLEEP_THRESHOLD_CPS != 0) && ((millis() - varioHardwareManager.sleepTimeoutSecs) >= (GnuSettings.SLEEP_TIMEOUT_MINUTES * 60 * 1000)))
+    {
+#ifdef MAIN_DEBUG
+      SerialPort.println("Timed out with no significant climb/sink, put MPU9250 and ESP8266 to sleep to minimize current draw");
+      SerialPort.flush();
+#endif
+      indicatePowerDown();
+      //     TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG);
+      MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG, "Deep sleep - inactivite");
+      deep_sleep("Power off");
+    }
 
-   }
-   else
-   if ((GnuSettings.SLEEP_THRESHOLD_CPS != 0) && ((millis()-sleepTimeoutSecs) >= (GnuSettings.SLEEP_TIMEOUT_MINUTES*60*1000))) {
-#ifdef MAIN_DEBUG       
-     SerialPort.println("Timed out with no significant climb/sink, put MPU9250 and ESP8266 to sleep to minimize current draw");
-     SerialPort.flush();
-#endif          
-     indicatePowerDown(); 
-//     TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG);
-     MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,"Deep sleep - inactivite");
-     deep_sleep("Power off");
-   }   
+    // **********************************************************
+    //  TRAITEMENT DES DONNEES
+    // **********************************************************
 
-//**********************************************************
-//  TRAITEMENT DES DONNEES
-//**********************************************************
-
-   /* set history */
-#if defined(HAVE_GPS) 
-    if ((GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)	|| (GnuSettings.RATIO_CLIMB_RATE > 1)) history.setAlti(kalmanvert.getCalibratedPosition(), millis());
+    // set history 
+#if defined(HAVE_GPS)
+    if ((GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) || (GnuSettings.RATIO_CLIMB_RATE > 1))
+      varioData.history.setAlti(varioData.kalmanvert.getCalibratedPosition(), millis());
 #endif
 
-		double currentalti  = kalmanvert.getCalibratedPosition();
-		double currentvario = kalmanvert.getVelocity();
-//    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentalti);
-//    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentvario);
+    double currentalti = varioData.kalmanvert.getCalibratedPosition();
+    double currentvario = varioData.kalmanvert.getVelocity();
+    //    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentalti);
+    //    DUMPLOG(LOG_TYPE_DEBUG,KALMAN_DEBUG_LOG,currentvario);
 
 #ifdef DATA_DEBUG
     SerialPort.print("Kalman Alti : ");
@@ -1600,112 +1131,155 @@ void loop() {
     SerialPort.println(currentvario);
 #endif //DATA_DEBUG
 
-    /* set screen */
+    // set screen 
 
-//**********************************************************
-//  MAJ STATISTIQUE
-//**********************************************************
+    // **********************************************************
+    //  MAJ STATISTIQUE
+    // **********************************************************
 
-    flystat.SetAlti(currentalti);
-    flystat.SetVario(currentvario);
+    varioData.flystat.SetAlti(currentalti);
+    varioData.flystat.SetVario(currentvario);
 
 #ifdef HAVE_SCREEN
 
-//**********************************************************
-//  DISPLAY ALTI
-//**********************************************************
+    // **********************************************************
+    //  DISPLAY ALTI
+    // **********************************************************
 
 #ifdef DATA_DEBUG
- //   SerialPort.print("altitude : ");
- //   SerialPort.println(currentalti);
+    //   SerialPort.print("altitude : ");
+    //   SerialPort.println(currentalti);
 #endif //DATA_DEBUG
 
-    if (displayLowUpdateState) {
+    if (varioData.displayLowUpdateState)
+    {
       screen.altiDigit->setValue(currentalti);
-      #ifdef AGL_MANAGER_H
-      aglManager.setAlti(currentalti);
-      #endif
+#ifdef AGL_MANAGER_H
+      varioData.aglManager.setAlti(currentalti);
+#endif
     }
 
-//**********************************************************
-//  DISPLAY VARIO
-//**********************************************************
-    
-    if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) {    
-      if( history.haveNewClimbRate() ) {
-        if (displayLowUpdateState) screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
+    // **********************************************************
+    //  DISPLAY VARIO
+    // **********************************************************
+
+    if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
+    {
+      if (varioData.history.haveNewClimbRate())
+      {
+        if (varioData.displayLowUpdateState)
+          screen.varioDigit->setValue(varioData.history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
       }
-    } else {
-      if (displayLowUpdateState) screen.varioDigit->setValue(currentvario);    
+    }
+    else
+    {
+      if (varioData.displayLowUpdateState)
+        screen.varioDigit->setValue(currentvario);
     }
 
-//**********************************************************
-//  DISPLAY FINESSE / TAUX DE CHUTE MOYEN
-//**********************************************************
+    // **********************************************************
+    //  DISPLAY FINESSE / TAUX DE CHUTE MOYEN
+    // **********************************************************
 
-    if( history.haveNewClimbRate() ) {
+    if (varioData.history.haveNewClimbRate())
+    {
       double TmpTrend;
-      TmpTrend = history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT);
+      TmpTrend = varioData.history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT);
 #ifdef DATA_DEBUG
       SerialPort.print("Trend value : ");
       SerialPort.println(TmpTrend);
 #endif //DATA_DEBUG
-      
-      if (displayLowUpdateState) {
-        if (GnuSettings.RATIO_CLIMB_RATE > 1) {
-          if (abs(TmpTrend) < 10) screen.trendDigit->setValue(abs(TmpTrend)); 
-          else                    screen.trendDigit->setValue(9.9);
+
+      if (varioData.displayLowUpdateState)
+      {
+        if (GnuSettings.RATIO_CLIMB_RATE > 1)
+        {
+          if (abs(TmpTrend) < 10)
+            screen.trendDigit->setValue(abs(TmpTrend));
+          else
+            screen.trendDigit->setValue(9.9);
         }
 
 #ifdef DATA_DEBUG
         SerialPort.println("display trendLevel");
 #endif //DATA_DEBUG
 
-        if (TmpTrend == 0)     screen.trendLevel->stateTREND(0);
-        else if (TmpTrend > 0) screen.trendLevel->stateTREND(1);
-        else                   screen.trendLevel->stateTREND(-1);
+        if (TmpTrend == 0)
+          screen.trendLevel->stateTREND(0);
+        else if (TmpTrend > 0)
+          screen.trendLevel->stateTREND(1);
+        else
+          screen.trendLevel->stateTREND(-1);
       }
-    }  
-#else
-    if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE) {
-      if( history.haveNewClimbRate() ) {
-        if (displayLowUpdateState) screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
-      }
-    else {
-      if (displayLowUpdateState) screen.varioDigit->setValue(currentvario);
     }
+#else
+    if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
+    {
+      if (history.haveNewClimbRate())
+      {
+        if (displayLowUpdateState)
+          screen.varioDigit->setValue(history.getClimbRate(GnuSettings.SETTINGS_CLIMB_PERIOD_COUNT));
+      }
+      else
+      {
+        if (displayLowUpdateState)
+          screen.varioDigit->setValue(currentvario);
+      }
 #endif //HAVE_SCREEN
-     
-  } else {
+  }
+  else
+  {
 
-    /**************************************************************/
-    /*   ERREUR BAROMETRE / MPU                                   */
-    /**************************************************************/
-    
-    SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");   
+    // **************************************************************
+    // *   ERREUR BAROMETRE / MPU                                   *
+    // **************************************************************
+
+    SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");
 
     compteurErrorMPU++;
-    if (compteurErrorMPU > 20) {
+    if (compteurErrorMPU > 20)
+    {
       compteurErrorMPU = 20;
 
- //**********************************************************
-//  DISABLE BEEPER
-//**********************************************************
+      // **********************************************************
+      //  DISABLE BEEPER
+      // **********************************************************
 
 #ifdef HAVE_SPEAKER
-      beeper.setVelocity( 0 );
+      beeper.setVelocity(0);
 #endif //HAVE_SPEAKER
 
-      if (displayLowUpdateState) {
+      if (varioData.displayLowUpdateState)
+      {
         screen.altiDigit->setValue(0);
-        #ifdef AGL_MANAGER_H
-        aglManager.setAlti(0);
-        #endif
+#ifdef AGL_MANAGER_H
+        varioData.aglManager.setAlti(0);
+#endif
+      }
+
+      if (varioData.displayLowUpdateState)
+        screen.varioDigit->setValue(0);
+
+      double tmpAlti, tmpTemp, tmpAccel;
+
+      MESSLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,"ERREUR MPU");
+      if ( twScheduler.havePressure() ) {
+        twScheduler.getTempAlti(tmpTemp, tmpAlti);
+        DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpAlti);
+      } else {
+        MESSLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,"AUCUNE MESURE MS5611");       
       }
       
-      if (displayLowUpdateState) screen.varioDigit->setValue(0);    
+      if (twScheduler.haveAccel() ) {
+        tmpAccel = twScheduler.getAccel(NULL);
+        DUMPLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,tmpAccel);
+      } else {
+        MESSLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,"AUCUNE MESURE MPU");               
+      }
     }
-/*
+*/
+    
+    /*
 #ifdef TWOWIRESCHEDULER
     if( twScheduler.havePressure() ) {
     
@@ -1731,12 +1305,12 @@ void loop() {
       SerialPort.print("Temperature sans accelerometre: ");
       SerialPort.println(tmpTemp);
 #endif //DATA_DEBUG
-    }*/
-  }
+    }
+  }*/
 
-//**********************************************************
-//  EMISSION DES BIPS
-//**********************************************************
+  //**********************************************************
+  //  EMISSION DES BIPS
+  //**********************************************************
 
   /*****************/
   /* update beeper */
@@ -1748,75 +1322,97 @@ void loop() {
 #endif //PROG_DEBUG
 #endif //HAVE_SPEAKER
 
+  //**********************************************************
+  //  EMISSION TRAME BT
+  //  ACQUISITION GPS
+  //**********************************************************
 
- //**********************************************************
-//  EMISSIONTRAME BT
-//  ACQUISITION GPS
-//**********************************************************
+  // ********************
+  // * update bluetooth *
+  // ********************
 
-  /********************/
-  /* update bluetooth */
-  /********************/
+#ifdef HAVE_BLUETOOTH
+  if (varioData.updateBle())
+    {
+#ifdef GPS_DEBUG
+      SerialPort.println("Update BLE");
+#endif //GPS_DEBUG
+    }
+#endif //HAVE_BLUETOOTH
+
+ /* 
 #ifdef HAVE_BLUETOOTH
 #ifdef HAVE_GPS
-  /* in priority send vario nmea sentence */
-  if( bluetoothNMEA.available() ) {
-    while( bluetoothNMEA.available() ) {
-       serialNmea.write( bluetoothNMEA.get() );
+  // * in priority send vario nmea sentence *
+  if (varioHardwareManager.varioBle->bluetoothNMEA.available())
+  {
+    while (varioHardwareManager.varioBle->bluetoothNMEA.available())
+    {
+      serialNmea.write(varioHardwareManager.varioBle->bluetoothNMEA.get());
     }
     serialNmea.release();
   }
 #else //!HAVE_GPS
-  /* check the last vario nmea sentence */
-  if( millis() - lastVarioSentenceTimestamp > VARIOMETER_SENTENCE_DELAY ) {
+  // * check the last vario nmea sentence *
+  if (millis() - lastVarioSentenceTimestamp > VARIOMETER_SENTENCE_DELAY)
+  {
     lastVarioSentenceTimestamp = millis();
 #ifdef VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
-    bluetoothNMEA.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
+    bluetoothNMEA.begin(varioData.kalmanvert.getCalibratedPosition(), varioData.kalmanvert.getVelocity());
 #else
-    bluetoothNMEA.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
+    bluetoothNMEA.begin(varioData.kalmanvert.getPosition(), varioData.kalmanvert.getVelocity());
 #endif
-    while( bluetoothNMEA.available() ) {
-       serialNmea.write( bluetoothNMEA.get() );
+    while (bluetoothNMEA.available())
+    {
+      serialNmea.write(bluetoothNMEA.get());
     }
   }
 #endif //!HAVE_GPS
 #endif //HAVE_BLUETOOTH
+*/
 
-   /**************/
+  /**************/
   /* update GPS */
   /**************/
 #ifdef HAVE_GPS
 #ifdef HAVE_BLUETOOTH
   /* else try to parse GPS nmea */
-  else {
+  else
+  {
 #endif //HAVE_BLUETOOTH
-    
-    /* try to lock sentences */
-    if( serialNmea.lockRMC() ) {
-      
+
+/*
+    // * try to lock sentences *
+    if (serialNmea.lockRMC())
+    {
+
 #ifdef GPS_DEBUG
-    SerialPort.println("mneaParser : beginRMC");
+      SerialPort.println("mneaParser : beginRMC");
 #endif //GPS_DEBUG
 
-      nmeaParser.beginRMC();      
-    } else if( serialNmea.lockGGA() ) {
-      
+      nmeaParser.beginRMC();
+    }
+    else if (serialNmea.lockGGA())
+    {
+
 #ifdef GPS_DEBUG
-    SerialPort.println("mneaParser : beginGGA");
+      SerialPort.println("mneaParser : beginGGA");
 #endif //GPS_DEBUG
 
       nmeaParser.beginGGA();
 #ifdef HAVE_BLUETOOTH
-      lastSentence = true;
+      varioHardwareManager.varioBle->lastSentence = true;
 #endif //HAVE_BLUETOOTH
-#ifdef HAVE_SDCARD      
-      /* start to write IGC B frames */
-      if (!GnuSettings.NO_RECORD) igcSD.writePosition(kalmanvert);
+#ifdef HAVE_SDCARD
+      // * start to write IGC B frames *
+      if (!GnuSettings.NO_RECORD)
+        igcSD.writePosition(varioData.kalmanvert);
 #endif //HAVE_SDCARD
     }
-  
-    /* parse if needed */
-    if( nmeaParser.isParsing() ) {
+
+    // * parse if needed *
+    if (nmeaParser.isParsing())
+    {
 
 #ifdef GPS_DEBUG
       SerialPort.println("mneaParser : isParsing");
@@ -1825,314 +1421,379 @@ void loop() {
 #ifdef SDCARD_DEBUG
       SerialPort.print("writeGGA : ");
 #endif //SDCARD_DEBUG
-      
-      while( nmeaParser.isParsing() ) {
+
+      while (nmeaParser.isParsing())
+      {
         uint8_t c = serialNmea.read();
-        
-        /* parse sentence */        
-        nmeaParser.feed( c );
+
+        // * parse sentence *
+        nmeaParser.feed(c);
 
 #ifdef NMEAPARSER_DEBUG
         char tmpchar = c;
         SerialPort.print(tmpchar);
 #endif //NMEAPARSER_DEBUG
 
-#ifdef HAVE_SDCARD          
-        /* if GGA, convert to IGC and write to sdcard */
-        if( sdcardState == SDCARD_STATE_READY && nmeaParser.isParsingGGA() ) {
+#ifdef HAVE_SDCARD
+        // * if GGA, convert to IGC and write to sdcard *
+        if (sdcardState == SDCARD_STATE_READY && nmeaParser.isParsingGGA())
+        {
           igc.feed(c);
-/*          while( igc.available() ) {
-            fileIgc.write( igc.get() );
-          }*/
-          if (!GnuSettings.NO_RECORD) igcSD.writeGGA();          
+          // *          while( igc.available() ) {
+          //  fileIgc.write( igc.get() );
+          //}*
+          if (!GnuSettings.NO_RECORD)
+            igcSD.writeGGA();
         }
 #endif //HAVE_SDCARD
       }
 
 #ifdef NMEAPARSER_DEBUG
-          SerialPort.println("");
+      SerialPort.println("");
 #endif //NMEAPARSER_DEBUG
 
       serialNmea.release();
-#ifdef HAVE_SDCARD          
+#ifdef HAVE_SDCARD
       fileIgc.flush();
 #endif //HAVE_SDCARD
 #ifdef SDCARD_DEBUG
       SerialPort.println("");
 #endif //SDCARD_DEBUG
-    
-#ifdef HAVE_BLUETOOTH   
-      /* if this is the last GPS sentence */
-      /* we can send our sentences */
-      if( lastSentence ) {
-          lastSentence = false;
+
+#ifdef HAVE_BLUETOOTH
+      // * if this is the last GPS sentence *
+      // * we can send our sentences *
+      if (varioHardwareManager.varioBle->lastSentence)
+      {
+        varioHardwareManager.varioBle->lastSentence = false;
 #ifdef VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
-          bluetoothNMEA.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
+        varioHardwareManager.varioBle->bluetoothNMEA.begin(varioData.kalmanvert.getCalibratedPosition(), varioData.kalmanvert.getVelocity());
 #else
-          bluetoothNMEA.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
+        varioHardwareManager.varioBle->bluetoothNMEA.begin(varioData.kalmanvert.getPosition(), varioData.kalmanvert.getVelocity());
 #endif
-          serialNmea.lock(); //will be writed at next loop
+        serialNmea.lock(); //will be writed at next loop
       }
 #endif //HAVE_BLUETOOTH
-    }
 
+    }*/
 
-//**********************************************************
-//  DETECTION FIX GPS / DEBUT DU VOL
-//**********************************************************
-    
-    /***************************/
-    /* update variometer state */
-    /*    (after parsing)      */
-    /***************************/
-    if( variometerState < VARIOMETER_STATE_FLIGHT_STARTED ) {
+     varioData.updateGps();
 
-      /* if initial state check if date is recorded  */
-      if( variometerState == VARIOMETER_STATE_INITIAL ) {
-        if( nmeaParser.haveDate() ) {
-          
+    //**********************************************************
+    //  DETECTION FIX GPS / DEBUT DU VOL
+    //**********************************************************
+
+     varioData.updateState();
+
+/*
+    // ***************************
+    // * update variometer state *
+    // *    (after parsing)      *
+    // ***************************
+    if (varioData.variometerState < VARIOMETER_STATE_FLIGHT_STARTED)
+    {
+
+      // * if initial state check if date is recorded  *
+      if (varioData.variometerState == VARIOMETER_STATE_INITIAL)
+      {
+        if (nmeaParser.haveDate())
+        {
+
 #ifdef GPS_DEBUG
           SerialPort.println("VARIOMETER_STATE_DATE_RECORDED");
 #endif //GPS_DEBUG
 
-          variometerState = VARIOMETER_STATE_DATE_RECORDED;
+          varioData.variometerState = VARIOMETER_STATE_DATE_RECORDED;
         }
       }
-      
-      /* check if we need to calibrate the altimeter */
-      else if( variometerState == VARIOMETER_STATE_DATE_RECORDED ) {
+
+      // * check if we need to calibrate the altimeter *
+      else if (varioData.variometerState == VARIOMETER_STATE_DATE_RECORDED)
+      {
 
 #ifdef GPS_DEBUG
-          SerialPort.print("NmeaParser Precision : ");
-          SerialPort.println(nmeaParser.precision);
-          SerialPort.print("VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD : ");
-          SerialPort.println(VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD);        
+        SerialPort.print("NmeaParser Precision : ");
+        SerialPort.println(nmeaParser.precision);
+        SerialPort.print("VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD : ");
+        SerialPort.println(VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD);
 #endif //GPS_DEBUG
 
-        /* we need a good quality value */
-        if( nmeaParser.haveNewAltiValue() && nmeaParser.precision < VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD ) {
+        // * we need a good quality value *
+        if (nmeaParser.haveNewAltiValue() && nmeaParser.precision < VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD)
+        {
 
-          compteurGpsFix++;
+          varioData.compteurGpsFix++;
           double tmpGpsAlti = nmeaParser.getAlti();
-          aglManager.setAltiGps(tmpGpsAlti);
+          varioData.aglManager.setAltiGps(tmpGpsAlti);
 
- //         DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,tmpGpsAlti);
+          //         DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,tmpGpsAlti);
 
           //Moyenne alti gps
-          if (compteurGpsFix > 5) gpsAlti = (gpsAlti + tmpGpsAlti) / 2;
-          else                    gpsAlti = tmpGpsAlti;       
+          if (varioData.compteurGpsFix > 5)
+            varioData.gpsAlti = (varioData.gpsAlti + tmpGpsAlti) / 2;
+          else
+            varioData.gpsAlti = tmpGpsAlti;
 
 #ifdef GPS_DEBUG
           SerialPort.print("CompteurGpsFix : ");
           SerialPort.println(compteurGpsFix);
 #endif //GPS_DEBUG
-          
+
 #ifdef HAVE_SCREEN
           screen.recordIndicator->setActifGPSFIX();
-        //  recordIndicator->stateRECORD();
+          //  recordIndicator->stateRECORD();
 #endif //HAVE_SCREEN
 
 #if defined(DATA_DEBUG) || defined(GPS_DEBUG)
           SerialPort.print("Gps Alti : ");
-          SerialPort.println(gpsAlti);
+          SerialPort.println(varioData.gpsAlti);
 #endif //DATA_DEBUG
 
-          if (compteurGpsFix > NB_ACQUISITION_FIX_GPS) {
+          if (varioData.compteurGpsFix > NB_ACQUISITION_FIX_GPS)
+          {
 #ifdef GPS_DEBUG
             SerialPort.println("GPS FIX");
 #endif //GPS_DEBUG
-          
-          /* calibrate */
- #ifdef HAVE_SPEAKER 
-            if (GnuSettings.ALARM_GPSFIX) {
- //           toneAC(BEEP_FREQ);
+
+            // * calibrate *
+#ifdef HAVE_SPEAKER
+            if (GnuSettings.ALARM_GPSFIX)
+            {
+              //           toneAC(BEEP_FREQ);
               beeper.generateTone(GnuSettings.BEEP_FREQ, 200);
-//            delay(200);
-//            toneAC(0);
+              //            delay(200);
+              //            toneAC(0);
             }
- #endif //defined(HAVE_SPEAKER) 
+#endif //defined(HAVE_SPEAKER)
 
 #ifdef HAVE_SCREEN
             screen.fixgpsinfo->setFixGps();
             screen.recordIndicator->setActifGPSFIX();
-        //  recordIndicator->stateRECORD();
+            //  recordIndicator->stateRECORD();
 #endif //HAVE_SCREEN
-            kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
-/*            if (currentHeight == 0) kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
-            else                    kalmanvert.calibratePosition(gpsAlti+currentHeight);*/
+            varioData.kalmanvert.calibratePosition(varioData.gpsAlti + GnuSettings.COMPENSATION_GPSALTI);
+//                        if (currentHeight == 0) kalmanvert.calibratePosition(gpsAlti+GnuSettings.COMPENSATION_GPSALTI);
+//            else                    kalmanvert.calibratePosition(gpsAlti+currentHeight);
 
 #ifdef DATA_DEBUG
             SerialPort.print("Gps Alti : ");
-            SerialPort.println(gpsAlti);
+            SerialPort.println(varioData.gpsAlti);
 #endif //DATA_DEBUG
 
 #ifdef GPS_DEBUG
             SerialPort.print("GpsAlti : ");
-            SerialPort.println(gpsAlti);
-            SerialPort.println("Kalman CalibratePosition");        
+            SerialPort.println(varioData.gpsAlti);
+            SerialPort.println("Kalman CalibratePosition");
 #endif //GPS_DEBUG
-          
-#if defined(HAVE_GPS) 
-            if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)  history.init(gpsAlti, millis());
-#endif //defined(HAVE_GPS) 
 
-            variometerState = VARIOMETER_STATE_CALIBRATED;
+#if defined(HAVE_GPS)
+            if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
+              varioData.history.init(varioData.gpsAlti, millis());
+#endif //defined(HAVE_GPS)
+
+            varioData.variometerState = VARIOMETER_STATE_CALIBRATED;
 
 #ifdef GPS_DEBUG
-            SerialPort.println("GPS Calibrated");        
+            SerialPort.println("GPS Calibrated");
 #endif //GPS_DEBUG
-          
-#ifdef HAVE_SDCARD 
-            if (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) {
+
+#ifdef HAVE_SDCARD
+            if (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)
+            {
 
 #ifdef SDCARD_DEBUG
-              SerialPort.println("createSDCardTrackFile");        
+              SerialPort.println("createSDCardTrackFile");
 #endif //SDCARD_DEBUG
 
-             createSDCardTrackFile();
+              createSDCardTrackFile();
             }
 #endif //HAVE_SDCARD
           }
         }
       }
-      
-      /* else check if the flight have started */
-      else {  //variometerState == VARIOMETER_STATE_CALIBRATED
-        
-        /* check flight start condition */
 
-        DUMP(kalmanvert.getVelocity());
+      // * else check if the flight have started *
+      else
+      { //variometerState == VARIOMETER_STATE_CALIBRATED
+
+        // * check flight start condition *
+
+        DUMP(varioData.kalmanvert.getVelocity());
         DUMP(GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD);
         DUMP(GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD);
-        
-        if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
-            ((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&   
-             ((kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD)) 
+
+        if ((millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
+                ((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&
+                 ((varioData.kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (varioData.kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD))
 #ifdef HAVE_GPS
 
-             && (nmeaParser.getSpeed() > GnuSettings.FLIGHT_START_MIN_SPEED)
+                 && (nmeaParser.getSpeed() > GnuSettings.FLIGHT_START_MIN_SPEED)
 #endif //HAVE_GPS
 
-            ) || (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)
-     
-  //        && (kalmanvert.getVelocity() < FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > FLIGHT_START_VARIO_HIGH_THRESHOLD) &&
-          ) {
-//          variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
+                     ) ||
+            (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)
+
+            //        && (kalmanvert.getVelocity() < FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > FLIGHT_START_VARIO_HIGH_THRESHOLD) &&
+        )
+        {
+          //          variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
           enableflightStartComponents();
         }
       }
     }
+ */
 #ifdef HAVE_BLUETOOTH
   }
 #endif //HAVE_BLUETOOTH
-#endif //HAVE_GPS
 
+#ifdef HAVE_SCREEN
+        if ((varioData.gpsFix > 0) && (varioData.gpsFix < 3))  screen.recordIndicator->setActifGPSFIX();
+        if (varioData.gpsFix == 2) screen.fixgpsinfo->setFixGps();
+        
+#endif //HAVE_SCREEN
 
-//**********************************************************
-//  MISE A JOUR ALTI AVEC GPS
-//**********************************************************
+//#endif //HAVE_GPS
 
-  /* if no GPS, we can't calibrate, and we have juste to check flight start */
+#else //HAVE_GPS
+
+  // * if no GPS, we can't calibrate, and we have juste to check flight start *
+
+    //**********************************************************
+    //  DETECTION FIX GPS / DEBUT DU VOL
+    //**********************************************************
+
+     varioData.updateState();
+
+/*  
 #ifndef HAVE_GPS
-  if( variometerState == VARIOMETER_STATE_CALIBRATED ) { //already calibrated at start 
-/*    if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
+  if (varioHardwareManager.variometerState == VARIOMETER_STATE_CALIBRATED)
+  { //already calibrated at start
+    / *    if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
         (kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD || kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD) ) {
       variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
-      enableflightStartComponents();*/
+      enableflightStartComponents();*
 
-
-      if( (millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
-          (((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&   
-           ((kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD))) || 
-           (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START))) {
-//        variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
-        enableflightStartComponents();      
+    if ((millis() > GnuSettings.FLIGHT_START_MIN_TIMESTAMP) &&
+        (((GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) &&
+          ((varioData.kalmanvert.getVelocity() < GnuSettings.FLIGHT_START_VARIO_LOW_THRESHOLD) || (varioData.kalmanvert.getVelocity() > GnuSettings.FLIGHT_START_VARIO_HIGH_THRESHOLD))) ||
+         (!GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)))
+    {
+      //        variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
+      enableflightStartComponents();
     }
-  }
+  }*/
 #endif // !HAVE_GPS
+
+////////////////////////////////////
+
 
   /**********************************/
   /* update low freq screen objects */
   /**********************************/
 #ifdef HAVE_SCREEN
 
+  //**********************************************************
+  //  DISPLAY TIME / DUREE DU VOL
+  //**********************************************************
 
-//**********************************************************
-//  DISPLAY TIME / DUREE DU VOL
-//**********************************************************
-
-/************************************/
-/* Update Time, duration            */
-/* Voltage, SatLevel                */
-/************************************/
+  /************************************/
+  /* Update Time, duration            */
+  /* Voltage, SatLevel                */
+  /************************************/
 
 #ifdef HAVE_GPS
 
-  if (displayLowUpdateState) {
-    if (nmeaParser.haveDate()) {
-      
+  if (varioData.displayLowUpdateState)
+  {
+    if (nmeaParser.haveDate())
+    {
+
       /* set time */
 #if defined(GPS_DEBUG) || defined(DATA_DEBUG)
       SerialPort.print("Time : ");
       SerialPort.println(nmeaParser.time);
 #endif //GPS_DEBUG
 
-//      DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.time);
+      //      DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.time);
 
-      screen.screenTime->setTime( nmeaParser.time );
-      screen.screenTime->correctTimeZone( GnuSettings.VARIOMETER_TIME_ZONE );
-      screen.screenElapsedTime->setCurrentTime( screen.screenTime->getTime() );
-      flystat.SetTime(screen.screenTime->getTime());
-      flystat.SetDuration(screen.screenElapsedTime->getTime());      
+      screen.screenTime->setTime(nmeaParser.time);
+      screen.screenTime->correctTimeZone(GnuSettings.VARIOMETER_TIME_ZONE);
+      if (varioData.getVariometerState() == VARIOMETER_STATE_FLIGHT_STARTED)
+      { 
+        screen.screenElapsedTime->setCurrentTime(screen.screenTime->getTime());
+        varioData.flystat.SetTime(screen.screenTime->getTime());
+        varioData.flystat.SetDuration(screen.screenElapsedTime->getTime());
+      }
+      else
+      {
+        screen.screenElapsedTime->setCurrentTime(screen.screenTime->getTime());       
+      }
     }
-    
-      /* update satelite count */
-    screen.satLevel->setSatelliteCount( nmeaParser.satelliteCount );
+
+    /* update satelite count */
+    screen.satLevel->setSatelliteCount(nmeaParser.satelliteCount);
 #ifdef GPS_DEBUG
     SerialPort.print("Sat : ");
     SerialPort.println(nmeaParser.satelliteCount);
-#endif //GPS_DEBUG
-//    DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.satelliteCount);
-  }    
-#endif //HAVE_GPS  
+#endif //GPS_DEBUG 
+       //    DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,nmeaParser.satelliteCount);
+  }
+#endif //HAVE_GPS
 
   /*****************/
   /* update screen */
   /*****************/
 
-//**********************************************************
-//  DISPLAY SPEED
-//**********************************************************
-  
-#ifdef HAVE_GPS
-  /* when getting speed from gps, display speed and ratio */
+  //**********************************************************
+  //  DISPLAY SPEED
+  //**********************************************************
 
-  if ((variometerState >= VARIOMETER_STATE_DATE_RECORDED ) && ( nmeaParser.haveNewSpeedValue() )) {
+#ifdef HAVE_GPS
+
+    if (varioData.updateSpeed())
+    {
+      screen.speedDigit->setValue(varioData.currentSpeed);
+      screen.ratioDigit->setValue(varioData.ratio);
+    }
+
+/*
+#ifdef HAVE_GPS
+  // * when getting speed from gps, display speed and ratio *
+
+  if ((varioData.variometerState >= VARIOMETER_STATE_DATE_RECORDED) && (nmeaParser.haveNewSpeedValue()))
+  {
 
     double currentSpeed = nmeaParser.getSpeed();
-    double ratio = history.getGlideRatio(currentSpeed, serialNmea.getReceiveTimestamp(), GnuSettings.SETTINGS_GLIDE_RATIO_PERIOD_COUNT);
+    double ratio = varioData.history.getGlideRatio(currentSpeed, serialNmea.getReceiveTimestamp(), GnuSettings.SETTINGS_GLIDE_RATIO_PERIOD_COUNT);
 
 #if defined(GPS_DEBUG) || defined(DATA_DEBUG)
-          SerialPort.print("GpsSpeed : ");
-          SerialPort.println(currentSpeed);
+    SerialPort.print("GpsSpeed : ");
+    SerialPort.println(currentSpeed);
 #endif //GPS_DEBUG
 
-//     DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,currentSpeed);
+    //     DUMPLOG(LOG_TYPE_DEBUG,GPS_DEBUG_LOG,currentSpeed);
 
-     flystat.SetSpeed(currentSpeed);
+    varioData.flystat.SetSpeed(currentSpeed);
 
-    // display speed and ratio    
-    if (currentSpeed > 99)      screen.speedDigit->setValue( 99 );
-    else                        screen.speedDigit->setValue( currentSpeed );
+    // display speed and ratio
+    if (currentSpeed > 99)
+      screen.speedDigit->setValue(99);
+    else
+      screen.speedDigit->setValue(currentSpeed);
 
-    if ( currentSpeed >= GnuSettings.RATIO_MIN_SPEED && ratio >= 0.0 && ratio < GnuSettings.RATIO_MAX_VALUE  && displayLowUpdateState) {
+    if (currentSpeed >= GnuSettings.RATIO_MIN_SPEED && ratio >= 0.0 && ratio < GnuSettings.RATIO_MAX_VALUE && varioData.displayLowUpdateState)
+    {
       screen.ratioDigit->setValue(ratio);
-    } else {
+    }
+    else
+    {
       screen.ratioDigit->setValue(0.0);
     }
   }
+*/  
 #endif //HAVE_GPS
-/*  if( millis() - lastDisplayTimestamp > 1000 ) {
+
+       /*  if( millis() - lastDisplayTimestamp > 1000 ) {
 
     lastDisplayTimestamp = millis();
     //Serial.println(intTW.lastTwError);
@@ -2172,89 +1833,99 @@ void loop() {
     fileIgc.print(nmeaParser.time);
     fileIgc.print(" - ");
     fileIgc.println(kalmanvert.getVelocity());
-#endif //HAVE_GPS*/
+#endif //HAVE_GPS
 
+  // }*/
 
+  //**********************************************************
+  //   DISPLAY LOW FRECQUENCE OBJECT
+  //**********************************************************
 
- // }
+  if (varioData.displayLowUpdateState)
+  {
 
-//**********************************************************
-//   DISPLAY LOW FRECQUENCE OBJECT
-//********************************************************** 
+    //**********************************************************
+    //  ACQUISITION / DISPLAY TENSION BATTERIE
+    //**********************************************************
 
-  if (displayLowUpdateState) {
+#if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR)
+    varioData.updateVoltage();
+    screen.batLevel->setVoltage(varioData.voltage);
 
-//**********************************************************
-//  ACQUISITION / DISPLAY TENSION BATTERIE
-//**********************************************************
+/*
+    //  int tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
+    //  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
 
-#if defined(HAVE_SCREEN) && defined(HAVE_VOLTAGE_DIVISOR) 
-//  int tmpVoltage = analogRead(VOLTAGE_DIVISOR_PIN);
-//  if (maxVoltage < tmpVoltage) {maxVoltage = tmpVoltage;}
+    // * update battery level *
 
-      /* update battery level */
-
-      
 #if defined(VOLTAGE_DIVISOR_DEBUG)
     int val = adc1_get_raw(ADC1_CHANNEL_7);
 
     SerialPort.print("Tension : ");
     SerialPort.println(val);
-    if (compteurBoucle == 5) DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG,val);
+    if (compteurBoucle == 5)
+      DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG, val);
 #endif //VOLTAGE_DIVISOR_DEBUG
 
-  long TmpVoltage = 0;
-  for(int i=0; i<10; i++) TmpVoltage += analogRead(VOLTAGE_DIVISOR_PIN);  
-  TmpVoltage = TmpVoltage / 10;
+    long TmpVoltage = 0;
+    for (int i = 0; i < 10; i++)
+      TmpVoltage += analogRead(VOLTAGE_DIVISOR_PIN);
+    TmpVoltage = TmpVoltage / 10;
 
-  if (compteurBoucle == 4) {
-    DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG,TmpVoltage);
-    compteurBoucle = 0;
-  }
-  else {
-    compteurBoucle++;
-  }
-  
-  if (TmpVoltage > MaxVoltage) MaxVoltage = TmpVoltage;
-  
-    if (MaxVoltage < 1750) {
-      if (millis() - time_deep_sleep > 10000) {
-        screen.ScreenViewMessage("Bat Low",3);
-        indicatePowerDown(); 
-//        TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG);
-        MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,"Deep sleep - Batterie low");
-        DUMPLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG,MaxVoltage);
-        deep_sleep("Batt Low");  //protection batterie
-      }
-    } else {
-      time_deep_sleep = millis();        
+    if (compteurBoucle == 4)
+    {
+      DUMPLOG(LOG_TYPE_DEBUG, VOLTAGE_DEBUG_LOG, TmpVoltage);
+      compteurBoucle = 0;
+    }
+    else
+    {
+      compteurBoucle++;
     }
 
-    screen.batLevel->setVoltage(MaxVoltage);
-    MaxVoltage   = 0;
-//  batLevel.setVoltage( maxVoltage );
-//  maxVoltage = 0;
+    if (TmpVoltage > varioData.MaxVoltage)
+      varioData.MaxVoltage = TmpVoltage;
+
+    if (varioData.MaxVoltage < 1750)
+    {
+      if (millis() - varioHardwareManager.time_deep_sleep > 10000)
+      {
+        screen.ScreenViewMessage("Bat Low", 3);
+        indicatePowerDown();
+        //        TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG);
+        MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG, "Deep sleep - Batterie low");
+        DUMPLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG, varioData.MaxVoltage);
+        deep_sleep("Batt Low"); //protection batterie
+      }
+    }
+    else
+    {
+      varioHardwareManager.time_deep_sleep = millis();
+    }
+
+    screen.batLevel->setVoltage(varioData.MaxVoltage);
+    varioData.MaxVoltage = 0;
+    //  batLevel.setVoltage( maxVoltage );
+    //  maxVoltage = 0;
+*/
 
 #endif //HAVE_VOLTAGE_DIVISOR
 
-//**********************************************************
-//  DISPLAY STATE RECORD
-//**********************************************************
+    //**********************************************************
+    //  DISPLAY STATE RECORD
+    //**********************************************************
 
     screen.recordIndicator->stateRECORD();
 #ifdef PROG_DEBUG
-//    SerialPort.println("Record Indicator : staterecord ");
+    //    SerialPort.println("Record Indicator : staterecord ");
     SerialPort.print("VarioState : ");
-    SerialPort.println(variometerState);
+    SerialPort.println(varioData.getVariometerState());
 #endif //PROG_DEBUG
-      
   }
 
-
-//**********************************************************
-//  DISPLAY TEMPERATURE ESP32
-//**********************************************************
-/*
+  //**********************************************************
+  //  DISPLAY TEMPERATURE ESP32
+  //**********************************************************
+  /*
    if (displayLowUpdateState) {
     
 #ifdef PROG_DEBUG
@@ -2265,131 +1936,165 @@ void loop() {
 #endif //PROG_DEBUG
   }*/
 
-//**********************************************************
-//  DISPLAY BEARING
-//**********************************************************
+  //**********************************************************
+  //  DISPLAY BEARING 
+  //**********************************************************
 
-  if (displayLowUpdateState) {
-    
-    if (nmeaParser.haveBearing()) {
+  if (varioData.displayLowUpdateState)
+  {
 
-      double bearing    = nmeaParser.getBearing();
+    int tmpcap = varioData.getCap();
+    if (tmpcap > 0) {
+      String bearingStr = nmeaParser.Bearing_to_Ordinal(tmpcap);
+#ifdef DATA_DEBUG
+      SerialPort.print("Compas : ");
+      SerialPort.print(tmpcap);
+      SerialPort.print(" - ");
+      SerialPort.println(bearingStr);
+#endif //DATA_DEBUG
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, tmpcap);
+      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearingStr);
+
+      screen.gpsBearing->setValue(tmpcap);
+      screen.gpsBearingText->setValue(bearingStr);
+#if (VARIOSCREEN_SIZE == 291)
+      screen.bearing->setValue(tmpcap);
+      screen.bearingText->setValue(bearingStr);
+#endif
+    }
+
+/*    if (nmeaParser.haveBearing())
+    {
+
+      double bearing = nmeaParser.getBearing();
       String bearingStr = nmeaParser.Bearing_to_Ordinal(bearing);
 #ifdef DATA_DEBUG
       SerialPort.print("Compas : ");
       SerialPort.print(bearing);
       SerialPort.print(" - ");
       SerialPort.println(bearingStr);
-#endif //DATA_DEBUG     
+#endif //DATA_DEBUG
       DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearing);
       DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearingStr);
 
-     screen.gpsBearing->setValue(bearing); 
-     screen.gpsBearingText->setValue(bearingStr); 
-    }
+      screen.gpsBearing->setValue(bearing);
+      screen.gpsBearingText->setValue(bearingStr);
+    }*/
 
-    if (nmeaParser.haveLongitude()) {
-      String longitude = nmeaParser.getLongitude();      
+    if (nmeaParser.haveLongitude())
+    {
+      String longitude = nmeaParser.getLongitude();
 #ifdef DATA_DEBUG
       SerialPort.print("Longitude : ");
       SerialPort.println(longitude);
-#endif //DATA_DEBUG     
+#endif //DATA_DEBUG
       DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, longitude);
-      #ifdef AGL_MANAGER_H
-      aglManager.setLongitude(nmeaParser.getLong());
-      #endif
-//      screen.gpsLongDir->setValue(String(nmeaParser.getLongDir()));
-//      screen.gpsLong->setValue(nmeaParser.getLong());
+#ifdef AGL_MANAGER_H
+      varioData.aglManager.setLongitude(nmeaParser.getLong());
+#endif
+      //      screen.gpsLongDir->setValue(String(nmeaParser.getLongDir()));
+      //      screen.gpsLong->setValue(nmeaParser.getLong());
       screen.gpsLong->setValue(nmeaParser.getLongDegree());
     }
 
-    if (nmeaParser.haveLatitude()) {
+    if (nmeaParser.haveLatitude())
+    {
       String latitude = nmeaParser.getLatitude();
 #ifdef DATA_DEBUG
       SerialPort.print("Latitude : ");
       SerialPort.println(latitude);
-#endif //DATA_DEBUG     
+#endif //DATA_DEBUG
       DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, latitude);
-      #ifdef AGL_MANAGER_H
-      aglManager.setLatitude(nmeaParser.getLat());
-      #endif
-//      screen.gpsLatDir->setValue(String(nmeaParser.getLatDir()));
-//      screen.gpsLat->setValue(nmeaParser.getLat());
+#ifdef AGL_MANAGER_H
+      varioData.aglManager.setLatitude(nmeaParser.getLat());
+#endif
+      //      screen.gpsLatDir->setValue(String(nmeaParser.getLatDir()));
+      //      screen.gpsLat->setValue(nmeaParser.getLat());
       screen.gpsLat->setValue(nmeaParser.getLatDegree());
     }
-    #ifdef AGL_MANAGER_H
-      currentHeight = aglManager.getHeight();
+    
+#ifdef AGL_MANAGER_H
+    varioData.currentHeight = varioData.aglManager.getHeight();
 #ifdef PROG_DEBUG
-      SerialPort.print("Height : ");
-      SerialPort.println(currentHeight);
-#endif //PROG_DEBUG     
-      screen.heightDigit->setValue(currentHeight);
-      #endif
+    SerialPort.print("Height : ");
+    SerialPort.println(varioData.currentHeight);
+#endif //PROG_DEBUG
+    screen.heightDigit->setValue(varioData.currentHeight);
+#endif
+
+    if (nmeaParser.haveNewAltiValue()) {
+      varioData.gpsAlti = nmeaParser.getAlti();
+      varioData.aglManager.setAltiGps(varioData.gpsAlti);
+    }
   }
-   
-  displayLowUpdateState = false;
 
-// Passes control to other tasks when called
-  SysCall::yield();
+  varioData.displayLowUpdateState = false;
 
-//**********************************************************
-//  UPDATE DISPLAY
-//**********************************************************
+  // Passes control to other tasks when called
+//  SysCall::yield();
+
+  //**********************************************************
+  //  UPDATE DISPLAY
+  //**********************************************************
 
 #ifdef PROG_DEBUG
-    //SerialPort.println("Update Screen");
+  //SerialPort.println("Update Screen");
 #endif //PROG_DEBUG
 
-  if (screen.schedulerScreen->displayStep()) {
-    screen.updateScreen(); 
+  if (screen.schedulerScreen->displayStep())
+  {
+    screen.updateScreen();
   }
- 
+
 #endif //HAVE_SCREEN
 
-//**********************************************************
-//  UPDATE STATISTIQUE
-//**********************************************************
+  //**********************************************************
+  //  UPDATE STATISTIQUE
+  //**********************************************************
 
-  flystat.Handle(); 
+  varioData.flystat.Handle();
 
-//*****************************************
-//      FORCE L'ACTIVATION DE L'AMPLI          
-//*****************************************  
+  //*****************************************
+  //      FORCE L'ACTIVATION DE L'AMPLI
+  //*****************************************
 
 #ifdef HAVE_AUDIO_AMPLI
-  toneHAL.enableAmpli();
+//  toneHAL.enableAmpli();
 #endif
-  
-/*******************************/
-/*******************************/ 
+
+  /*******************************/
+  /*******************************/
 }
 
-
-/**************************************************/
+/*
+// **************************************************
 #if defined(HAVE_SDCARD) && defined(HAVE_GPS)
-void createSDCardTrackFile(void) {
-/**************************************************/  
-  /* start the sdcard record */
+void createSDCardTrackFile(void)
+{
+// **************************************************
+  // * start the sdcard record *
 
 #ifdef SDCARD_DEBUG
-      SerialPort.println("createSDCardTrackFile : begin ");
+  SerialPort.println("createSDCardTrackFile : begin ");
 #endif //SDCARD_DEBUG
- 
-  if( sdcardState == SDCARD_STATE_INITIALIZED ) {
+
+  if (sdcardState == SDCARD_STATE_INITIALIZED)
+  {
 
 #ifdef SDCARD_DEBUG
     SerialPort.println("createSDCardTrackFile : SDCARD_STATE_INITIALIZED ");
 #endif //SDCARD_DEBUG
 
-    flystat.Begin();
+    varioData.flystat.Begin();
     uint8_t dateN[3];
-    igcSD.CreateIgcFile(dateN,GnuSettings.NO_RECORD);
+    igcSD.CreateIgcFile(dateN, GnuSettings.NO_RECORD);
 
 #ifdef SDCARD_DEBUG
     SerialPort.print("DateNum Gnuvario-E.ino : ");
 #endif //SDCARD_DEBUG
 
-    for(uint8_t i=0; i<3; i++) {
+    for (uint8_t i = 0; i < 3; i++)
+    {
 #ifdef SDCARD_DEBUG
       SerialPort.print(dateN[i]);
       SerialPort.print(" - ");
@@ -2399,99 +2104,107 @@ void createSDCardTrackFile(void) {
 #ifdef SDCARD_DEBUG
     SerialPort.println("");
 #endif //SDCARD_DEBUG
-    
-    flystat.SetDate(dateN);
+
+    varioData.flystat.SetDate(dateN);
   }
 }
 #endif //defined(HAVE_SDCARD) && defined(HAVE_GPS)
 
-
-
-
-/*******************************************/
-void enableflightStartComponents(void) {
-/*******************************************/  
+// *******************************************
+void enableflightStartComponents(void)
+{
+// *******************************************
 
 #ifdef PROG_DEBUG
   SerialPort.println("enableflightStartComponents ");
 #endif //SDCARD_DEBUG
 
-  variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
+  varioData.variometerState = VARIOMETER_STATE_FLIGHT_STARTED;
 
-  if (!GnuSettings.NO_RECORD) {
-    
+  if (!GnuSettings.NO_RECORD)
+  {
+
 #ifdef HAVE_SPEAKER
-    if (GnuSettings.ALARM_FLYBEGIN) {
-      for( int i = 0; i<2; i++) {
-  //     toneAC(BEEP_FREQ);
- //     delay(200);
-  //    toneAC(0);
+    if (GnuSettings.ALARM_FLYBEGIN)
+    {
+      for (int i = 0; i < 2; i++)
+      {
+        //     toneAC(BEEP_FREQ);
+        //     delay(200);
+        //    toneAC(0);
         beeper.generateTone(GnuSettings.BEEP_FREQ, 200);
         delay(200);
       }
     }
-#endif //HAVE_SPEAKER 
+#endif //HAVE_SPEAKER
   }
-  
-  /* set base time */
+
+  // * set base time *
 #if defined(HAVE_SCREEN) && defined(HAVE_GPS)
 #ifdef PROG_DEBUG
   SerialPort.println("screenElapsedTime");
 #endif //SDCARD_DEBUG
 
-  if (nmeaParser.haveDate()) {
-      
-      /* set time */
+  if (nmeaParser.haveDate())
+  {
+
+    // * set time *
 #if defined(GPS_DEBUG) || defined(DATA_DEBUG)
     SerialPort.print("Time : ");
     SerialPort.println(nmeaParser.time);
 #endif //GPS_DEBUG
 
-    screen.screenTime->setTime( nmeaParser.time );
-    screen.screenTime->correctTimeZone( GnuSettings.VARIOMETER_TIME_ZONE );
+    screen.screenTime->setTime(nmeaParser.time);
+    screen.screenTime->correctTimeZone(GnuSettings.VARIOMETER_TIME_ZONE);
 
-    screen.screenElapsedTime->setBaseTime( screen.screenTime->getTime() );
+    screen.screenElapsedTime->setBaseTime(screen.screenTime->getTime());
 #endif //defined(HAVE_SCREEN) && defined(HAVE_GPS)
   }
 
-  /* enable near climbing */
+  // * enable near climbing *
 #ifdef HAVE_SPEAKER
-//#ifdef VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM
-if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM) {
-  beeper.setGlidingAlarmState(true);
-}
-//#endif
+  //#ifdef VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM
+  if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_ALARM)
+  {
+    beeper.setGlidingAlarmState(true);
+  }
+  //#endif
 
-//#ifdef VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP
-if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP) {
-  beeper.setGlidingBeepState(true);
-}
+  //#ifdef VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP
+  if (GnuSettings.VARIOMETER_ENABLE_NEAR_CLIMBING_BEEP)
+  {
+    beeper.setGlidingBeepState(true);
+  }
 //#endif
 #endif //HAVE_SPEAKER
 
-#if defined(HAVE_SDCARD) && defined(HAVE_GPS) 
-//&& defined(VARIOMETER_RECORD_WHEN_FLIGHT_START)
-  if (GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START && (!GnuSettings.NO_RECORD)) {
-  
+#if defined(HAVE_SDCARD) && defined(HAVE_GPS)
+  //&& defined(VARIOMETER_RECORD_WHEN_FLIGHT_START)
+  if (GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START && (!GnuSettings.NO_RECORD))
+  {
+
 #ifdef SDCARD_DEBUG
-    SerialPort.println("createSDCardTrackFile");        
+    SerialPort.println("createSDCardTrackFile");
 #endif //SDCARD_DEBUG
 
     createSDCardTrackFile();
   }
 #endif // defined(HAVE_SDCARD) && defined(VARIOMETER_RECORD_WHEN_FLIGHT_START)
 
-  if (!GnuSettings.NO_RECORD) {
+  if (!GnuSettings.NO_RECORD)
+  {
 #ifdef SDCARD_DEBUG
-    SerialPort.println("Record Start");        
+    SerialPort.println("Record Start");
 #endif //SDCARD_DEBUG
 
     screen.recordIndicator->setActifRECORD();
     screen.recordIndicator->stateRECORD();
   }
-  else {
+  else
+  {
     screen.recordIndicator->setNoRECORD();
     screen.recordIndicator->stateRECORD();
   }
-  flystat.Enable(); 
+  varioData.flystat.Enable();
 }
+*/

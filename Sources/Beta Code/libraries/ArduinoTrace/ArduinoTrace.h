@@ -1,5 +1,5 @@
 // ArduinoTrace - github.com/bblanchon/ArduinoTrace
-// Copyright Benoit Blanchon 2018-2019
+// Copyright Benoit Blanchon 2018-2020
 // MIT License
 //
 // A simple tracing macro to debug you program.
@@ -41,6 +41,14 @@
 #define ARDUINOTRACE_ENABLE_FULLPATH 0
 #else
 #define ARDUINOTRACE_ENABLE_FULLPATH 1
+#endif
+
+#ifndef ARDUINOTRACE_FUNCTION_NAME_IN_FLASH
+#if defined(ESP8266)
+#define ARDUINOTRACE_FUNCTION_NAME_IN_FLASH 1
+#else
+#define ARDUINOTRACE_FUNCTION_NAME_IN_FLASH 0
+#endif
 #endif
 
 namespace ArduinoTrace {
@@ -124,6 +132,13 @@ struct Printer {
 #define ARDUINOTRACE_FLASHIFY(X) X
 #endif
 
+#if ARDUINOTRACE_FUNCTION_NAME_IN_FLASH
+#define ARDUINOTRACE_FUNCTION_NAME \
+  reinterpret_cast<const __FlashStringHelper *>(__PRETTY_FUNCTION__)
+#else
+#define ARDUINOTRACE_FUNCTION_NAME __PRETTY_FUNCTION__
+#endif
+
 #define ARDUINOTRACE_PRINT(id, file, prefix, content)                         \
   {                                                                           \
     struct __filename {                                                       \
@@ -136,7 +151,7 @@ struct Printer {
                                                          content);            \
   }
 
-#define ARDUINOTRACE_INIITIALIZE(id, bauds)                         \
+#define ARDUINOTRACE_INITIALIZE(id, bauds)                          \
   ArduinoTrace::Initializer ARDUINOTRACE_CONCAT(__initializer, id)( \
       ARDUINOTRACE_SERIAL, bauds);
 
@@ -149,16 +164,17 @@ struct Printer {
 //
 // Use this macro only if you want to call TRACE() at global scope,
 // in other cases, call Serial.begin() in your setup() function, as usual.
-#define ARDUINOTRACE_INIT(bauds) ARDUINOTRACE_INIITIALIZE(__COUNTER__, bauds);
+#define ARDUINOTRACE_INIT(bauds) ARDUINOTRACE_INITIALIZE(__COUNTER__, bauds);
 
 // Adds a trace in the Serial port
 //
 // Call this macro anywhere, including at global scope.
 // However, if you use it at global scope, you need to call ARDUINOTRACE_INIT()
 // first, otherwise, the Serial port will not be ready.
-#define TRACE()                             \
-  ARDUINOTRACE_PRINT(__COUNTER__, __FILE__, \
-                     ARDUINOTRACE_TRACE_PREFIX(__LINE__), __PRETTY_FUNCTION__)
+#define TRACE()                                           \
+  ARDUINOTRACE_PRINT(__COUNTER__, __FILE__,               \
+                     ARDUINOTRACE_TRACE_PREFIX(__LINE__), \
+                     ARDUINOTRACE_FUNCTION_NAME)
 
 // Prints the value of a variable.
 //

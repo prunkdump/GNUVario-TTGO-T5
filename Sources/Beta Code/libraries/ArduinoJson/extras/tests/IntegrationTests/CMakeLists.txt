@@ -6,6 +6,7 @@ add_executable(IntegrationTests
 	gbathree.cpp
 	issue772.cpp
 	round_trip.cpp
+	openweathermap.cpp
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -15,5 +16,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	)
 endif()
 
-target_link_libraries(IntegrationTests catch)
+target_link_libraries(IntegrationTests
+	ArduinoJson
+	catch
+)
+
 add_test(IntegrationTests IntegrationTests)

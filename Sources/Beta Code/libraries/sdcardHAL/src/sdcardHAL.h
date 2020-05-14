@@ -91,6 +91,11 @@ class SdCardHAL : public SdFat {
 
 #endif
 
+#define SDCARD_STATE_INITIAL 0
+#define SDCARD_STATE_INITIALIZED 1
+#define SDCARD_STATE_READY 2
+#define SDCARD_STATE_ERROR -1
+
 extern SdCardHAL SDHAL; 
 //#define _fs SDHAL
 

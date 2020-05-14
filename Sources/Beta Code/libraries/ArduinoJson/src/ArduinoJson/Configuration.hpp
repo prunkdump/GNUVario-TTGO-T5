@@ -13,9 +13,11 @@
 #if __cplusplus >= 201103L
 #define ARDUINOJSON_HAS_LONG_LONG 1
 #define ARDUINOJSON_HAS_NULLPTR 1
+#define ARDUINOJSON_HAS_RVALUE_REFERENCES 1
 #else
 #define ARDUINOJSON_HAS_LONG_LONG 0
 #define ARDUINOJSON_HAS_NULLPTR 0
+#define ARDUINOJSON_HAS_RVALUE_REFERENCES 0
 #endif
 
 // Small or big machine?
@@ -201,10 +203,26 @@
 #endif
 #endif
 
+#ifndef ARDUINOJSON_ENABLE_ALIGNMENT
+#if defined(__AVR)
+#define ARDUINOJSON_ENABLE_ALIGNMENT 0
+#else
+#define ARDUINOJSON_ENABLE_ALIGNMENT 1
+#endif
+#endif
+
 #ifndef ARDUINOJSON_TAB
 #define ARDUINOJSON_TAB "  "
 #endif
 
 #ifndef ARDUINOJSON_STRING_BUFFER_SIZE
 #define ARDUINOJSON_STRING_BUFFER_SIZE 32
+#endif
+
+#ifndef ARDUINOJSON_DEBUG
+#ifdef __PLATFORMIO_BUILD_DEBUG__
+#define ARDUINOJSON_DEBUG 1
+#else
+#define ARDUINOJSON_DEBUG 0
+#endif
 #endif

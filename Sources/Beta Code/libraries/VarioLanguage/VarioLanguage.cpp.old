@@ -1,0 +1,650 @@
+/* VarioLanguage -- 
+ *
+ * Copyright 2020 MichelPa / Jpg63
+ * 
+ * This file is part of GnuVario-E.
+ *
+ * ToneHAL is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ToneHAL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/* 
+ *********************************************************************************
+ *                                                                               *
+ *                           VarioLanguage                                       *
+ *                                                                               *
+ *  version    Date     Description                                              *
+ *    1.0    11/04/20                                                            *
+ *                                                                               *
+ *********************************************************************************
+ */
+
+#include <HardwareConfig.h>
+#include <DebugConfig.h>
+
+#ifdef DATA_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
+
+#include <sdcardHAL.h>
+//#include <VarioSettings.h>
+
+#include <VarioLanguage.h>
+
+#include <ArduinoJson.h>
+
+#include <varioscreenGxEPD.h>
+
+VarioLanguage varioLanguage;
+
+#define PARAMS_VERSION_LANGUE "1.0"
+
+
+#define DEFAULT_TITRE_TIME 					"Heure"
+#define DEFAULT_TITRE_TDV   				"Temps de vol"
+#define DEFAULT_TITRE_ALTI  				"Alti"
+#define DEFAULT_TITRE_AGL   				"Alti Sol"
+#define DEFAULT_TITRE_VARIO 				"Vario"
+#define DEFAULT_TITRE_SPEED 				"Vitesse"
+#define DEFAULT_TITRE_FINESSE 			"Finesse"
+#define DEFAULT_TITRE_TCHUTE  			"T Chute"
+#define DEFAULT_TITRE_CAP 					"Cap"
+#define DEFAULT_TITRE_LAT						"Lat"
+#define DEFAULT_TITRE_LONG 					"Long"
+#define DEFAULT_TITRE_COMPAS 				"Compas"
+#define DEFAULT_TITRE_STATISTIQUE  	"Statistique"
+#define DEFAULT_TITRE_DATE 					"Date"
+#define DEFAULT_TITRE_HEURE					"Heure"
+#define DEFAULT_TITRE_DUREE 				"Duree"
+#define DEFAULT_TITRE_VITESSE 			"Vitesse"
+#define DEFAULT_TITRE_CONNECTION 		"Connection"
+#define DEFAULT_TITRE_CONNECTIONA 	"Connection a "
+#define DEFAULT_TITRE_DEMARRAGE 		"Demarrage"
+#define DEFAULT_TITRE_REDEMARRAGE 	"Redemarrage"
+#define DEFAULT_TITRE_ENCOURS 			"en cours"				
+
+//****************************************************************************************************************************
+void VarioLanguage::init(uint8_t language)
+//****************************************************************************************************************************
+{
+	char tmpchar[20] = "gnuvario";
+
+	switch (language) {
+	  case 0:
+			strcat(tmpchar,"FR");
+			break;
+		case 1:
+			strcat(tmpchar,"EN");
+			break;
+		default:
+			strcat(tmpchar,"FR");
+			break;
+	}
+	strcat(tmpchar,".jso");
+	
+#ifdef SDCARD_DEBUG
+  SerialPort.println("VarioLanguage Init : ");
+	SerialPort.print("file : ");
+	SerialPort.println(tmpchar);
+#endif
+	
+	loadConfigurationLangue(tmpchar);
+}
+
+
+//**********************************************************
+void VarioLanguage::loadConfigurationLangue(char *filename) {
+//**********************************************************
+  // Open file for reading
+	boolean MajFileParams = false;
+	
+#ifdef SDCARD_DEBUG
+  SerialPort.println("loadConfigurationLangue");
+	SerialPort.print("File : ");
+	SerialPort.println(filename);
+#endif
+	
+	
+#ifdef SDFAT_LIB
+  SdFile file;
+	if (!file.open(filename, O_RDONLY)) {
+#else
+  File file = SDHAL_SD.open(filename);
+  if (!file) {
+#endif
+    SerialPort.println(F("Failed to read file"));
+		
+		TITRE_TAB[TITRE_TIME]  = DEFAULT_TITRE_TIME;
+		
+    return;
+  }
+
+  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(10) + JSON_OBJECT_SIZE(12)+200;
+  DynamicJsonDocument doc(capacity);
+
+#ifdef SDCARD_DEBUG
+  SerialPort.println("deserialisation");
+#endif
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, file);
+  if (error)
+    SerialPort.println(F("Failed to read file, using default configuration"));
+
+	String tmpValueString;
+
+#ifdef SDCARD_DEBUG
+  SerialPort.println("Paramètres : ");
+#endif
+
+	const char* GnuvarioE_version_langue = doc["gnuvarioe"]["version"]; // "1.0"
+	if (strcmp(GnuvarioE_version_langue, PARAMS_VERSION_LANGUE) != 0) MajFileParams = true;
+
+	//*****    TITRE *****
+
+#ifdef SDCARD_DEBUG
+  SerialPort.println("****** Titre *******");
+#endif
+
+  JsonObject Titre = doc["titre"];
+	
+  if (Titre.containsKey("TIME")) {	
+		String Titre_TIME = Titre["TIME"];
+		tmpValueString = Titre_TIME;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_TIME;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_TIME]  = tmpValueString.substring(MAX_CAR_TITRE_TIME);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_TIME : ");
+  SerialPort.println(TITRE_TAB[TITRE_TIME]);
+#endif
+
+  if (Titre.containsKey("TDV")) {	
+		String Titre_TDV = Titre["TDV"];
+		tmpValueString = Titre_TDV;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_TDV;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_TDV]  = tmpValueString.substring(MAX_CAR_TITRE_TDV);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_TDV : ");
+  SerialPort.println(TITRE_TAB[TITRE_TDV]);
+#endif
+
+  if (Titre.containsKey("ALTI")) {	
+		String Titre_ALTI = Titre["ALTI"];
+		tmpValueString = Titre_ALTI;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_ALTI;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_ALTI]  = tmpValueString.substring(MAX_CAR_TITRE_ALTI);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_ALTI : ");
+  SerialPort.println(TITRE_TAB[TITRE_ALTI]);
+#endif
+
+  if (Titre.containsKey("AGL")) {	
+		String Titre_AGL = Titre["AGL"];
+		tmpValueString = Titre_AGL;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_AGL;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_AGL]  = tmpValueString.substring(MAX_CAR_TITRE_AGL);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_AGL : ");
+  SerialPort.println(TITRE_TAB[TITRE_AGL]);
+#endif
+
+  if (Titre.containsKey("VARIO")) {	
+		String Titre_VARIO = Titre["VARIO"];
+		tmpValueString = Titre_VARIO;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_VARIO;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_VARIO]  = tmpValueString.substring(MAX_CAR_TITRE_VARIO);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_VARIO : ");
+  SerialPort.println(TITRE_TAB[TITRE_VARIO]);
+#endif
+
+  if (Titre.containsKey("SPEED")) {	
+		String Titre_SPEED = Titre["SPEED"];
+		tmpValueString = Titre_SPEED;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_SPEED;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_SPEED]  = tmpValueString.substring(MAX_CAR_TITRE_SPEED);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_SPEED : ");
+  SerialPort.println(TITRE_TAB[TITRE_SPEED]);
+#endif
+
+  if (Titre.containsKey("FINESSE")) {	
+		String Titre_FINESSE = Titre["FINESSE"];
+		tmpValueString = Titre_FINESSE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_FINESSE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_FINESSE]  = tmpValueString.substring(MAX_CAR_TITRE_FINESSE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_FINESSE : ");
+  SerialPort.println(TITRE_TAB[TITRE_FINESSE]);
+#endif
+
+  if (Titre.containsKey("TCHUTE")) {	
+		String Titre_TCHUTE = Titre["TCHUTE"];
+		tmpValueString = Titre_TCHUTE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_TCHUTE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_TCHUTE]  = tmpValueString.substring(MAX_CAR_TITRE_TCHUTE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_TCHUTE : ");
+  SerialPort.println(TITRE_TAB[TITRE_TCHUTE]);
+#endif
+
+  if (Titre.containsKey("CAP")) {	
+		String Titre_CAP = Titre["CAP"];
+		tmpValueString = Titre_CAP;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_CAP;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_CAP]  = tmpValueString.substring(MAX_CAR_TITRE_CAP);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_CAP : ");
+  SerialPort.println(TITRE_TAB[TITRE_CAP]);
+#endif
+
+  if (Titre.containsKey("LAT")) {	
+		String Titre_LAT = Titre["LAT"];
+		tmpValueString = Titre_LAT;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_LAT;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_LAT]  = tmpValueString.substring(MAX_CAR_TITRE_LAT);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_LAT : ");
+  SerialPort.println(TITRE_TAB[TITRE_LAT]);
+#endif
+
+  if (Titre.containsKey("LONG")) {	
+		String Titre_LONG = Titre["LONG"];
+		tmpValueString = Titre_LONG;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_LONG;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_LONG]  = tmpValueString.substring(MAX_CAR_TITRE_LONG);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_LONG : ");
+  SerialPort.println(TITRE_TAB[TITRE_LONG]);
+#endif
+
+  if (Titre.containsKey("COMPAS")) {	
+		String Titre_COMPAS = Titre["COMPAS"];
+		tmpValueString = Titre_COMPAS;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_COMPAS;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_COMPAS]  = tmpValueString.substring(MAX_CAR_TITRE_COMPAS);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_COMPAS : ");
+  SerialPort.println(TITRE_TAB[TITRE_COMPAS]);
+#endif
+
+	//*****    MESSAGE *****
+
+#ifdef SDCARD_DEBUG
+  SerialPort.println("****** Message *******");
+#endif
+
+  JsonObject Message = doc["message"];
+	
+  if (Message.containsKey("STATISTIQUE")) {	
+		String Titre_STATISTIQUE = Message["STATISTIQUE"];
+		tmpValueString = Titre_STATISTIQUE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_STATISTIQUE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_STATISTIQUE]  = tmpValueString.substring(MAX_CAR_TITRE_STATISTIQUE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_STATISTIQUE : ");
+  SerialPort.println(TITRE_TAB[TITRE_STATISTIQUE]);
+#endif
+
+  if (Message.containsKey("DATE")) {	
+		String Titre_DATE = Message["DATE"];
+		tmpValueString = Titre_DATE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_DATE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_DATE]  = tmpValueString.substring(MAX_CAR_TITRE_DATE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_DATE : ");
+  SerialPort.println(TITRE_TAB[TITRE_DATE]);
+#endif
+
+  if (Message.containsKey("HEURE")) {	
+		String Titre_HEURE = Message["HEURE"];
+		tmpValueString = Titre_HEURE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_HEURE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_HEURE]  = tmpValueString.substring(MAX_CAR_TITRE_HEURE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_HEURE : ");
+  SerialPort.println(TITRE_TAB[TITRE_HEURE]);
+#endif
+
+  if (Message.containsKey("DUREE")) {	
+		String Titre_DUREE = Message["DUREE"];
+		tmpValueString = Titre_DUREE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_DUREE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_DUREE]  = tmpValueString.substring(MAX_CAR_TITRE_DUREE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_DUREE : ");
+  SerialPort.println(TITRE_TAB[TITRE_DUREE]);
+#endif
+
+  if (Message.containsKey("VITESSE")) {	
+		String Titre_VITESSE = Message["VITESSE"];
+		tmpValueString = Titre_VITESSE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_VITESSE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_VITESSE]  = tmpValueString.substring(MAX_CAR_TITRE_VITESSE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_VITESSE : ");
+  SerialPort.println(TITRE_TAB[TITRE_VITESSE]);
+#endif
+
+  if (Message.containsKey("CONNECTION")) {	
+		String Titre_CONNECTION = Message["CONNECTION"];
+		tmpValueString = Titre_CONNECTION;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_CONNECTION;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_CONNECTION]  = tmpValueString.substring(MAX_CAR_TITRE_CONNECTION);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_CONNECTION : ");
+  SerialPort.println(TITRE_TAB[TITRE_CONNECTION]);
+#endif
+
+  if (Message.containsKey("CONNECTIONA")) {	
+		String Titre_CONNECTIONA = Message["CONNECTIONA"];
+		tmpValueString = Titre_CONNECTIONA;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_CONNECTIONA;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_CONNECTIONA]  = tmpValueString.substring(MAX_CAR_TITRE_CONNECTIONA);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_CONNECTIONA : ");
+  SerialPort.println(TITRE_TAB[TITRE_CONNECTIONA]);
+#endif
+
+  if (Message.containsKey("DEMARRAGE")) {	
+		String Titre_DEMARRAGE = Message["DEMARRAGE"];
+		tmpValueString = Titre_DEMARRAGE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_DEMARRAGE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_DEMARRAGE]  = tmpValueString.substring(MAX_CAR_TITRE_DEMARRAGE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_DEMARRAGE : ");
+  SerialPort.println(TITRE_TAB[TITRE_DEMARRAGE]);
+#endif
+
+  if (Message.containsKey("REDEMARRAGE")) {	
+		String Titre_REDEMARRAGE = Message["REDEMARRAGE"];
+		tmpValueString = Titre_REDEMARRAGE;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_REDEMARRAGE;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_REDEMARRAGE]  = tmpValueString.substring(MAX_CAR_TITRE_REDEMARRAGE);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_REDEMARRAGE : ");
+  SerialPort.println(TITRE_TAB[TITRE_REDEMARRAGE]);
+#endif
+
+  if (Message.containsKey("ENCOURS")) {	
+		String Titre_ENCOURS = Message["ENCOURS"];
+		tmpValueString = Titre_ENCOURS;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValueString = DEFAULT_TITRE_ENCOURS;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+	TITRE_TAB[TITRE_ENCOURS]  = tmpValueString.substring(MAX_CAR_TITRE_ENCOURS);
+#ifdef SDCARD_DEBUG
+  SerialPort.print("TITRE_ENCOURS : ");
+  SerialPort.println(TITRE_TAB[TITRE_ENCOURS]);
+#endif
+
+  // Close the file (Curiously, File's destructor doesn't close the file)
+  file.close();
+	
+	//Mise à jour du fichier params.jso
+	if (MajFileParams) {
+#ifdef SDCARD_DEBUG
+		SerialPort.println("Sauvegarde de nouveaux paramètres");
+#endif
+//		saveConfigurationVario(filename);
+	}
+}
+
+//**********************************************************
+String VarioLanguage::getText(uint8_t value) {
+//**********************************************************
+  return TITRE_TAB[value];
+}
+
+/*
+
+{
+    "gnuvarioe": {
+        "version": "1.0"
+    },
+		"language": {
+				"id": 0,
+				"text": "Français"
+		},
+    "titre": {
+				"TIME":  "Heure",
+				"TDV":   "Temps de vol",
+				"ALTI":  "Alti",
+				"AGL":   "Alti Sol",
+				"VARIO": "Vario",
+				"SPEED": "Vitesse",
+				"FINESSE": "Finesse",
+				"TCHUTE": "T Chute",
+				"CAP": "Cap",
+				"LAT": "Lat",
+				"LONG": "Long",
+				"COMPAS": "Compas"
+    },
+    "message": {
+				"STATISTIQUE":  "Statistique",
+				"DATE": "Date",
+				"HEURE":"Heure",
+				"DUREE": "Duree",
+				"VITESSE": "Vitesse",
+				"CONNECTION": "Connection",
+				"CONNECTIONA": "Connection a ",
+				"DEMARRAGE": "Demarrage",
+				"REDEMARRAGE": "Redemarrage",
+				"ENCOURS": "en cours"				
+		}
+}
+
+
+JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(10) + JSON_OBJECT_SIZE(12)+100
+*/

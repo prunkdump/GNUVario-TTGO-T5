@@ -52,6 +52,7 @@
 #endif
 
 #define TEMP_READ 0
+#define PRESS_READ 1
 #define HAVE_PRESSURE 2
 #define HAVE_ACCEL 4
 #define HAVE_MAG 6
@@ -212,6 +213,13 @@ void TWScheduler::ms5611Interrupt(void) {
 
   if( ms5611Step == 0 ) {
 
+    /* if PRESS_READ is not set the last I2C operation failed */
+    /* so the CONV_D1 operation was not launched, relaunch */
+    if( ! bisset(PRESS_READ) ) {
+      errorRelaunch();
+      return;
+    }
+
     bunset(TEMP_READ);
     intTW.setRxBuffer((uint8_t *)ms5611Output);
     intTW.start((uint8_t*)ms5611Step1, sizeof(ms5611Step1), INTTW_USE_PROGMEM, ms5611TempCallback);
@@ -222,6 +230,7 @@ void TWScheduler::ms5611Interrupt(void) {
 
     /* if can't get temp, don't go further */
     if( ! bisset(TEMP_READ) ) {
+      errorRelaunch();
       return;
     }
 
@@ -240,15 +249,31 @@ void TWScheduler::ms5611Interrupt(void) {
   }
 }
 
+
 void TWScheduler::ms5611TempCallback(void) {
 
   bset(TEMP_READ);
 }
 
+void TWScheduler::errorRelaunch(void) {
+  
+  /* relaunch conv D1 */
+  /* use PRESS_READ as success flag */ 
+  bunset(PRESS_READ);
+  intTW.start((uint8_t*)(&(ms5611Step2[5])), 3, INTTW_USE_PROGMEM, errorRelaunchCallback);
+  ms5611Step = 0;
+}
+
+void TWScheduler::errorRelaunchCallback(void) {
+
+  /* conv D1 success */
+  bset(PRESS_READ);
+}
+
 void TWScheduler::ms5611OutputCallback(void) {
 
   /* done ! */
-  status |= (1 << HAVE_PRESSURE);
+  status |= (1 << PRESS_READ) | (1 << HAVE_PRESSURE);
 }
 
 bool TWScheduler::havePressure(void) {

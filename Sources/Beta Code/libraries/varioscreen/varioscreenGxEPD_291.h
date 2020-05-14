@@ -39,11 +39,15 @@
  *    1.0.9  03/02/20   changement de nom passage de 29 à 290                    *
  *    1.0.10 09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
  *    1.0.11 17/02/20   Ajout 2.90 et 2.91                                       *
+ *                      Ajout FONTLARGE / FONTNORMAL                             *
  *    1.0.12 25/02/20   Ajout ScreenBackground                                   *
  *    1.0.13 05/03/20   Ajout affichage alti agl                                 *
+ *    1.0.14 07/03/20   Correction xSemaphore                                    *
+ *    1.0.15 09/03/20   Modification ScreenViewSound                             *
+ *    1.0.16 08/04/20   Modification affichage des titres                        *
+ *    1.1.0  29/04/20   Changement de font - repositionnement                    *
  *                                                                               *
  *********************************************************************************/
-
 
 #ifndef VARIOSCREENGXEPD_291_H
 #define VARIOSCREENGXEPD_291_H
@@ -64,6 +68,40 @@
 #define SCREEN_STACK_SIZE 2000
 #define SCREEN_CORE 1
 #define SCREEN_PRIORITY 10
+
+#define MAX_CAR_TITRE_TIME 					15
+#define MAX_CAR_TITRE_TDV 					15 
+#define MAX_CAR_TITRE_ALTI 					8 
+#define MAX_CAR_TITRE_AGL 					8 
+#define MAX_CAR_TITRE_VARIO 				5
+#define MAX_CAR_TITRE_SPEED					7
+#define MAX_CAR_TITRE_FINESSE   		7
+#define MAX_CAR_TITRE_TCHUTE				7 
+#define MAX_CAR_TITRE_CAP						3
+#define MAX_CAR_TITRE_LAT						3
+#define MAX_CAR_TITRE_LONG 					4
+#define MAX_CAR_TITRE_COMPAS 				6
+#define MAX_CAR_TITRE_STAT        	11
+#define MAX_CAR_TITRE_DATE 					4
+#define MAX_CAR_TITRE_HEURE					5
+#define MAX_CAR_TITRE_DUREE 				5
+#define MAX_CAR_TITRE_VITESSE 			7
+#define MAX_CAR_TITRE_CONNECT   		10
+#define MAX_CAR_TITRE_CONNECTA	  	13
+#define MAX_CAR_TITRE_DEMAR     		9
+#define MAX_CAR_TITRE_REDEMAR     	11
+#define MAX_CAR_TITRE_ENCOURS 			8				
+#define MAX_CAR_TITRE_CALIBR   			12
+#define MAX_CAR_TITRE_VEILLE				14			
+
+/******************************/
+/* The screen zone multi      */ 
+/*----------------------------*/
+class ScreenZoneMulti {
+  public:
+		uint8_t x, y, width, height, page;
+		void update();  
+};
 
 /************************/
 /* The screen scheduler */
@@ -219,10 +257,16 @@ class VarioScreen {
 	ScreenText*   gpsLat;
 	ScreenText*   gpsLong;
 	
+	ScreenText*   bearingText;
+	ScreenDigit*  bearing;
+	
 //  ScreenSchedulerObject* displayList;
 	ScreenSchedulerObject displayList[40];  //17];
+	ScreenZoneMulti				ZoneMultiList[5];
+	
 	ScreenScheduler* schedulerScreen; 
 	uint8_t MaxObjectList = 0;
+	uint8_t MaxZoneList   = 0;
 	
 	virtual ~VarioScreen();
 

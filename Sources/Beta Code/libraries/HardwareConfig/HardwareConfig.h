@@ -235,7 +235,7 @@
 /* Set the GPS precision needed to use the GPS altitude value  */
 /* to calibrate the barometric altitude.                       */
 /*      !!! the best possible precision is 100 !!!             */ 
-#define VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD 350
+#define VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD 250
 
 /* The GPS RMC and GGA sentences parameters */
 /* Check the SD card ouput or bluetooth output of gps-time-analysis */

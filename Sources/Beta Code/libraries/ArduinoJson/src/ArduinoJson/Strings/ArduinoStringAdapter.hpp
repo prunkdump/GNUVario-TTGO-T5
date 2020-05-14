@@ -7,6 +7,8 @@
 #include <WString.h>
 
 #include <ArduinoJson/Polyfills/safe_strcmp.hpp>
+#include <ArduinoJson/Strings/IsString.hpp>
+#include <ArduinoJson/Strings/StoragePolicy.hpp>
 
 namespace ARDUINOJSON_NAMESPACE {
 
@@ -15,10 +17,12 @@ class ArduinoStringAdapter {
   ArduinoStringAdapter(const ::String& str) : _str(&str) {}
 
   char* save(MemoryPool* pool) const {
-    if (isNull()) return NULL;
+    if (isNull())
+      return NULL;
     size_t n = _str->length() + 1;
     char* dup = pool->allocFrozenString(n);
-    if (dup) memcpy(dup, _str->c_str(), n);
+    if (dup)
+      memcpy(dup, _str->c_str(), n);
     return dup;
   }
 
@@ -27,7 +31,7 @@ class ArduinoStringAdapter {
     return !_str->c_str();
   }
 
-  int8_t compare(const char* other) const {
+  int compare(const char* other) const {
     // Arduino's String::c_str() can return NULL
     const char* me = _str->c_str();
     return safe_strcmp(me, other);
@@ -37,17 +41,11 @@ class ArduinoStringAdapter {
     return compare(expected) == 0;
   }
 
-  const char* data() const {
-    return _str->c_str();
-  }
-
   size_t size() const {
     return _str->length();
   }
 
-  bool isStatic() const {
-    return false;
-  }
+  typedef storage_policy::store_by_copy storage_policy;
 
  private:
   const ::String* _str;

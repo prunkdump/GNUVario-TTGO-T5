@@ -57,6 +57,10 @@
 /*    1.3.2 17/01/20    Ajout DISPLAY_STAT_DURATION - passage en v1.1 					 */
 /*    1.3.3 19/01/20    Ajout DEEPSLEEP_DEBUG                                    */
 /*    1.3.4 04/02/20    Ajout URL_UPDATE passage en version 1.2 de params.json   */
+/*    1.3.5 05/03/20    Ajout DEFAULT_VARIOMETER_ENABLE_AGL											 */
+/*    1.3.6 07/04/20    Ajout ACCELERATION_MEASURE_STANDARD_DEVIATION            */
+/*                      Ajout LANGUAGE																					 */
+/*                      Ajout VARIOMETER_INTEGRATED_CLIMB_RATE                   */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -927,7 +931,7 @@ uint8_t VarioSettings::soundSettingRead(void) {
     eepromTag <<= 8;
     eepromTag += EEPROMHAL.read(SOUND_EEPROM_ADDR + 0x01);
   
-    uint8_t TmpValue;
+//    uint8_t TmpValue;
     if( eepromTag != SOUND_EEPROM_TAG ) { 
 /*#ifdef HAVE_SDCARD
 	    if (!readFlashSDSettings()) {
@@ -1001,7 +1005,8 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   }
 
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
-	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
+//	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
+  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(16) + 1090;
   DynamicJsonDocument doc(capacity);
 
   SerialPort.println("deserialisation");
@@ -1190,6 +1195,18 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 	URL_UPDATE = tmpValueString;
   SerialPort.print("URL_UPDATE : ");
   SerialPort.println(URL_UPDATE);
+
+	if (Systeme.containsKey("LANGUAGE")) {
+		     tmpValue = Systeme["LANGUAGE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_LANGUAGE;
+		MajFileParams = true;																		
+		SerialPort.print("Defaut Recup - ");
+	}
+  LANGUAGE = tmpValue;
+  SerialPort.print("LANGUAGE : ");
+  SerialPort.println(LANGUAGE);
 
 	//*****    GENERAL *****
 
@@ -1452,6 +1469,45 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SerialPort.print("SENT_LXNAV_SENTENCE : ");
   SerialPort.println(VARIOMETER_SENT_LXNAV_SENTENCE);*/
 
+	if (Vario.containsKey("ACCELERATION_MEASURE_STANDARD_DEVIATION")) {
+		     tmpValueFloat = Vario["ACCELERATION_MEASURE_STANDARD_DEVIATION"]; 
+				 //valeur entre 3.00 et 6.00
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValueFloat = DEFAULT_ACCELERATION_MEASURE_STANDARD_DEVIATION;
+		MajFileParams = true;																		
+		SerialPort.print("Defaut Recup - ");
+	}
+  ACCELERATION_MEASURE_STANDARD_DEVIATION = tmpValueFloat;
+  SerialPort.print("ACCELERATION_MEASURE_STANDARD_DEVIATION : ");
+  SerialPort.println(ACCELERATION_MEASURE_STANDARD_DEVIATION);
+
+	if (Vario.containsKey("VARIOMETER_INTEGRATED_CLIMB_RATE")) {
+		     tmpValue = Vario["VARIOMETER_INTEGRATED_CLIMB_RATE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_INTEGRATED_CLIMB_RATE;
+		MajFileParams = true;												
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) VARIOMETER_INTEGRATED_CLIMB_RATE = true;
+  else              VARIOMETER_INTEGRATED_CLIMB_RATE = false;
+  SerialPort.print("VARIOMETER_INTEGRATED_CLIMB_RATE : ");
+  SerialPort.println(VARIOMETER_INTEGRATED_CLIMB_RATE);
+
+	if (Vario.containsKey("SETTINGS_VARIO_PERIOD_COUNT")) {
+				//valeur comprise entre 0 et 40 soit 0 à 2s avec un pas de 50ms
+		     tmpValue = Vario["SETTINGS_VARIO_PERIOD_COUNT"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_SETTINGS_VARIO_PERIOD_COUNT;
+		MajFileParams = true;																		
+		SerialPort.print("Defaut Recup - ");
+	}
+  SETTINGS_VARIO_PERIOD_COUNT = tmpValue;
+  SerialPort.print("SETTINGS_VARIO_PERIOD_COUNT : ");
+  SerialPort.println(SETTINGS_VARIO_PERIOD_COUNT);
+
 	//*****  FLIGHT START *****
 
   SerialPort.println("****** Flight start *******");
@@ -1600,7 +1656,8 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/assistant to compute the capacity.
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
-	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
+//	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
+  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(16) + 1090;
 	DynamicJsonDocument doc(capacity);
 
   SerialPort.println("****** GnuvarioE *******");
@@ -1647,6 +1704,8 @@ void VarioSettings::saveConfigurationVario(char *filename) {
 	Systeme["DISPLAY_STAT_DURATION"] = DISPLAY_STAT_DURATION;
 	
 	Systeme["URL_UPDATE"] = URL_UPDATE;
+
+	Systeme["LANGUAGE"] = LANGUAGE;
 		
 	//*****    GENERAL *****
 
@@ -1706,6 +1765,13 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   if (VARIOMETER_SENT_LXNAV_SENTENCE) Systeme["SENT_LXNAV_SENTENCE"] = 1;
   else              									Systeme["SENT_LXNAV_SENTENCE"] = 0;
 */
+
+  Vario["ACCELERATION_MEASURE_STANDARD_DEVIATION"] = ACCELERATION_MEASURE_STANDARD_DEVIATION;
+
+  if (VARIOMETER_INTEGRATED_CLIMB_RATE) Vario["VARIOMETER_INTEGRATED_CLIMB_RATE"] = 1;
+  else              				 						Vario["VARIOMETER_INTEGRATED_CLIMB_RATE"] = 0;
+
+  Vario["SETTINGS_VARIO_PERIOD_COUNT"] = SETTINGS_VARIO_PERIOD_COUNT;
 	
 	//*****    Flight_Start *****
 
@@ -1902,7 +1968,8 @@ double Statistic::getGain(void) {
 				"SLEEP_TIMEOUT_MINUTES": 20,
 				"SLEEP_THRESHOLD_CPS": 50,
 				"ALTERNATE_DATA_DURATION": 2000,
-				"URL_UPDATE": "http://gnuvario-e.yj.fr/webupdate/checkversion"
+				"URL_UPDATE": "http://gnuvario-e.yj.fr/webupdate/checkversion",
+				"LANGUAGE": 0
     },
     "General": {
         "PILOT_NAME": "MagaliXXXXXXXXXXXXXX",
@@ -1928,7 +1995,10 @@ double Statistic::getGain(void) {
         "RATIO_MIN_SPEED": 10.1,
         "RATIO_CLIMB_RATE": 2,
         "SENT_LXNAV_SENTENCE": 1,
-				"VARIOMETER_ENABLE_AGL": 1
+				"VARIOMETER_ENABLE_AGL": 1,
+				"ACCELERATION_MEASURE_STANDARD_DEVIATION": 0.35,
+				"VARIOMETER_INTEGRATED_CLIMB_RATE": 0,
+				"SETTINGS_VARIO_PERIOD_COUNT":5,
    },
     "Flight start": {
         "FLIGHT_START_MIN_TIMESTAMP": 15000,
@@ -1938,6 +2008,7 @@ double Statistic::getGain(void) {
         "RECORD_WHEN_FLIGHT_START": 1
     }
 }
+
 PARSING
 
 const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 940;

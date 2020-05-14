@@ -10,6 +10,16 @@
 #include <ArduinoJson/Strings/RamStringAdapter.hpp>
 #include <ArduinoJson/Variant/VariantContent.hpp>
 
+// VariantData can't have a constructor (to be a POD), so we have no way to fix
+// this warning
+#if defined(__GNUC__)
+#if __GNUC__ >= 7
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+#endif
+
 namespace ARDUINOJSON_NAMESPACE {
 
 class VariantData {
@@ -181,16 +191,18 @@ class VariantData {
   }
 
   bool isEnclosed() const {
-    return isCollection() || isString();
+    return !isFloat();
   }
 
   void remove(size_t index) {
-    if (isArray()) _content.asCollection.remove(index);
+    if (isArray())
+      _content.asCollection.removeElement(index);
   }
 
   template <typename TAdaptedString>
   void remove(TAdaptedString key) {
-    if (isObject()) _content.asCollection.remove(key);
+    if (isObject())
+      _content.asCollection.removeMember(key);
   }
 
   void setBoolean(bool value) {
@@ -329,31 +341,42 @@ class VariantData {
   }
 
   VariantData *addElement(MemoryPool *pool) {
-    if (isNull()) toArray();
-    if (!isArray()) return 0;
-    return _content.asCollection.add(pool);
+    if (isNull())
+      toArray();
+    if (!isArray())
+      return 0;
+    return _content.asCollection.addElement(pool);
   }
 
   VariantData *getElement(size_t index) const {
-    return isArray() ? _content.asCollection.get(index) : 0;
+    return isArray() ? _content.asCollection.getElement(index) : 0;
+  }
+
+  VariantData *getOrAddElement(size_t index, MemoryPool *pool) {
+    if (isNull())
+      toArray();
+    if (!isArray())
+      return 0;
+    return _content.asCollection.getOrAddElement(index, pool);
   }
 
   template <typename TAdaptedString>
   VariantData *getMember(TAdaptedString key) const {
-    return isObject() ? _content.asCollection.get(key) : 0;
+    return isObject() ? _content.asCollection.getMember(key) : 0;
   }
 
   template <typename TAdaptedString>
   VariantData *getOrAddMember(TAdaptedString key, MemoryPool *pool) {
-    if (isNull()) toObject();
-    if (!isObject()) return 0;
-    VariantData *var = _content.asCollection.get(key);
-    if (var) return var;
-    return _content.asCollection.add(key, pool);
+    if (isNull())
+      toObject();
+    if (!isObject())
+      return 0;
+    return _content.asCollection.getOrAddMember(key, pool);
   }
 
   void movePointers(ptrdiff_t stringDistance, ptrdiff_t variantDistance) {
-    if (_flags & VALUE_IS_OWNED) _content.asString += stringDistance;
+    if (_flags & VALUE_IS_OWNED)
+      _content.asString += stringDistance;
     if (_flags & COLLECTION_MASK)
       _content.asCollection.movePointers(stringDistance, variantDistance);
   }
@@ -370,3 +393,9 @@ class VariantData {
 };
 
 }  // namespace ARDUINOJSON_NAMESPACE
+
+#if defined(__GNUC__)
+#if __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
+#endif

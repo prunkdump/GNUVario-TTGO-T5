@@ -12,13 +12,13 @@
 /*                                                                           */
 /*****************************************************************************/
 
-#if defined(ESP32) && defined(TONEDAC)
-
-
-#include "toneDAC_esp32.h"
 #include <Arduino.h>
 #include "DebugConfig.h"
 #include "HardwareConfig.h"
+
+#if defined(ESP32) && defined(TONEDAC)
+
+#include "toneDAC_esp32.h"
 //#include "utility\DebugConfig.h"
 //#include "utility\Config.h"
 

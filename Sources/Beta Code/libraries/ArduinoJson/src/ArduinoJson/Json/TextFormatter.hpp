@@ -10,6 +10,7 @@
 #include <ArduinoJson/Json/EscapeSequence.hpp>
 #include <ArduinoJson/Numbers/FloatParts.hpp>
 #include <ArduinoJson/Numbers/Integer.hpp>
+#include <ArduinoJson/Polyfills/assert.hpp>
 #include <ArduinoJson/Polyfills/attributes.hpp>
 
 namespace ARDUINOJSON_NAMESPACE {
@@ -32,13 +33,10 @@ class TextFormatter {
   }
 
   void writeString(const char *value) {
-    if (!value) {
-      writeRaw("null");
-    } else {
-      writeRaw('\"');
-      while (*value) writeChar(*value++);
-      writeRaw('\"');
-    }
+    ARDUINOJSON_ASSERT(value != NULL);
+    writeRaw('\"');
+    while (*value) writeChar(*value++);
+    writeRaw('\"');
   }
 
   void writeChar(char c) {
@@ -53,7 +51,8 @@ class TextFormatter {
 
   template <typename T>
   void writeFloat(T value) {
-    if (isnan(value)) return writeRaw(ARDUINOJSON_ENABLE_NAN ? "NaN" : "null");
+    if (isnan(value))
+      return writeRaw(ARDUINOJSON_ENABLE_NAN ? "NaN" : "null");
 
 #if ARDUINOJSON_ENABLE_INFINITY
     if (value < 0.0) {
@@ -61,9 +60,11 @@ class TextFormatter {
       value = -value;
     }
 
-    if (isinf(value)) return writeRaw("Infinity");
+    if (isinf(value))
+      return writeRaw("Infinity");
 #else
-    if (isinf(value)) return writeRaw("null");
+    if (isinf(value))
+      return writeRaw("null");
 
     if (value < 0.0) {
       writeRaw('-');
@@ -74,7 +75,8 @@ class TextFormatter {
     FloatParts<T> parts(value);
 
     writePositiveInteger(parts.integral);
-    if (parts.decimalPlaces) writeDecimals(parts.decimal, parts.decimalPlaces);
+    if (parts.decimalPlaces)
+      writeDecimals(parts.decimal, parts.decimalPlaces);
 
     if (parts.exponent < 0) {
       writeRaw("e-");

@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <ArduinoJson/Memory/MemoryPool.hpp>
 #include <ArduinoJson/Strings/ConstRamStringAdapter.hpp>
+#include <ArduinoJson/Strings/IsString.hpp>
+#include <ArduinoJson/Strings/StoragePolicy.hpp>
 
 namespace ARDUINOJSON_NAMESPACE {
 
@@ -13,16 +16,16 @@ class RamStringAdapter : public ConstRamStringAdapter {
   RamStringAdapter(const char* str) : ConstRamStringAdapter(str) {}
 
   char* save(MemoryPool* pool) const {
-    if (!_str) return NULL;
+    if (!_str)
+      return NULL;
     size_t n = size() + 1;
     char* dup = pool->allocFrozenString(n);
-    if (dup) memcpy(dup, _str, n);
+    if (dup)
+      memcpy(dup, _str, n);
     return dup;
   }
 
-  bool isStatic() const {
-    return false;
-  }
+  typedef ARDUINOJSON_NAMESPACE::storage_policy::store_by_copy storage_policy;
 };
 
 template <typename TChar>

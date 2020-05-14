@@ -247,7 +247,7 @@ Fly stat        0xD0		26+2
 /*************************/
 
 //#define AUDIO_AMP_MODE_LOW					//Ampli activable sur un niveau bas - sortie = 0
-//#define AUDIO_AMPLI_LOWPOWER				//Activation/desactivation de l'ampli à chaque tone/notone (economie d'énergie)
+#define AUDIO_AMPLI_LOWPOWER				//Activation/desactivation de l'ampli à chaque tone/notone (economie d'énergie)
 
 #if (PCB_VERSION == 2)
 

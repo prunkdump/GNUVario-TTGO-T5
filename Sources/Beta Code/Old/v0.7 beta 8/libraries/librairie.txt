@@ -1,0 +1,51 @@
+Ecran E-Paper
+
+libraries	: GxEPD2 + Adafruit_GFX_Library
+Test		: Test_GxEPD2_ESP32
+
+Sound
+
+libraries	: toneHAL + tone_esp32
+test		: test_toneHAL
+
+
+EEPROM
+
+libraries 	: eepromHAL
+Test		: test_EepromHal
+
+
+MPU
+
+libraries 	: MPU9250_asukiaaa
+test		: MPU9
+
+MS5611
+
+libraries 	: MS5xxx
+Test		: Test_MS5611_ESP32
+
+GPS
+
+libraries 	: TinyGPSPlus-master
+Test		: testGpsEsp32
+
+Boutons
+
+libraries	: M4Stack
+Test		: Test_button
+
+BT
+
+libraries	: BluetoothSerial
+Test		: SerialToSerialBT
+
+WIFI
+
+libraries	: Wifi
+Test		: wifiScan
+
+SD
+
+libraries	: esp32-micro-sdcard-master / mySd
+Test		: ESP32__goodSD

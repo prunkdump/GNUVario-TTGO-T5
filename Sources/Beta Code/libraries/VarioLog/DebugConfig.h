@@ -58,18 +58,19 @@
 /* pour désactiver les messages   */
 /**********************************/
 
-//#define ENABLE_DEBUG
+#define ENABLE_DEBUG
 
 #if defined(ENABLE_DEBUG)
 
 
 // 							OUTPUT SERIALNMEA
-//#define SERIAL_NMEA_SERIAL_OUTPUT
+#define SERIAL_NMEA_SERIAL_OUTPUT
 //#define SERIAL_NMEA_BLUETOOTH_OUTPUT
 
 
 //              DEBUGING MODE
 #define PROG_DEBUG			  //debug principal program
+//#define HARDWARE_DEBUG
 //#define IMU_DEBUG			  //debug IMU
 //#define I2CDEV_SERIAL_DEBUG   //debug I2Cdev
 //#define DEBUG_SERIAL_NMEA_1
@@ -88,9 +89,9 @@
 //#define IGC_DEBUG
 #define DATA_DEBUG
 //#define BT_DEBUG
-#define WIFI_DEBUG
+//#define WIFI_DEBUG
 //#define SOUND_DEBUG
-#define AGL_DEBUG
+//#define AGL_DEBUG
 
 #endif //ENABLE_DEBUG
 #endif

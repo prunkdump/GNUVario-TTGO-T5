@@ -142,7 +142,7 @@ int EepromHal::EEPROMAnythingWrite(int pos, char *character, int length)
 	
   for (int i = 0; i < length; i++)
   {
-		char tmpChar = *character;
+	//	char tmpChar = *character;
 
 	  if (read(pos + i) != *character)  {
       write(pos + i, *character);

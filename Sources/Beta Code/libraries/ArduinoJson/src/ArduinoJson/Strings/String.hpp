@@ -5,6 +5,8 @@
 #pragma once
 
 #include <ArduinoJson/Strings/ConstRamStringAdapter.hpp>
+#include <ArduinoJson/Strings/IsString.hpp>
+#include <ArduinoJson/Strings/StoragePolicy.hpp>
 
 namespace ARDUINOJSON_NAMESPACE {
 
@@ -27,11 +29,16 @@ class String {
   }
 
   friend bool operator==(String lhs, String rhs) {
-    if (lhs._data == rhs._data) return true;
-    if (!lhs._data) return false;
-    if (!rhs._data) return false;
+    if (lhs._data == rhs._data)
+      return true;
+    if (!lhs._data)
+      return false;
+    if (!rhs._data)
+      return false;
     return strcmp(lhs._data, rhs._data) == 0;
   }
+
+  typedef storage_policy::decide_at_runtime storage_policy;
 
  private:
   const char* _data;
@@ -47,10 +54,11 @@ class StringAdapter : public RamStringAdapter {
     return _isStatic;
   }
 
-  /*  const char* save(MemoryPool* pool) const {
-      if (_isStatic) return c_str();
-      return RamStringAdapter::save(pool);
-    }*/
+  const char* save(MemoryPool* pool) const {
+    if (_isStatic)
+      return data();
+    return RamStringAdapter::save(pool);
+  }
 
  private:
   bool _isStatic;

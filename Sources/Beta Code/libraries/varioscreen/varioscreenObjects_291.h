@@ -55,18 +55,17 @@
  *    1.1.8  16/11/19   Ajout classe GxEPD2_BW_U                                 *
  *    1.1.9  11/01/20   Modif VARIOSCREEN_SIZE == 290                            *
  *    1.1.10 07/02/20   Ajout 290 et 291                                         *
- *                      Ajout FONTLARGE / FONTNORMAL Digit                       *
- *    1.0.10 19/02/20   Ajout variolog                                           *
- *    1.0.11 21/02/20   Correction Bug d'affichage batterie                      *
+ *                      Ajouter FONTNORMAL / FONTLARGE Digit                     *
+ *    1.0.11 19/02/20   Ajout variolog                                           *
+ *    1.0.12 21/02/20   Correction Bug d'affichage batterie                      *
+ *    1.1.13 05/03/20   Ajout affichage AGL                                      *
+ *    1.1.14 06/03/20   Ajout gestion icone DISPLAY_OBJECT_TREND                 *
+ *    1.1.15 09/03/20   Modification de l'effacement digit left                  *
+ *    1.1.16 08/04/20   Modification affichage des titres                        *
+ *    1.1.17 13/04/20   Titre en mode texte                                      *
+ *    1.2.0  29/04/20   Modification font screedigit                             *
+ *                                                                               *
  *********************************************************************************/
-
-
-
-
-
-
-
-
 #ifndef VARIOSCREENOBJECTS_291_H
 #define VARIOSCREENOBJECTS_291_H
 
@@ -85,10 +84,27 @@
 // FreeFonts from Adafruit_GFX
 #include <Fonts/FreeSansBold9pt7b.h>
 #include <Fonts/FreeSansBold12pt7b.h>
-#include <Fonts/FreeSansBold18pt7b.h>
-#include <Fonts/FreeSansBold24pt7b.h>
+//#include <Fonts/FreeSansBold18pt7b.h>
+//#include <Fonts/FreeSansBold24pt7b.h>
+//#include <Fonts/SpaceMonoBold12pt7b.h>
+//#include <Fonts/FreeSerifBold18pt7b.h>
+//#include <Fonts/FreeMonoBold9pt7b.h>
+//#include <Fonts/FreeMonoBold24pt7b.h>
+//#include <Fonts/FreeMonoBold22pt7b.h>
+//#include <Fonts/FreeMonoBold18pt7b.h>
+//#include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
-#include <Fonts/FreeSerifBold18pt7b.h>
+//#include <Fonts/jersey22pt7b.h>
+//#include <Fonts/digital22pt7b.h>
+//#include <Fonts/MONOFONT22pt7b.h>
+//#include <Fonts/Audimat24pt7b.h>
+//#include <Fonts/Audimat26pt7b.h>
+#include <Fonts/FreeSansBold8pt7b.h>
+//#include <Fonts/jersey18pt7b.h>
+#include <Fonts/gnuvarioe14pt7b.h>
+#include <Fonts/gnuvarioe18pt7b.h>
+#include <Fonts/gnuvarioe23pt7b.h>
+#include <Fonts/NotoSans6pt7b.h> //Picopixel.h>
 
 /* minimum drift to update digit */
 #define VARIOSCREEN_DIGIT_DISPLAY_THRESHOLD 0.65
@@ -214,8 +230,9 @@ class VarioScreenObject {
 #define ALIGNLEFT   	1
 #define ALIGNCENTER		2
 
-#define FONTLARGE			true
-#define FONTNORMAL    false
+#define FONTNORMAL    0
+#define FONTSMALL			1
+#define FONTLARGE			2
 
 class ScreenDigit: public VarioScreenObject {
 // anchorX			Position en X
@@ -232,7 +249,7 @@ class ScreenDigit: public VarioScreenObject {
 // TitleY       Position du titre en Y
 
  public :
-   ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uint16_t precision, boolean plusDisplay = false, boolean zero = false, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0, bool large = FONTLARGE);
+   ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uint16_t precision, boolean plusDisplay = false, boolean zero = false, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0, int8_t large = FONTNORMAL, int nbCarTitle = 0);
  //  : VarioScreenObject(0), anchorX(anchorX), anchorY(anchorY), width(width), precision(precision), plusDisplay(plusDisplay), zero(zero), leftAlign(leftAlign), showtitle(showtitle)
  // { lastDisplayWidth = 0; }
   void show(void);
@@ -247,12 +264,14 @@ class ScreenDigit: public VarioScreenObject {
   boolean plusDisplay, zero;	//, showtitle
 	int8_t Align;
   boolean showtitle;
- uint8_t lastDisplayWidth;
+  uint8_t lastDisplayWidth;
 	int16_t oldw=0, oldh=0, oldx=0, oldy=0;
 	uint16_t Zwidth, Zheight;
 	uint16_t MaxWidth, MaxHeight;
 	int8_t displayTypeID;
-  boolean large;
+  int8_t large;
+	int nbCarTitle;
+	int MaxTitleWidth, MaxTitleHeight;
 };
 
 class ScreenText: public VarioScreenObject {
@@ -267,7 +286,7 @@ class ScreenText: public VarioScreenObject {
 // TitleY       Position du titre en Y
 
  public :
-   ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, bool large = FONTLARGE, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0);
+   ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, int8_t large = FONTNORMAL, int8_t Align = ALIGNLEFT, boolean showtitle = true, 	int8_t displayTypeID = 0, int nbCarTitle = 0);
  //  : VarioScreenObject(0), anchorX(anchorX), anchorY(anchorY), width(width), precision(precision), plusDisplay(plusDisplay), zero(zero), leftAlign(leftAlign), showtitle(showtitle)
  // { lastDisplayWidth = 0; }
   void show(void);
@@ -277,7 +296,7 @@ class ScreenText: public VarioScreenObject {
   String value;
   String oldvalue="";
   const uint16_t anchorX, anchorY, width;
-  boolean large;
+  int8_t large;
 	int8_t Align;
   boolean showtitle;
   uint8_t lastDisplayWidth;
@@ -285,6 +304,8 @@ class ScreenText: public VarioScreenObject {
 	uint16_t Zwidth, Zheight;
 	uint16_t MaxWidth, MaxHeight;
 	int8_t displayTypeID;
+	int nbCarTitle;
+	int MaxTitleWidth, MaxTitleHeight;
 };
 
 /* meters unit */

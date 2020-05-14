@@ -9,20 +9,26 @@ add_executable(MixedConfigurationTests
 	cpp11.cpp
 	decode_unicode_0.cpp
 	decode_unicode_1.cpp
+	enable_alignment_0.cpp
+	enable_alignment_1.cpp
+	enable_comments_0.cpp
+	enable_comments_1.cpp
 	enable_infinity_0.cpp
 	enable_infinity_1.cpp
 	enable_nan_0.cpp
 	enable_nan_1.cpp
+	enable_progmem_1.cpp
 	use_double_0.cpp
 	use_double_1.cpp
 	use_long_long_0.cpp
 	use_long_long_1.cpp
-	enable_progmem_1.cpp
-	enable_comments_1.cpp
-	enable_comments_0.cpp
 )
 
-target_link_libraries(MixedConfigurationTests catch)
+target_link_libraries(MixedConfigurationTests
+	ArduinoJson
+	catch
+)
+
 set_target_properties(MixedConfigurationTests PROPERTIES UNITY_BUILD OFF)
 
 add_test(MixedConfiguration MixedConfigurationTests)

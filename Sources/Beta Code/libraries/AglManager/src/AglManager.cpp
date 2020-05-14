@@ -59,7 +59,7 @@ AglManager::AglManager()
 }
 
 //****************************************************************************************************************************
-void AglManager::init(void)
+bool AglManager::init(void)
 //****************************************************************************************************************************
 {
     char tmpFileName[15] = AGL_Directory;
@@ -73,6 +73,7 @@ void AglManager::init(void)
     SerialPort.print("INIT AGL : Directory exists : ");
     SerialPort.println(Directory_AGL_Exists);
 #endif //AGL_DEBUG
+  return Directory_AGL_Exists;
 }
 
 //****************************************************************************************************************************
@@ -181,6 +182,12 @@ int AglManager::getGroundLevel()
 int AglManager::getAgl()
 //****************************************************************************************************************************
 {
+		groundLevel = getGroundLevel();
+#ifdef AGL_DEBUG
+    SerialPort.print("AGL Directory exists : ");
+    SerialPort.println(Directory_AGL_Exists);
+#endif //AGL_DEBUG
+
     if (groundLevel == -1 || currentAltiGps == -1)  return -1;
 		else                                            return groundLevel-currentAltiGps;
 }
@@ -207,7 +214,7 @@ boolean AglManager::IsOk(void)
 float AglManager::degMinToDeg(float value)
 //****************************************************************************************************************************
 {
-    float r = value;
+//    float r = value;
     int intValue = value;
     float min = value - intValue;
     float decimal = min / 0.6;

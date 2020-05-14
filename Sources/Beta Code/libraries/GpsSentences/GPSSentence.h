@@ -29,6 +29,7 @@
 /*    1.0.3    03/10/19     Ajout gestion HAVE_SDCARD 													 */
 /*    1.0.4    12/10/19     Ajout gestion du dossier de stockage des VOLs        */
 /*    1.0.5    29/11/19     Modif SdFat                                          */
+/*    1.0.6    22/03/20     Modif define                                         */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -47,10 +48,10 @@
 
 #include <kalmanvert.h>
 
-#define SDCARD_STATE_INITIAL 0
+/*#define SDCARD_STATE_INITIAL 0
 #define SDCARD_STATE_INITIALIZED 1
 #define SDCARD_STATE_READY 2
-#define SDCARD_STATE_ERROR -1
+#define SDCARD_STATE_ERROR -1*/
 
 
 /*!!! the first character of begin() is part of the sentence !!!*/

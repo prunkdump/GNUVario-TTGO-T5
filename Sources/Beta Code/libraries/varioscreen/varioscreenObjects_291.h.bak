@@ -55,16 +55,17 @@
  *    1.1.8  16/11/19   Ajout classe GxEPD2_BW_U                                 *
  *    1.1.9  11/01/20   Modif VARIOSCREEN_SIZE == 290                            *
  *    1.1.10 07/02/20   Ajout 290 et 291                                         *
- *                      Ajout FONTLARGE / FONTNORMAL Digit                       *
- *    1.0.10 19/02/20   Ajout variolog                                           *
- *    1.0.11 21/02/20   Correction Bug d'affichage batterie                      *
+ *                      Ajouter FONTNORMAL / FONTLARGE Digit                     *
+ *    1.0.11 19/02/20   Ajout variolog                                           *
+ *    1.0.12 21/02/20   Correction Bug d'affichage batterie                      *
+ *    1.1.13 05/03/20   Ajout affichage AGL                                      *
+ *    1.1.14 06/03/20   Ajout gestion icone DISPLAY_OBJECT_TREND                 *
+ *    1.1.15 09/03/20   Modification de l'effacement digit left                  *
+ *    1.1.16 08/04/20   Modification affichage des titres                        *
+ *    1.1.17 13/04/20   Titre en mode texte                                      *
+ *    1.2.0  29/04/20   Modification font screedigit                             *
+ *                                                                               *
  *********************************************************************************/
-
-
-
-
-
-
 #ifndef VARIOSCREENOBJECTS_291_H
 #define VARIOSCREENOBJECTS_291_H
 
@@ -77,7 +78,7 @@
 #include <digit.h>
 #include <variostat.h>
 
-#include <GxEPD2_BWU.h>
+#include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
 
 // FreeFonts from Adafruit_GFX
@@ -158,8 +159,6 @@
 #define MAXW_OBJECT_LONG_DIR                32
 #define MAXW_OBJECT_BEARING_TEXT            110
 #define MAXW_OBJECT_BEARING                 100
-#define MAXW_OBJECT_LAT 									 	160
-#define MAXW_OBJECT_LONG									 	160
 
 #include <VarioSettings.h>
 extern VarioSettings GnuSettings;
