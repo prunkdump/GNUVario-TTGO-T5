@@ -48,6 +48,8 @@
  *    1.0.15 09/03/20   Modification ScreenViewSound                             *
  *    1.0.16 08/04/20   Modification affichage des titres                        *
  *    1.1.0  29/04/20   Changement de font - repositionnement                    *
+ *    1.1.1  10/05/20   Correction affichage screenTime (:/h)                    *
+ *    1.1.2  11/05/20   Effacement zones multi                                   *
  *																				 *
 *********************************************************************************/
  
@@ -91,7 +93,7 @@
 
 #include <Utility.h>
 
-#include <SysCall.h>
+// #include <SysCall.h>
 
 #include <VarioData.h>
 #include <AglManager.h>
@@ -311,6 +313,16 @@ void VarioScreen::createScreenObjects(void)
 
 /*	tensionDigit = new ScreenDigit(VARIOSCREEN_TENSION_ANCHOR_X, VARIOSCREEN_TENSION_ANCHOR_Y, 5, 2, false, false, ALIGNRIGHT);	
 	tempratureDigit = new ScreenDigit(VARIOSCREEN_TENSION_ANCHOR_X, VARIOSCREEN_TENSION_ANCHOR_Y, 5, 2, false, false, ALIGNRIGHT);*/
+
+	MaxZoneList = 0;
+	
+  MaxZoneList++;
+		
+	ZoneMultiList[MaxZoneList-1].x			= VARIOSCREEN_GR_ANCHOR_X-4;
+	ZoneMultiList[MaxZoneList-1].y   		= VARIOSCREEN_GR_ANCHOR_Y-42;
+	ZoneMultiList[MaxZoneList-1].width 	= 65;
+	ZoneMultiList[MaxZoneList-1].height	= 49;
+	ZoneMultiList[MaxZoneList-1].page   = 0;
 	
 	createScreenObjectsPage0();
 	createScreenObjectsPage1();
@@ -1079,7 +1091,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 
     double tmpAlti = varioData.flystat.GetAlti();
 		if (tmpAlti > 9999) tmpAlti = 9999;
-		sprintf(tmpbuffer,"Alti Max : %.0f",tmpAlti); 
+		sprintf(tmpbuffer,"Alti Max : %3.0f",tmpAlti); 
 		display.setCursor(10, 115);
 		display.print(tmpbuffer);
 	 
@@ -1093,13 +1105,13 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
    double tmpVarioMax = varioData.flystat.GetVarioMax();
 	 if (tmpVarioMax > 10) tmpVarioMax = 9.9;
 	 if (tmpVarioMax < -10) tmpVarioMax = -9.9;
-	 sprintf(tmpbuffer,"Vario Max : %2.1f",tmpVarioMax); 
+	 sprintf(tmpbuffer,"Vario Max : %1.1f",tmpVarioMax); 
 	 display.setCursor(155, 65);
 	 display.print(tmpbuffer);
 	 
    double tmpSpeed = varioData.flystat.GetSpeed();
 	 if (tmpSpeed > 1000) tmpSpeed = 999;
-	 sprintf(tmpbuffer,"Vitesse : %.0f",tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
+	 sprintf(tmpbuffer,"Vitesse : %3.0f",tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
 	 display.setCursor(155, 90);
 	 display.print(tmpbuffer);
 	 display.drawLine(0, 20, 295, 20, GxEPD_BLACK);
@@ -1571,6 +1583,25 @@ void VarioScreen::SetViewSound(int volume) {
 	viewSound = volume;
 }
 
+//****************************************************************************************************************************
+//****************************************************************************************************************************
+//                          VARIOSCREEMULTI
+//****************************************************************************************************************************
+//****************************************************************************************************************************
+
+//****************************************************************************************************************************
+void ScreenZoneMulti::update(void) {
+//****************************************************************************************************************************
+
+#ifdef SCREEN_DEBUG
+	SerialPort.print("VarioScreenMulti");	
+#endif //SCREEN_DEBUG
+  
+//	display.drawRect(x, y, width, height, GxEPD_BLACK);
+	display.fillRect(x, y, width, height, GxEPD_WHITE);
+}
+
+
 /************************/
 /* The screen scheduler */
 /************************/
@@ -1681,15 +1712,22 @@ boolean ScreenScheduler::displayStep(void) {
 
   display.setFullWindow();
  	
-	if (millis() - oldtimeAllDisplay >= 30000)	{
+	if (millis() - oldtimeAllDisplay >= 900000)	{
+		// refresh toutes les 15min
 		oldtimeAllDisplay  = millis();	
 		ShowDisplayAll = true;
 //		display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
+		display.clearScreen();
 		
 #ifdef SCREEN_DEBUG2
 		SerialPort.println("displaystep - showDisplayAll");
 #endif //SCREEN_DEBUG
 		
+	}
+
+// Efface les zones multiScreen
+	for(int i=0; i<screen.MaxZoneList; i++) {
+		if (screen.ZoneMultiList[i].page == currentPage) screen.ZoneMultiList[i].update();
 	}
 
 	uint8_t n = 0;

@@ -46,16 +46,22 @@
 #include <HardwareConfig.h>
 
 // Ecran 1.54''
+#if (VARIOSCREEN_SIZE == 154)
 #include <varioscreenObjects_154.h>
 #include <varioscreenGxEPD_154.h>
+#endif
 
 // Ecran 2.90'' paysage
+#if (VARIOSCREEN_SIZE == 290)
 #include <varioscreenGxEPD_290.h>
 #include <varioscreenObjects_290.h>
+#endif
 
 // Ecran 2.90'' portrait
+#if (VARIOSCREEN_SIZE ==291)
 #include <varioscreenGxEPD_291.h>
 #include <varioscreenObjects_291.h>
+#endif
 
 // Ecran 2.13''
 //#include <varioscreenGxEPD_213.h>

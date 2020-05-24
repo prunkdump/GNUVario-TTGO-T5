@@ -182,7 +182,12 @@ private:
 		bool 		CompteurStartFlyEnable 	= false;
 		unsigned long	TimeStartFly;
 		uint8_t	CompteurStartFly	= 0;
-
+		bool		SpeedAvalable = false;
+		bool    GpsAvalable   = false;
+		unsigned long	TimeCapMesure = 0;		
+		int 		bearing = 0;
+		int 		moyCap = 0;
+		int			nbMesureCap = 0;
 };
 
 extern VarioData varioData;

@@ -28,7 +28,7 @@
  *                                                                               *
  *********************************************************************************
  */
- 
+
 #ifndef HGT_READER_H
 #define HGT_READER_H
 
@@ -43,21 +43,20 @@
 
 class HGTReader
 {
-public :
-  HGTReader(const String& aglDir);
+public:
+  HGTReader(const String &aglDir);
   int getGroundLevel(float latitude, float longitude);
 
 private:
   String getFileNameForPosition(float latitude, float longitude);
-  bool openFile(const String& fileName);
+  bool openFile(const String &fileName);
   int loadGroundLevel(float latitude, float longitude);
   int getTileHeight(int x, int y);
-  static String rightPad(const String& src, int size, char c);
+  static String rightPad(const String &src, int size, char c);
 
   String aglDir;
   String currentFileName = "";
-  SdFile currentFile;
-
+  File currentFile;
 };
 
 #endif //HGT_READER_H

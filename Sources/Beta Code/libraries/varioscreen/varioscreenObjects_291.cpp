@@ -35,12 +35,12 @@
  *    1.0.6  12/08/19   Ajout gestion écran de config GPS                        *
  *    1.0.7  15/08/19   Ajout gestion bouton dans screeninit                     *
  *    1.0.8  15/09/19   Ajout écran connection Wifi - ScreenViewWifi             *
- *    1.0.9  22/08/19   Ajout ScreenViewReboot									 								 *
+ *    1.0.9  22/08/19   Ajout ScreenViewReboot									 *
  *    1.0.10 22/08/19   Ajout Page1                                              *
  *    1.0.11 23/08/19   Correction bug previousPage                              *
  *                      Ajout TUnit                                              *
  *    1.0.12 24/08/19   Ajout ScreenViewSound(int volume)                        *
- *		1.0.13 25/08/19		Gestion de l'écran de config du son					 						 *	
+ *		1.0.13 25/08/19		Gestion de l'écran de config du son					 *	
  *    1.0.14 23/09/19   Modification page stat                                   *
  *                      Modification de l'affichage de la charge de la betterie  *
  *                      Ajout d'un deep-sleep en cas de batterie trop faible     *
@@ -50,22 +50,25 @@
  *    1.1.3  13/10/19   Integration au Gnuvario                                  *
  *    1.1.4  14/10/19   Modification affichage titre champs screendigit          *
  *    1.1.5  15/10/19   Modification affichage des satellites                    *
- *    1.1.6  20/10/19   Suppression classe GxEPD2_BW_U							 						 *
+ *    1.1.6  20/10/19   Suppression classe GxEPD2_BW_U							 *
  *    1.1.7  16/11/19   Ajout classe GxEPD2_BW_U                                 *
  *    1.1.8  11/01/20   Modif VARIOSCREEN_SIZE == 290                            *
- *    1.1.9  03/02/20   Changement de nom passage de 29 à 290  					 				 *
- *    1.1.10 16/02/20   Adaptation écran 2.9" mode portrait						 					 *
- *						VARIOSCREEN_SIZE == 291              					 										 *	
+ *    1.1.9  03/02/20   Changement de nom passage de 29 à 290  					 *
+ *    1.1.10 16/02/20   Adaptation écran 2.9" mode portrait						 *
+ *						VARIOSCREEN_SIZE == 291              					 *	
  *    1.1.11 21/02/20   Correction bug affichage batterie                        *
  *    1.0.12 19/02/20   Ajout variolog                                           *
  *    1.1.13 23/02/20   Ajout d'objets texte (compass, Lat, Long), changement    *
- *					    de taille de texte                                       				 *
+ *					    de taille de texte                                       *
  *    1.0.14 05/03/20   Ajout affichage AGL                                      *
  *    1.0.15 06/03/20   Ajout gestion icone DISPLAY_OBJECT_TREND                 *
  *    1.0.16 09/03/20   Modification de l'effacement digit left                  *
  *    1.0.17 08/04/20   Modification affichage des titres                        *
  *    1.1.18 13/04/20   Titre en mode texte                                      *
  *    1.2.0  29/04/20   Modification font screedigit                             *
+ *    1.2.1  15/05/20   Modification screentime                                  *
+ *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
+ *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
  *                                                                               *
  *********************************************************************************/
  
@@ -112,8 +115,8 @@
 #include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
 
-#include "GxEPD2_boards.h"
-#include "GxEPD2_boards_added.h"
+#include "./GxEPD2_boards.h"
+#include "./GxEPD2_boards_added.h"
 //#include "GxEPD2_more_boards_added.h" // private
 
 #include <imglib/gridicons_sync.h>
@@ -452,6 +455,15 @@ ScreenDigit::ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uin
 	MaxTitleWidth   = (nbCarTitle * w);	
 	MaxTitleHeight  = h;
 
+  	if (Align == ALIGNLEFT) {
+		titleX = anchorX + 2;
+		titleY = anchorY - MaxHeight - 1; 
+	}
+	else {
+		titleX = anchorX - MaxWidth+2;
+		if (titleX < 0) titleX = 2;
+		titleY = anchorY - MaxHeight - 1; 		
+	}
 /*
 
 	char TmpChar[MAX_CHAR_IN_LINE];
@@ -605,6 +617,20 @@ void ScreenDigit::setValue(double Value) {
 	SerialPort.println(Value);	
 #endif //SCREEN_DEBUG
 
+	int tmpInt;
+	tmpInt = width - precision;
+	if (precision > 0) tmpInt--;
+	if (plusDisplay)   tmpInt--;
+	double valueMax = 1;
+	for (int i=0;i<tmpInt;i++) valueMax *= 10;
+	double tmpPrecision = 1;
+	for (int i=0;i<precision;i++) tmpPrecision /= 10;
+	valueMax = valueMax - tmpPrecision;
+	
+	DUMP(valueMax);
+	
+	if (value > valueMax) value = valueMax;
+
   if (Value != oldvalue) {
     /* build digit and check changes */
     oldvalue=value;
@@ -633,6 +659,12 @@ int ScreenDigit::digitsBe4Decimal(double number) {
   return cnt;
 }
 
+//****************************************************************************************************************************
+void ScreenDigit::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+}
 
 //****************************************************************************************************************************
 char * ScreenDigit::dtostrf2(double number, signed char width, unsigned char prec, char *s, boolean zero) {
@@ -779,7 +811,7 @@ void ScreenDigit::show() {
   uint16_t w, h;  //, w1, h1;
   int16_t box_w; //, box_w1; 
   int16_t box_h; //, box_h1; 
-	int16_t titleX, titleY;
+//	int16_t titleX, titleY;
 //	int tmpWidth;
 
 //	dtostrf2(999999.999,width,precision,tmpChar,zero);
@@ -867,8 +899,8 @@ void ScreenDigit::show() {
 //		display.fillRect(anchorX-1, anchorY-MaxHeight-3, MaxWidth+5, MaxHeight+6, GxEPD_WHITE); //display.fillRect(anchorX-1, anchorY-MaxHeight-3, MaxWidth+5, MaxHeight+6, GxEPD_WHITE);
   
     display.setCursor(anchorX, anchorY-1); //display.setCursor(anchorX, anchorY-1);
-		titleX = anchorX + 2;
-		titleY = anchorY - MaxHeight - 1; 
+//		titleX = anchorX + 2;
+//		titleY = anchorY - MaxHeight - 1; 
     display.print(digitCharacters);
 				
 	} else {
@@ -894,9 +926,9 @@ void ScreenDigit::show() {
 //		display.drawRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_BLACK);
 		
     display.setCursor(anchorX-w, anchorY-1);
-		titleX = anchorX - MaxWidth+2;
+/*		titleX = anchorX - MaxWidth+2;
 		if (titleX < 0) titleX = 2;
-		titleY = anchorY - MaxHeight - 1; 	
+		titleY = anchorY - MaxHeight - 1; 	*/
 
 //		display.fillRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+5, MaxHeight+6, GxEPD_WHITE);//display.fillRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+5, MaxHeight+6, GxEPD_WHITE);
 
@@ -1246,7 +1278,6 @@ ScreenText::ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, int8_
 		display.setTextSize(1);
 	}
 
-
 //  int16_t box_x = anchorX;
 //  int16_t box_y = anchorY;
 //  uint16_t w, h;
@@ -1427,6 +1458,16 @@ ScreenText::ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, int8_
 	display.getTextBounds("W", 0, 100, &box_w, &box_h, &w, &h);
 	MaxTitleWidth   = (nbCarTitle * w);	
 	MaxTitleHeight  = h;	
+	
+	if (Align == ALIGNLEFT) {
+		titleX = anchorX + 2;
+		titleY = anchorY - MaxHeight - 1; 
+	}
+	else {
+		titleX = anchorX - MaxWidth+2;
+		if (titleX < 0) titleX = 2;
+		titleY = anchorY - MaxHeight - 1; 		
+	}
 }
 
 //****************************************************************************************************************************
@@ -1448,6 +1489,12 @@ void ScreenText::setValue(String Value) {
   reset();
 }
  
+ //****************************************************************************************************************************
+void ScreenText::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+}
 
 //****************************************************************************************************************************
 void ScreenText::show() {
@@ -1486,7 +1533,7 @@ void ScreenText::show() {
 //  uint16_t w, h, w1, h1;
 //  int16_t box_w, box_w1; 
 //  int16_t box_h, box_h1; 
-	int16_t titleX, titleY;
+//	int16_t titleX, titleY;
 //	int tmpWidth;
 
 
@@ -1577,8 +1624,8 @@ void ScreenText::show() {
 		display.fillRect(anchorX-1, anchorY-MaxHeight-1, MaxWidth-5, MaxHeight+2, GxEPD_WHITE);
 		//display.drawRect(anchorX-1, anchorY-MaxHeight-6, MaxWidth+4, MaxHeight+10, GxEPD_BLACK);
 		display.setCursor(anchorX, anchorY);
-		titleX = anchorX + 4;
-		titleY = anchorY - MaxHeight; 
+//		titleX = anchorX + 4;
+//		titleY = anchorY - MaxHeight; 
     display.print(value.substring(0,width));
 	}
 	else if (Align == ALIGNRIGHT) {
@@ -2563,6 +2610,13 @@ int8_t* ScreenTime::getTime(void) {
   return time;
 }
 
+ //****************************************************************************************************************************
+void ScreenTime::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+	titlePosition = true;
+}
 /* !!! never reset, only on page change !!! */
 //****************************************************************************************************************************
 void ScreenTime::show(void) {
@@ -2572,6 +2626,25 @@ void ScreenTime::show(void) {
   SerialPort.println("Show : ScreenTime");
 #endif //SCREEN_DEBUG
 
+//  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
+  display.fillRect(posX-70, posY-32, 16, 34, GxEPD_WHITE);
+// 	display.drawRect(posX-70, posY-32, 16, 34, GxEPD_BLACK);
+
+
+  if (dot_or_h == false) {
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : H");
+#endif //SCREEN_DEBUG
+
+    display.drawBitmap(posX-70, posY-24,hicons,  16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
+  else {	
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : DOT");
+#endif //SCREEN_DEBUG
+  
+    display.drawBitmap(posX-70, posY-26, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
 #ifdef SCREEN_DEBUG2
   SerialPort.print("time : ");
   SerialPort.print(time[2]);
@@ -2586,7 +2659,7 @@ void ScreenTime::show(void) {
   minute.setValue(time[1]);
   minute.show();
 
-  if (!dot_or_h) {	
+/*  if (!dot_or_h) {	
 #ifdef SCREEN_DEBUG2
 		SerialPort.println("dot_or_h  : H");
 #endif //SCREEN_DEBUG
@@ -2609,7 +2682,7 @@ void ScreenTime::show(void) {
 //		display.drawRect(posX-55, posY-26, 16, 26, GxEPD_BLACK);
 		display.fillRect(posX-54, posY-25, 14, 24, GxEPD_WHITE);
     display.drawBitmap(posX-55, posY-25, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
-	}
+	}*/
 
   display.fillRect(posX-121, posY-10-28, 88, 10, GxEPD_WHITE);
 	
@@ -2624,6 +2697,8 @@ void ScreenTime::show(void) {
 
 //		display.setCursor(posX-100, posY-30); //titleX+2, titleY);
 
+		if (titlePosition) 	display.setCursor(titleX, titleY); //titleX+2, titleY);
+		else				display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 		display.print(varioLanguage.getText(TITRE_TIME));
 	}
 	else  {
@@ -2631,6 +2706,8 @@ void ScreenTime::show(void) {
 //			display.drawInvertedBitmap(posX-125, posY-17-36, tdvtext, 88, 17, GxEPD_BLACK);
 //		display.setCursor(posX-100, posY-30); //titleX+2, titleY);
 
+		if (titlePosition) 	display.setCursor(titleX, titleY); //titleX+2, titleY);
+		else				display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 		display.print(varioLanguage.getText(TITRE_TDV));
 	}
  }

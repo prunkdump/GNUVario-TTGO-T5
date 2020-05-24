@@ -28,51 +28,50 @@
  *                                                                               *
  *********************************************************************************
  */
- 
+
 #ifndef VARIO_LANGUAGE_H
 #define VARIO_LANGUAGE_H
 
 #include <HardwareConfig.h>
 
-#define FRENCH 		0
-#define ENGLISH		1
+#define FRENCH 0
+#define ENGLISH 1
 
-#define TITRE_TIME 						0
-#define TITRE_TDV  						1
-#define TITRE_ALTI 						2
-#define TITRE_AGL  						3
-#define TITRE_VARIO						4
-#define TITRE_SPEED   				5
-#define TITRE_FINESSE   			6
-#define TITRE_TCHUTE					7 
-#define TITRE_CAP							8
-#define TITRE_LAT							9
-#define TITRE_LONG 						10
-#define TITRE_COMPAS 					11
-#define TITRE_STAT        		12
-#define TITRE_DATE 						13
-#define TITRE_HEURE						14
-#define TITRE_DUREE 					15
-#define TITRE_VITESSE 				16
-#define TITRE_CONNECT   			17
-#define TITRE_CONNECTA	  		18
-#define TITRE_DEMAR     			19
-#define TITRE_REDEMAR     		20
-#define TITRE_ENCOURS 				21	
-#define TITRE_CALIBR          22
-#define TITRE_VEILLE          23			
+#define TITRE_TIME 0
+#define TITRE_TDV 1
+#define TITRE_ALTI 2
+#define TITRE_AGL 3
+#define TITRE_VARIO 4
+#define TITRE_SPEED 5
+#define TITRE_FINESSE 6
+#define TITRE_TCHUTE 7
+#define TITRE_CAP 8
+#define TITRE_LAT 9
+#define TITRE_LONG 10
+#define TITRE_COMPAS 11
+#define TITRE_STAT 12
+#define TITRE_DATE 13
+#define TITRE_HEURE 14
+#define TITRE_DUREE 15
+#define TITRE_VITESSE 16
+#define TITRE_CONNECT 17
+#define TITRE_CONNECTA 18
+#define TITRE_DEMAR 19
+#define TITRE_REDEMAR 20
+#define TITRE_ENCOURS 21
+#define TITRE_CALIBR 22
+#define TITRE_VEILLE 23
 
 class VarioLanguage
 {
 public:
-    void 		init(uint8_t language = 0);
-		void 		loadConfigurationLangue(char *filename);
-		String  getText(uint8_t value);
+	void init(uint8_t language = 0);
+	void loadConfigurationLangue(char *filename);
+	String getText(uint8_t value);
 
 private:
-
-		uint8_t langue = 0;
-		String TITRE_TAB[30];
+	uint8_t langue = 0;
+	String TITRE_TAB[30];
 };
 
 extern VarioLanguage varioLanguage;

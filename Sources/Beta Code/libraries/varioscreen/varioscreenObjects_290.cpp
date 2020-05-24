@@ -65,8 +65,11 @@
  *    1.1.17 08/04/20   Modification affichage des titres                        *
  *    1.1.18 13/04/20   Titre en mode texte                                      *
  *    1.2.0  29/04/20   Modification font screedigit                             *
+ *    1.2.1  10/05/20   Correction scrrentime                                    *
+ *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
+ *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
  *                                                                               *
-*********************************************************************************/ 
+ *********************************************************************************/ 
  
  
 
@@ -119,8 +122,8 @@
 #include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
 
-#include "GxEPD2_boards.h"
-#include "GxEPD2_boards_added.h"
+#include "./GxEPD2_boards.h"
+#include "./GxEPD2_boards_added.h"
 //#include "GxEPD2_more_boards_added.h" // private
 
 #include <imglib/gridicons_sync.h>
@@ -459,6 +462,15 @@ ScreenDigit::ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uin
 	MaxTitleWidth   = (nbCarTitle * w);	
 	MaxTitleHeight  = h;
 
+  if (Align == ALIGNLEFT) {
+		titleX = anchorX + 2;
+		titleY = anchorY - MaxHeight - 1; 
+	}
+	else {
+		titleX = anchorX - MaxWidth+2;
+		if (titleX < 0) titleX = 2;
+		titleY = anchorY - MaxHeight - 1; 		
+	}
 /*
 
 	char TmpChar[MAX_CHAR_IN_LINE];
@@ -611,6 +623,20 @@ void ScreenDigit::setValue(double Value) {
 	SerialPort.println(Value);	
 #endif //SCREEN_DEBUG
 
+	int tmpInt;
+	tmpInt = width - precision;
+	if (precision > 0) tmpInt--;
+	if (plusDisplay)   tmpInt--;
+	double valueMax = 1;
+	for (int i=0;i<tmpInt;i++) valueMax *= 10;
+	double tmpPrecision = 1;
+	for (int i=0;i<precision;i++) tmpPrecision /= 10;
+	valueMax = valueMax - tmpPrecision;
+	
+	DUMP(valueMax);
+	
+	if (value > valueMax) value = valueMax;
+	
   if (Value != oldvalue) {
     /* build digit and check changes */
     oldvalue=value;
@@ -639,6 +665,12 @@ int ScreenDigit::digitsBe4Decimal(double number) {
   return cnt;
 }
 
+//****************************************************************************************************************************
+void ScreenDigit::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+}
 
 //****************************************************************************************************************************
 char * ScreenDigit::dtostrf2(double number, signed char width, unsigned char prec, char *s, boolean zero) {
@@ -785,7 +817,7 @@ void ScreenDigit::show() {
   uint16_t w, h, w1, h1;
   int16_t box_w, box_w1; 
   int16_t box_h, box_h1; 
-	int16_t titleX, titleY;
+//	int16_t titleX, titleY;
 //	int tmpWidth;
 
 //	dtostrf2(999999.999,width,precision,tmpChar,zero);
@@ -870,8 +902,8 @@ void ScreenDigit::show() {
 		display.fillRect(anchorX-1, anchorY-MaxHeight-3, MaxWidth+5, MaxHeight+6, GxEPD_WHITE);
 
     display.setCursor(anchorX, anchorY-1); //display.setCursor(anchorX, anchorY-1);
-		titleX = anchorX + 2;
-		titleY = anchorY - MaxHeight - 1; 
+//		titleX = anchorX + 2;0
+//		titleY = anchorY - MaxHeight - 1; 
     display.print(digitCharacters);
 				
 	} else {
@@ -896,9 +928,9 @@ void ScreenDigit::show() {
 //		display.drawRect(anchorX-MaxWidth-1, anchorY-MaxHeight-3, MaxWidth+3, MaxHeight+6, GxEPD_BLACK);
 		
     display.setCursor(anchorX-w, anchorY-1);
-		titleX = anchorX - MaxWidth+2;
+/*		titleX = anchorX - MaxWidth+2;
 		if (titleX < 0) titleX = 2;
-		titleY = anchorY - MaxHeight - 1; 	
+		titleY = anchorY - MaxHeight - 1; 	*/
 
 
 	
@@ -1239,18 +1271,18 @@ ScreenText::ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, int8_
   int16_t box_h; 
 	int tmpWidth;
 
-  lastDisplayWidth = 0; 
+/*  lastDisplayWidth = 0; 
 
   display.setFont(&gnuvarioe18pt7b); //&FreeSansBold18pt7b);
-/*	if (large) display.setTextSize(2);
-	else 			 display.setTextSize(1);	*/
+// *	if (large) display.setTextSize(2);
+	else 			 display.setTextSize(1);	 //
   if (large == FONTLARGE) display.setTextSize(2);
   else if (large == FONTNORMAL) display.setTextSize(1);
 	else {
 		display.setFont(&gnuvarioe14pt7b);   //&FreeSansBold9pt7b);
 		display.setTextSize(1);
 	}
-
+*/
 
 //  int16_t box_x = anchorX;
 //  int16_t box_y = anchorY;
@@ -1432,6 +1464,16 @@ ScreenText::ScreenText(uint16_t anchorX, uint16_t anchorY, uint16_t width, int8_
 	display.getTextBounds("W", 0, 100, &box_w, &box_h, &w, &h);
 	MaxTitleWidth   = (nbCarTitle * w);	
 	MaxTitleHeight  = h;	
+	
+	if (Align == ALIGNLEFT) {
+		titleX = anchorX + 2;
+		titleY = anchorY - MaxHeight - 1; 
+	}
+	else {
+		titleX = anchorX - MaxWidth+2;
+		if (titleX < 0) titleX = 2;
+		titleY = anchorY - MaxHeight - 1; 		
+	}
 }
 
 //****************************************************************************************************************************
@@ -1453,6 +1495,12 @@ void ScreenText::setValue(String Value) {
   reset();
 }
  
+ //****************************************************************************************************************************
+void ScreenText::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+}
 
 //****************************************************************************************************************************
 void ScreenText::show() {
@@ -1491,7 +1539,7 @@ void ScreenText::show() {
 //  uint16_t w, h, w1, h1;
 //  int16_t box_w, box_w1; 
 //  int16_t box_h, box_h1; 
-	int16_t titleX, titleY;
+//	int16_t titleX, titleY;
 //	int tmpWidth;
 
 /*	dtostrf2(999999.999,width,precision,tmpChar,zero);
@@ -1581,8 +1629,8 @@ void ScreenText::show() {
 		display.fillRect(anchorX-1, anchorY-MaxHeight-6, MaxWidth+4, MaxHeight+10, GxEPD_WHITE);
 		//display.drawRect(anchorX-1, anchorY-MaxHeight-6, MaxWidth+4, MaxHeight+10, GxEPD_BLACK);
 		display.setCursor(anchorX, anchorY);
-		titleX = anchorX + 4;
-		titleY = anchorY - MaxHeight; 
+//		titleX = anchorX + 4;
+//		titleY = anchorY - MaxHeight; 
     display.print(value.substring(0,width));
 	}
 	else if (Align == ALIGNRIGHT) {
@@ -2643,6 +2691,13 @@ int8_t* ScreenTime::getTime(void) {
   return time;
 }
 
+ //****************************************************************************************************************************
+void ScreenTime::setPositionTitle(uint16_t X, uint16_t Y) {
+//****************************************************************************************************************************
+	titleX = X;
+	titleY = Y;
+	titlePosition = true;
+}
 /* !!! never reset, only on page change !!! */
 //****************************************************************************************************************************
 void ScreenTime::show(void) {
@@ -2651,6 +2706,26 @@ void ScreenTime::show(void) {
 #ifdef SCREEN_DEBUG2
   SerialPort.println("Show : ScreenTime");
 #endif //SCREEN_DEBUG
+
+//  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
+  display.fillRect(posX-70, posY-32, 16, 34, GxEPD_WHITE);
+// 	display.drawRect(posX-70, posY-32, 16, 34, GxEPD_BLACK);
+
+
+  if (dot_or_h == false) {
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : H");
+#endif //SCREEN_DEBUG
+
+    display.drawBitmap(posX-70, posY-24,hicons,  16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
+  else {	
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : DOT");
+#endif //SCREEN_DEBUG
+  
+    display.drawBitmap(posX-70, posY-26, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
 
 #ifdef SCREEN_DEBUG2
   SerialPort.print("time : ");
@@ -2666,7 +2741,7 @@ void ScreenTime::show(void) {
   minute.setValue(time[1]);
   minute.show();
 
-  if (!dot_or_h) {	
+/*  if (!dot_or_h) {	
 #ifdef SCREEN_DEBUG2
 		SerialPort.println("dot_or_h  : H");
 #endif //SCREEN_DEBUG
@@ -2691,7 +2766,7 @@ void ScreenTime::show(void) {
 //    	display.drawBitmap(posX-55, posY-25, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
 	display.fillRect(posX-69, posY-25, 14, 24, GxEPD_WHITE);
     display.drawBitmap(posX-70, posY-25,doticons,  16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
-	}
+	}*/
   display.fillRect(posX-121, posY-10-28, 88, 10, GxEPD_WHITE);
 	
 	display.setFont(&NotoSans6pt7b); 
@@ -2705,6 +2780,8 @@ void ScreenTime::show(void) {
 
 //			display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 //			display.print(varioLanguage.getText(TITRE_TIME));
+		if (titlePosition) 	display.setCursor(titleX, titleY); //titleX+2, titleY);
+		else				display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 		display.print(varioLanguage.getText(TITRE_TIME));
 	}
 	else  {
@@ -2712,6 +2789,8 @@ void ScreenTime::show(void) {
 //			display.drawInvertedBitmap(posX-125, posY-17-36, tdvtext, 88, 17, GxEPD_BLACK);
 //			display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 
+			if (titlePosition) 	display.setCursor(titleX, titleY); //titleX+2, titleY);
+			else				display.setCursor(posX-120, posY-30); //titleX+2, titleY);
 			display.print(varioLanguage.getText(TITRE_TDV));
 	}	
 }

@@ -26,6 +26,8 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
+#include "BluetoothSerial.h"
+
 /********************/
 /* output parameter */
 /********************/
@@ -128,5 +130,9 @@ class SerialNmea {
 };
 
 extern SerialNmea serialNmea;
+
+#if defined(SERIAL_NMEA_BLUETOOTH_OUTPUT) && defined(HAVE_BLUETOOTH)
+extern BluetoothSerial SerialBT;
+#endif
 
 #endif

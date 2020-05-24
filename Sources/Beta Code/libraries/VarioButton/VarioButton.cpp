@@ -162,21 +162,23 @@ void VARIOButtonScheduleur::update()
 		SerialPort.printf("pressedFor 2s A \r\n");
 #endif //BUTTON_DEBUG
 #if defined(HAVE_SDCARD) && defined(HAVE_GPS) && defined(AGL_MANAGER_H)
-		if (varioData.getVariometerState() >= VARIOMETER_STATE_CALIBRATED) {
+		if (varioData.getVariometerState() >= VARIOMETER_STATE_CALIBRATED)
+		{
 
 			int groundLevel = varioData.aglManager.getGroundLevel();
 			if (groundLevel != -1)
 			{
 				varioData.kalmanvert.calibratePosition(groundLevel);
-	
-				if (nmeaParser.haveNewAltiValue()) {
+
+				if (nmeaParser.haveNewAltiValue())
+				{
 					double tmpGpsAlti = nmeaParser.getAlti();
 					varioData.aglManager.setAltiGps(tmpGpsAlti);
 				}
-	
+
 				int aglLevel = varioData.aglManager.getAgl();
 				GnuSettings.COMPENSATION_GPSALTI = aglLevel;
-				
+
 				char tmpchar[20] = "params.jso";
 				GnuSettings.saveConfigurationVario(tmpchar);
 
@@ -273,14 +275,16 @@ void VARIOButtonScheduleur::update()
 }
 
 /**********************************************************/
-void VARIOButtonScheduleur::Set_StatePage(uint8_t state) {
-/**********************************************************/
+void VARIOButtonScheduleur::Set_StatePage(uint8_t state)
+{
+	/**********************************************************/
 	StatePage = state;
 }
 
 /**********************************************************/
-uint8_t VARIOButtonScheduleur::Get_StatePage(void) {
-/**********************************************************/
+uint8_t VARIOButtonScheduleur::Get_StatePage(void)
+{
+	/**********************************************************/
 	return StatePage;
 }
 
@@ -293,7 +297,8 @@ File root;
 #endif
 
 /**********************************************************/
-void VARIOButtonScheduleur::treatmentBtnA(bool Debounce) {
+void VARIOButtonScheduleur::treatmentBtnA(bool Debounce)
+{
 /**********************************************************/
 #ifdef BUTTON_DEBUG
 	SerialPort.println("Bouton A");
@@ -306,14 +311,17 @@ void VARIOButtonScheduleur::treatmentBtnA(bool Debounce) {
 	}
 	else if (StatePage == STATE_PAGE_VARIO)
 	{
-		
-		if (varioData.getVariometerState() == VARIOMETER_STATE_CALIBRATED) 
-		{     
-			if (GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START) {
-        GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START = false;
-			  varioData.createSDCardTrackFile();
+
+		if (varioData.getVariometerState() == VARIOMETER_STATE_CALIBRATED)
+		{
+			if (GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START)
+			{
+				GnuSettings.VARIOMETER_RECORD_WHEN_FLIGHT_START = false;
+				varioData.createSDCardTrackFile();
 			}
-		} else {
+		}
+		else
+		{
 			screen.schedulerScreen->previousPage();
 		}
 	}
@@ -360,8 +368,9 @@ void VARIOButtonScheduleur::treatmentBtnA(bool Debounce) {
 }
 
 /**********************************************************/
-void VARIOButtonScheduleur::treatmentBtnB(bool Debounce) {
-/***********************************************************/
+void VARIOButtonScheduleur::treatmentBtnB(bool Debounce)
+{
+	/***********************************************************/
 
 	if (StatePage == STATE_PAGE_VARIO)
 	{
@@ -396,14 +405,15 @@ void VARIOButtonScheduleur::treatmentBtnB(bool Debounce) {
 	{
 		//lancement de la calibration
 		StatePage = STATE_PAGE_CALIBRATE;
-		screen.ScreenViewMessage(varioLanguage.getText(TITRE_ENCOURS), 0);     //"en cours", 0);
+		screen.ScreenViewMessage(varioLanguage.getText(TITRE_ENCOURS), 0); //"en cours", 0);
 		Calibration.Begin();
 	}
 }
 
 /************************************************************/
-void VARIOButtonScheduleur::treatmentBtnC(bool Debounce) {
-/************************************************************/
+void VARIOButtonScheduleur::treatmentBtnC(bool Debounce)
+{
+	/************************************************************/
 
 	/*SerialPort.println("Read test.txt");
 
@@ -446,7 +456,8 @@ void VARIOButtonScheduleur::treatmentBtnC(bool Debounce) {
 
 #ifdef HAVE_WIFI
 /**********************************************************/
-void VARIOButtonScheduleur::WifiServeur(void) {
+void VARIOButtonScheduleur::WifiServeur(void)
+{
 /**********************************************************/
 #ifdef BUTTON_DEBUG
 	SerialPort.println("liste des fichiers");
@@ -462,8 +473,8 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 	root = SDHAL_SD.open("/");
 	if (root)
 	{
-#endif //SDFAT_LIB
-		printDirectory(root, 0);
+#endif //SDFAT_LIB \
+	//printDirectory(root, 0);
 		root.close();
 	}
 	else
@@ -496,8 +507,9 @@ void VARIOButtonScheduleur::WifiServeur(void) {
 #ifdef HAVE_SDCARD
 #ifdef SDFAT_LIB
 /**********************************************************/
-void VARIOButtonScheduleur::printDirectory(SdFile dir, int numTabs) {
-/**********************************************************/
+void VARIOButtonScheduleur::printDirectory(SdFile dir, int numTabs)
+{
+	/**********************************************************/
 
 	char fBuffer[15];
 	SdFile entry;
@@ -536,8 +548,9 @@ void VARIOButtonScheduleur::printDirectory(SdFile dir, int numTabs) {
 }
 #else  //SDFAT_LIB
 /**********************************************************/
-void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
-/**********************************************************/
+void VARIOButtonScheduleur::printDirectory(File dir, int numTabs)
+{
+	/**********************************************************/
 
 	dir.rewindDirectory();
 	//#ifdef BUTTON_DEBUG
@@ -574,8 +587,9 @@ void VARIOButtonScheduleur::printDirectory(File dir, int numTabs) {
 #endif //HAVE_SDCARD
 
 /**********************************************************/
-void VARIOButtonScheduleur::treatmentBtnB3S(bool Debounce) {
-/**********************************************************/
+void VARIOButtonScheduleur::treatmentBtnB3S(bool Debounce)
+{
+	/**********************************************************/
 
 	if (StatePage == STATE_PAGE_VARIO)
 	{

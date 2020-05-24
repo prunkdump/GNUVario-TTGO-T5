@@ -866,7 +866,7 @@ void esp32FOTA2::downloadWwwFiles()
 #endif
     // File system object.
     // Directory file.
-    SdFile root;
+    File root;
 
     String newPath = "wwwnew";
     if (!SDHAL_SD.mkdir(newPath.c_str()))
@@ -899,11 +899,10 @@ void esp32FOTA2::downloadWwwFiles()
             if (httpCode == HTTP_CODE_OK)
             {
 
-                SdFile myFile;
-                boolean tmpReturn = false;
-                tmpReturn = myFile.open(myfilename.c_str(), O_WRONLY | O_CREAT);
+                File myFile;
+                myFile = SDHAL_SD.open(myfilename.c_str(), FILE_WRITE);
 
-                if (!tmpReturn)
+                if (!myFile)
                 {
 #ifdef WIFI_DEBUG
                     SerialPort.print("Impossible de créer le fichier : ");
@@ -983,9 +982,9 @@ bool esp32FOTA2::UpdateWwwDirectory()
 #endif
     // File system object.
     // Directory file.
-    SdFile root;
+    File root;
 
-    String newPath = "wwwnew";
+    String newPath = "/wwwnew";
     //		String oldPath = "";
     DUMP(newPath.c_str());
     if (SDHAL_SD.exists(newPath.c_str()))
@@ -996,17 +995,17 @@ bool esp32FOTA2::UpdateWwwDirectory()
 
         // Traitement du fichier wwwnew
 
-        newPath = "wwwold";
+        newPath = "/wwwold";
         if (SDHAL_SD.exists(newPath.c_str()))
         {
 #ifdef WIFI_DEBUG
             SerialPort.println("[HTTP] le dossier wwwold existe");
 #endif
 
-            SdFile root;
-            SdFile file;
+            File root;
+            File file;
 
-            if (!root.open("wwwold"))
+            if (!(root = SDHAL_SD.open("/wwwold")))
             {
 #ifdef WIFI_DEBUG
                 SerialPort.println("[HTTP] impossible d'ouvrir le dossier wwwold");
@@ -1016,22 +1015,19 @@ bool esp32FOTA2::UpdateWwwDirectory()
             // Open next file in root.
             // Warning, openNext starts at the current directory position
             // so a rewind of the directory may be required.
-            while (file.openNext(&root, O_RDONLY))
+            while (file = root.openNextFile(FILE_READ))
             {
 
-                char fBuffer[32];
-                file.getName(fBuffer, 30);
-                String SBuffer = "wwwold/";
-                SBuffer += String(fBuffer);
-
 #ifdef WIFI_DEBUG
-                SerialPort.print("[HTTP] suppression du fichier : ");
-                SerialPort.println(SBuffer);
-#endif
 
+                SerialPort.print("[HTTP] suppression du fichier : <");
+                SerialPort.print(file.name());
+                SerialPort.println(">");
+#endif
+                String tmpFilenameToDel = file.name();
                 file.close();
 
-                if (!SDHAL_SD.remove(SBuffer.c_str()))
+                if (!SDHAL_SD.remove((char *)tmpFilenameToDel.c_str()))
                 {
 #ifdef WIFI_DEBUG
                     SerialPort.println("[HTTP] le fichier n'a pas pu être supprimé");
@@ -1051,7 +1047,7 @@ bool esp32FOTA2::UpdateWwwDirectory()
         }
 
         // rename "www" into "wwwold"
-        if (!SDHAL_SD.rename("www", "wwwold"))
+        if (!SDHAL_SD.rename("/www", "/wwwold"))
         {
 #ifdef WIFI_DEBUG
             SerialPort.println("[HTTP] le dossier www ne peut être renomé en wwwold");
@@ -1060,7 +1056,7 @@ bool esp32FOTA2::UpdateWwwDirectory()
         }
 
         // rename "www" into "wwwold"
-        if (!SDHAL_SD.rename("wwwnew", "www"))
+        if (!SDHAL_SD.rename("/wwwnew", "/www"))
         {
 #ifdef WIFI_DEBUG
             SerialPort.println("[HTTP] le dossier wwwnew ne peut être renomé en www");

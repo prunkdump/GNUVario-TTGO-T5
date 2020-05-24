@@ -68,11 +68,9 @@
 
 #ifdef HAVE_SDCARD
 #include <sdcardHAL.h>
-#include <SdFat.h>
-SdFat SD;
+// #include <SdFat.h>
+// SdFat SD;
 #endif
-
-#include <SPI.h>
 
 #include <VarioSettings.h>
 
@@ -83,6 +81,12 @@ SdFat SD;
 #include <esp32fota2.h>
 
 extern VarioSettings GnuSettings;
+
+#include <VarioIgcParser.h>
+
+// #if !defined(HAVE_BLUETOOTH)
+#include <VarioSqlFlight.h>
+// #endif // HAVE_BLUETOOTH
 
 #define TAG "server"
 
@@ -173,7 +177,7 @@ boolean VarioWifiServer::begin(void)
   File dataFile;
 
   //test présence fichier index
-  if (dataFile.open("www/index.htm", O_RDONLY))
+  if (dataFile = SDHAL_SD.open("/www/index.htm", FILE_READ))
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("SD Card initialized.");
@@ -183,14 +187,15 @@ boolean VarioWifiServer::begin(void)
     dataFile.close();
   }
 
-  dataFile.open("/", O_RDONLY);
-  dataFile.rewind();
-  dataFile.close();
+  dataFile = SDHAL_SD.open("/", FILE_READ);
+  dataFile.rewindDirectory();
+
 #ifdef WIFI_DEBUG
   // SerialPort.println("");
   // SerialPort.println("ListeDirectory");
   // listDirectory(dataFile, 0);
 #endif //WIFI_DEBUG
+  dataFile.close();
 
   if (hasSD != true)
   {
@@ -356,6 +361,9 @@ void VarioWifiServer::start(void)
   // sauvegarde du contenu du fichier preference
   server.on("/webconfig", HTTP_POST, handleSaveWebConfig);
 
+  // sauvegarde du contenu du fichier preference
+  server.on("/parseigc", HTTP_GET, handleParseIgc);
+
   //Aucun route spécifique, on regarde si il s'agit d'un fichier du répertoire www
   server.onNotFound(handleNotFound);
 
@@ -429,14 +437,13 @@ void listDirectory(File dir, int numTabs)
 {
   /***********************************/
 
-  char fBuffer[32];
-  dir.rewind();
+  dir.rewindDirectory();
 
   while (true)
   {
     File entry;
 
-    if (!entry.openNext(&dir, O_RDONLY))
+    if (!(entry = dir.openNextFile(FILE_READ)))
     {
       // no more files
       break;
@@ -447,19 +454,17 @@ void listDirectory(File dir, int numTabs)
       SerialPort.print('\t');
     }
 
-    entry.getName(fBuffer, 30);
-
-    SerialPort.print(fBuffer);
-    if (entry.isDir())
+    Serial.print(entry.name());
+    if (entry.isDirectory())
     {
-      SerialPort.println("/");
+      Serial.println("/");
       listDirectory(entry, numTabs + 1);
     }
     else
     {
       // files have sizes, directories do not
       SerialPort.print("\t\t");
-      SerialPort.println(entry.fileSize(), DEC);
+      SerialPort.println(entry.size(), DEC);
     }
 
     entry.close();
@@ -478,7 +483,7 @@ bool loadFromSdCard(String path)
   /***********************************/
   String dataType = "text/plain";
 
-  String basePath = "www";
+  String basePath = "/www";
 
   path = basePath + path;
 
@@ -545,16 +550,16 @@ bool loadFromSdCard(String path)
 
   File dataFile;
 
-  if (!dataFile.open(path.c_str(), O_RDONLY))
+  if (!(dataFile = SDHAL_SD.open(path.c_str(), FILE_READ)))
   {
     return false;
   };
-  if (dataFile.isDir())
+  if (dataFile.isDirectory())
   {
     dataFile.close();
     path += "/index.htm";
     dataType = "text/html";
-    if (!dataFile.open(path.c_str(), O_RDONLY))
+    if (!(dataFile = SDHAL_SD.open(path.c_str(), FILE_READ)))
     {
       return false;
     };
@@ -565,7 +570,7 @@ bool loadFromSdCard(String path)
     dataType = "application/octet-stream";
   }
 
-  if (server.streamFile(dataFile, dataType) != dataFile.fileSize())
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("Sent less data than expected!");
@@ -600,15 +605,15 @@ void handleListFlights()
   path = "/vols";
 
   File dir;
-  dir.open((char *)path.c_str(), O_READ); //O_RDONLY);
+  dir = SDHAL_SD.open((char *)path.c_str(), FILE_READ);
 
   path = String();
-  if (!dir.isDir())
+  if (!dir.isDirectory())
   {
     dir.close();
     return returnFail("NOT DIR");
   }
-  dir.rewind();
+  dir.rewindDirectory();
 
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.sendHeader("Access-Control-Allow-Origin", "*");
@@ -619,7 +624,8 @@ void handleListFlights()
   for (int cnt = 0; true; ++cnt)
   {
     File entry;
-    if (!entry.openNext(&dir, O_READ))
+    entry = dir.openNextFile(FILE_READ);
+    if (!entry)
     {
       TRACE();
       break;
@@ -634,9 +640,9 @@ void handleListFlights()
 
     String fsize = "";
 
-    if (!entry.isDir())
+    if (!entry.isDirectory())
     {
-      int bytes = entry.fileSize();
+      int bytes = entry.size();
       fsize = getFileSizeStringFromBytes(bytes);
     }
     else
@@ -646,17 +652,18 @@ void handleListFlights()
 
     output += "{\"type\":\"";
 
-    output += (entry.isDir()) ? "dir" : "file";
+    output += (entry.isDirectory()) ? "dir" : "file";
 
     output += "\",\"name\":\"";
 
-    char fBuffer[32];
-    entry.getName(fBuffer, 30);
-    output += fBuffer;
+    output += entry.name();
 
     output += "\",\"size\":\"";
     output += fsize;
     output += "\"";
+    //VarioIgcParser varioIgcParser;
+    // varioIgcParser.parseFile("/vols/" + String(entry.name()));
+    //output += ", \"info\": " + varioIgcParser.getJson();
     output += "}";
     server.sendContent(output);
     entry.close();
@@ -688,7 +695,7 @@ void handleParams()
 
   File dataFile;
 
-  if (!dataFile.open((char *)path.c_str(), O_RDONLY))
+  if (!(dataFile = SDHAL_SD.open((char *)path.c_str(), FILE_READ)))
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("params.jso introuvable");
@@ -700,7 +707,7 @@ void handleParams()
   //gestion des CORS
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
-  if (server.streamFile(dataFile, dataType) != dataFile.fileSize())
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
   {
     SerialPort.println("Sent less data than expected!");
   }
@@ -728,7 +735,7 @@ void handleWebConfig()
 
   File dataFile;
 
-  if (!dataFile.open((char *)path.c_str(), O_RDONLY))
+  if (!(dataFile = SDHAL_SD.open((char *)path.c_str(), FILE_READ)))
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("prefs.jso introuvable");
@@ -753,7 +760,7 @@ void handleWebConfig()
   //gestion des CORS
   server.sendHeader("Access-Control-Allow-Origin", "*");
 
-  if (server.streamFile(dataFile, dataType) != dataFile.fileSize())
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
   {
     SerialPort.println("Sent less data than expected!");
   }
@@ -777,7 +784,7 @@ void handleWifi()
   }
 
   String dataType = "text/plain";
-  String path = "wifi.cfg";
+  String path = "/wifi.cfg";
 
 #ifdef WIFI_DEBUG
   SerialPort.print("file name :");
@@ -785,8 +792,7 @@ void handleWifi()
 #endif
 
   File dataFile;
-  if (!dataFile.open((char *)path.c_str(), O_RDONLY))
-
+  if (!(dataFile = SDHAL_SD.open((char *)path.c_str(), FILE_READ)))
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("wifi.cfg introuvable");
@@ -795,7 +801,7 @@ void handleWifi()
     return returnFail("NO FILE named wifi.cfg");
   }
 
-  if (server.streamFile(dataFile, dataType) != dataFile.fileSize())
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
   {
     SerialPort.println("Sent less data than expected!");
   }
@@ -806,7 +812,7 @@ void handleWifi()
 
 // récupération en JSON de la liste des fichiers d'un répertoire
 // ou de la racine de la carte SD
-// récursivement
+// récursivement ou non
 /***********************************/
 void handlePrintDirectory()
 {
@@ -816,6 +822,8 @@ void handlePrintDirectory()
 #endif
 
   String path;
+  boolean isRecursive = true;
+
   if (!server.hasArg("dir"))
   {
     path = "/";
@@ -825,16 +833,21 @@ void handlePrintDirectory()
     path = server.arg("dir");
   }
 
+  if (server.hasArg("norecursive"))
+  {
+    isRecursive = false;
+  }
+
 #ifdef WIFI_DEBUG
   SerialPort.print("dir : ");
   SerialPort.println((char *)path.c_str());
 #endif
 
   File dir;
-  dir.open((char *)path.c_str(), O_RDONLY);
-  dir.rewind();
+  dir = SDHAL_SD.open((char *)path.c_str(), FILE_READ);
+  dir.rewindDirectory();
 
-  if (!dir.isDir())
+  if (!dir.isDirectory())
   {
 #ifdef WIFI_DEBUG
     SerialPort.println("Not directory");
@@ -867,7 +880,7 @@ void handlePrintDirectory()
   //SerialPort.println(output);
 #endif
   server.sendContent(output);
-  printDirectoryRecurse(path);
+  printDirectoryRecurse(path, isRecursive);
   output = "]";
 
   output += "}";
@@ -886,27 +899,25 @@ void handlePrintDirectory()
 }
 
 /***********************************/
-void printDirectoryRecurse(String path)
+void printDirectoryRecurse(String path, boolean isRecursive)
 /***********************************/
 {
 
-  char fBuffer[32];
   File dir;
-  dir.open((char *)path.c_str(), O_RDONLY);
-  dir.rewind();
+  dir = SDHAL_SD.open((char *)path.c_str(), FILE_READ);
+  dir.rewindDirectory();
 
   int tmpcnt = 0;
 
   for (int cnt = 0; true; ++cnt)
   {
     File entry;
-    if (!entry.openNext(&dir, O_RDONLY))
+    if (!(entry = dir.openNextFile(FILE_READ)))
     {
       // TRACE();
       break;
     }
-    entry.getName(fBuffer, 30);
-    String tmpName = fBuffer;
+    String tmpName = entry.name();
 
     if (tmpName.equalsIgnoreCase("SYSTEM~1") || tmpName.startsWith(".")) //equalsIgnoreCase(".TRASH~1"))
     {
@@ -921,9 +932,9 @@ void printDirectoryRecurse(String path)
 
     String fsize = "";
 
-    if (!entry.isDir())
+    if (!entry.isDirectory())
     {
-      int bytes = entry.fileSize();
+      int bytes = entry.size();
       fsize = getFileSizeStringFromBytes(bytes);
     }
     else
@@ -933,27 +944,28 @@ void printDirectoryRecurse(String path)
 
     output += "{\"type\":\"";
 
-    output += (entry.isDir()) ? "dir" : "file";
+    output += (entry.isDirectory()) ? "dir" : "file";
 
     output += "\",\"name\":\"";
-
-    entry.getName(fBuffer, 30);
-    output += fBuffer;
+    String tmpFullName = entry.name();
+    output += tmpFullName.substring(tmpFullName.lastIndexOf("/") + 1);
 
     output += "\",\"size\":\"";
     output += fsize;
     output += "\"";
 
-    if (entry.isDir())
+    if (entry.isDirectory())
     {
       output += ",\"contents\" :[";
 #ifdef WIFI_DEBUG
       // SerialPort.println(output);
 #endif
       server.sendContent(output);
-      entry.getName(fBuffer, 30);
-      printDirectoryRecurse(path + "/" + fBuffer);
 
+      if (isRecursive)
+      {
+        printDirectoryRecurse(entry.name(), isRecursive);
+      }
       output = "]";
     }
     output += "}";
@@ -992,7 +1004,7 @@ void handleFileDownload()
   DUMP(path);
 
   File dataFile;
-  if (!dataFile.open((char *)path.c_str(), O_RDONLY))
+  if (!(dataFile = SDHAL_SD.open((char *)path.c_str(), FILE_READ)))
   {
     return returnFail("NO FILE");
   }
@@ -1002,7 +1014,7 @@ void handleFileDownload()
 
   String dataType = "application/octet-stream";
 
-  if (server.streamFile(dataFile, dataType) != dataFile.fileSize())
+  if (server.streamFile(dataFile, dataType) != dataFile.size())
   {
     SerialPort.println("Sent less data than expected!");
   }
@@ -1081,6 +1093,7 @@ void handleFileUpload()
       SerialPort.print("Upload: END, Size: ");
       SerialPort.println(upload.totalSize);
 #endif
+      return returnOK();
     }
   }
   else if (upload.status == UPLOAD_FILE_ABORTED)
@@ -1097,8 +1110,6 @@ void handleFileUpload()
 
     return returnFail("Upload aborted");
   }
-
-  returnOK();
 }
 
 /***********************************/
@@ -1216,8 +1227,9 @@ void deleteRecursive(String path)
   /***********************************/
 
   File fileSD;
-  fileSD.open((char *)path.c_str(), O_RDONLY);
-  if (!fileSD.isDir())
+
+  fileSD = SDHAL_SD.open((char *)path.c_str(), FILE_READ);
+  if (!fileSD.isDirectory())
   {
     fileSD.close();
     SDHAL_SD.remove((char *)path.c_str());
@@ -1225,21 +1237,19 @@ void deleteRecursive(String path)
     return;
   }
 
-  fileSD.rewind();
+  fileSD.rewindDirectory();
 
   while (true)
   {
     File entry;
-    if (!entry.openNext(&fileSD, O_RDONLY))
+    if (!(entry = fileSD.openNextFile(FILE_READ)))
 
     {
       break;
     }
 
-    char fBuffer[32];
-    entry.getName(fBuffer, 30);
-    String entryPath = path + "/" + fBuffer;
-    if (entry.isDir())
+    String entryPath = entry.name();
+    if (entry.isDirectory())
     {
       entry.close();
       deleteRecursive(entryPath);
@@ -1377,9 +1387,9 @@ void handleSaveParams()
   uint8_t buf[64];
 
   File dataFile;
-  dataFile.open(path.c_str(), O_RDONLY);
+  dataFile = SDHAL_SD.open(path.c_str(), FILE_READ);
   File dataFile2;
-  dataFile2.open(pathBak.c_str(), O_RDWR | O_CREAT);
+  dataFile2 = SDHAL_SD.open(pathBak.c_str(), FILE_WRITE);
 
   while ((n = dataFile.read(buf, sizeof(buf))) > 0)
   {
@@ -1390,7 +1400,7 @@ void handleSaveParams()
 
   SDHAL_SD.remove((char *)path.c_str());
 
-  if (!dataFile.open(path.c_str(), O_RDWR | O_CREAT))
+  if (!(dataFile = SDHAL_SD.open(path.c_str(), FILE_WRITE)))
   {
     return returnFail("NO FILE");
   }
@@ -1425,7 +1435,7 @@ void handleSaveWebConfig()
 
   SDHAL_SD.remove((char *)path.c_str());
 
-  if (!dataFile.open(path.c_str(), O_RDWR | O_CREAT))
+  if (!(dataFile = SDHAL_SD.open(path.c_str(), FILE_WRITE)))
   {
     return returnFail("NO FILE");
   }
@@ -1466,9 +1476,9 @@ void handleSaveWifi()
   uint8_t buf[64];
 
   File dataFile;
-  dataFile.open(path.c_str(), O_RDONLY);
+  dataFile = SDHAL_SD.open(path.c_str(), FILE_READ);
   File dataFile2;
-  dataFile2.open(pathBak.c_str(), O_RDWR | O_CREAT);
+  dataFile2 = SDHAL_SD.open(pathBak.c_str(), FILE_READ);
 
   while ((n = dataFile.read(buf, sizeof(buf))) > 0)
   {
@@ -1479,7 +1489,7 @@ void handleSaveWifi()
 
   SDHAL_SD.remove((char *)path.c_str());
 
-  if (!dataFile.open(path.c_str(), O_RDWR | O_CREAT))
+  if (!(dataFile = SDHAL_SD.open(path.c_str(), FILE_WRITE)))
   {
     return returnFail("NO FILE");
   }
@@ -1487,6 +1497,38 @@ void handleSaveWifi()
   dataFile.println(content);
 
   dataFile.close();
+  return returnOK();
+}
+
+// parsage d'un fichier IGC
+/***********************************/
+void handleParseIgc()
+{
+/***********************************/
+#ifdef WIFI_DEBUG
+  SerialPort.println("handleParseIgc");
+#endif
+
+  if (server.uri() != "/parseigc")
+  {
+    return returnFail("BAD URL");
+  }
+  if (server.args() == 0)
+  {
+    return returnFail("BAD ARGS");
+  }
+
+  String path = server.arg(0);
+
+  //parsage du fichier IGC
+  VarioIgcParser varioIgcParser;
+  varioIgcParser.parseFile(path);
+
+// #if !defined(HAVE_BLUETOOTH)
+  VarioSqlFlight varioSqlFlight;
+  varioSqlFlight.insertFlight(varioIgcParser.getJson());
+// #endif // HAVE_BLUETOOTH
+
   return returnOK();
 }
 

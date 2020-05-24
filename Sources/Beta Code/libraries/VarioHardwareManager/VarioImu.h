@@ -55,8 +55,8 @@ private:
 public:
     VarioImu();
     void init();
-		double firstAlti();
-		bool   updateData();
+    double firstAlti();
+    bool updateData();
     double getAlti();
     double getTemp();
     double getAccel();

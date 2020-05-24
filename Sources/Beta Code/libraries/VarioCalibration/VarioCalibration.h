@@ -123,7 +123,7 @@ private:
 #endif //SDFAT_LIB
 
 	boolean sdcardFound = false;
-	char filename[15] = "RECORD00.CAL";
+	char filename[15] = "/RECORD00.CAL";
 #define FILENAME_SIZE 8
 	Digit valueDigit;
 

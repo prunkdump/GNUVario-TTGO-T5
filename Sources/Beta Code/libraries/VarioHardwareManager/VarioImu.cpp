@@ -40,9 +40,9 @@
 VarioImu::VarioImu()
 {
 #ifdef TWOWIRESCHEDULER
-    imu = new VarioImuTwoWire;
+  imu = new VarioImuTwoWire;
 #else
-    imu = new VarioImuStd;
+  imu = new VarioImuStd;
 #endif
 }
 
@@ -50,13 +50,14 @@ VarioImu::VarioImu()
 void VarioImu::init()
 //*******************************
 {
-    this->imu->init();
+  this->imu->init();
 }
 
 //*******************************
-double VarioImu::firstAlti() {
-//*******************************
-	
+double VarioImu::firstAlti()
+{
+  //*******************************
+
   /******************/
   /* get first data */
   /******************/
@@ -73,15 +74,8 @@ double VarioImu::firstAlti() {
   SerialPort.println("première mesure");
 #endif //MS5611_DEBUG
 
-	this->imu->updateAlti();
+  this->imu->updateAlti();
   double firstAlti = this->imu->getAlti();
-
-  // #ifdef TWOWIRESCHEDULER
-  //   /* init kalman filter with 0.0 accel*/
-  //   double firstAlti = twScheduler.getAlti();
-  // #else  //TWOWIRESCHEDULER
-  //   double firstAlti = ms5611.readPressure();
-  // #endif //TWOWIRESCHEDULER
 
   if (isnan(firstAlti))
   {
@@ -89,14 +83,8 @@ double VarioImu::firstAlti() {
     {
       delay(1000);
 
-			this->imu->updateAlti();
+      this->imu->updateAlti();
       firstAlti = this->imu->getAlti();
-      // #ifdef TWOWIRESCHEDULER
-      //       /* init kalman filter with 0.0 accel*/
-      //       firstAlti = twScheduler.getAlti();
-      // #else  //TWOWIRESCHEDULER
-      //       firstAlti = ms5611.readPressure();
-      // #endif //TWOWIRESCHEDULER
 
       if (!isnan(firstAlti))
         break;
@@ -114,31 +102,35 @@ double VarioImu::firstAlti() {
 #ifdef MS5611_DEBUG
   SerialPort.print("firstAlti : ");
   SerialPort.println(firstAlti);
-#endif //MS5611_DEBUG		
-	
+#endif //MS5611_DEBUG
+
   return firstAlti;
 }
 
 //*******************************
-bool VarioImu::updateData() {
-//*******************************
-	return(this->imu->updateData());	
+bool VarioImu::updateData()
+{
+  //*******************************
+  return (this->imu->updateData());
 }
 
 //*******************************
-double VarioImu::getAlti(){
-//*******************************
-    return this->imu->getAlti();
+double VarioImu::getAlti()
+{
+  //*******************************
+  return this->imu->getAlti();
 }
 
 //*******************************
-double VarioImu::getTemp(){
-//*******************************
-    return this->imu->getTemp();
+double VarioImu::getTemp()
+{
+  //*******************************
+  return this->imu->getTemp();
 }
 
 //*******************************
-double VarioImu::getAccel(){
-//*******************************
-    return this->imu->getAccel();
+double VarioImu::getAccel()
+{
+  //*******************************
+  return this->imu->getAccel();
 }

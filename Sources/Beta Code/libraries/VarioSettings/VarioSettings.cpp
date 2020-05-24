@@ -997,7 +997,7 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SdFile file;
 	if (!file.open(filename, O_RDONLY)) {
 #else
-  File file = SDHAL_SD.open(filename);
+  File file = SDHAL_SD.open(filename, FILE_READ);
   if (!file) {
 #endif
     SerialPort.println(F("Failed to read file"));

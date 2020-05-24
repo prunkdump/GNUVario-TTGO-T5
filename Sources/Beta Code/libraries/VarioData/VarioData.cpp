@@ -176,7 +176,7 @@ bool VarioData::initSettings(bool Test_SD)
     GnuSettings.setVersion(Version, Sub_Version, Beta_Code);
 
     SerialPort.println("Chargement des parametres depuis le fichier params.jso");
-    char tmpchar[20] = "params.jso";
+    char tmpchar[20] = "/params.jso";
     GnuSettings.loadConfigurationVario(tmpchar);
 
 #ifdef SDCARD_DEBUG
@@ -226,7 +226,7 @@ bool VarioData::initSettings(bool Test_SD)
     header.saveParams(VARIOMETER_MODEL_NAME, __dataPilotName, __dataGliderName);
 
     boolean ModifValue = false;
-    char tmpFileName[15] = "wifi.cfg";
+    char tmpFileName[15] = "/wifi.cfg";
 
     if (SDHAL_SD.exists(tmpFileName))
     {
@@ -262,7 +262,7 @@ bool VarioData::initSettings(bool Test_SD)
 
     //lecture parametre de configuration
 
-    strcpy(tmpFileName, "variocal.cfg");
+    strcpy(tmpFileName, "/variocal.cfg");
 
     if (SDHAL_SD.exists(tmpFileName))
     {
@@ -1264,10 +1264,12 @@ bool VarioData::updateSpeed(void) {
 			ratio = 0.0;
 //      screen.ratioDigit->setValue(0.0);
     }
+		SpeedAvalable = true;
 		return true;
   }
 	else 
 	{
+		SpeedAvalable = false;
 		return false;
 	}
 #endif //HAVE_GPS
@@ -1372,7 +1374,32 @@ int VarioData::getCap(void) {
 
 */
 
-	int cap = -1;
+	if ((variometerState > VARIOMETER_STATE_CALIBRATED) && (SpeedAvalable) && (currentSpeed > 5)) {
+    if (nmeaParser.haveBearing())
+    {
+
+      bearing = nmeaParser.getBearing();
+			
+			GpsAvalable = true;
+			TimeCapMesure = millis();		
+			
+#ifdef DATA_DEBUG
+      SerialPort.print("Compas GPS : ");
+      SerialPort.println(bearing);
+#endif //DATA_DEBUG
+//      DUMPLOG(LOG_TYPE_DEBUG, DATA_DEBUG_LOG, bearing);
+			return bearing;
+    }
+	}	
+	
+	TRACE();
+	if ((GpsAvalable) && ((millis() - TimeCapMesure) < 1500)) {
+		return bearing;	 
+	} else {
+		GpsAvalable = false;
+	}
+
+	TRACE();
 	if (twScheduler.haveAccel() ) {
 		double vertVector[3];
 		double vertAccel = twScheduler.getAccel(vertVector);
@@ -1393,9 +1420,42 @@ int VarioData::getCap(void) {
 			tmpcap = 360 - tmpcap;
 			
 			DUMP(tmpcap);
-			return tmpcap;
+			
+#ifdef DATA_DEBUG
+      SerialPort.print("Compas magnetique : ");
+      SerialPort.println(tmpcap);
+#endif //DATA_DEBUG
+			
+//Moyenne
+			
+			if (nbMesureCap < 10) {
+				if (moyCap == -1) moyCap = 0;
+				moyCap += tmpcap;
+				nbMesureCap++;
+				DUMP(nbMesureCap);
+			}
+			else {
+				moyCap += tmpcap;
+				DUMP(moyCap);
+				bearing = moyCap / 10;
+				moyCap = 0;
+				nbMesureCap = 0;				
+			}
+			 
+			DUMP(bearing); 
+			return bearing;
 		}
+		else {
+/*		bearing = -1;
+		nbMesureCap = 0;
+		TRACE();*/
+		}
+	} 
+	else {
+		bearing = -1;
+		nbMesureCap = 0;
+		TRACE();
 	}
-
-	return cap;
+	
+	return bearing;
 }

@@ -2,11 +2,27 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
+#include <VarioLog.h>
+
+#ifndef ARDUINOTRACE_ENABLE
+#ifdef HARDWARE_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+#endif
+
+#ifndef ARDUINOTRACE_SERIAL
+#define ARDUINOTRACE_SERIAL SerialPort
+#endif
+
+#include <ArduinoTrace.h>
+
 #ifdef HAVE_BLUETOOTH
 
 #include "VarioBle.h"
 
-#include "SimpleBLE.h"
+//#include "SimpleBLE.h"
 #include <VarioSettings.h>
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -17,20 +33,14 @@
 bool VarioBle::init()
 // ******************************
 {
-  if (GnuSettings.VARIOMETER_ENABLE_BT)
-  {
-#ifdef BT_DEBUG
-    SerialPort.setDebugOutput(true);
-    //    pinMode(0, INPUT_PULLUP);
-    SerialPort.print("ESP32 SDK: ");
-    SerialPort.println(ESP.getSdkVersion());
-#endif //BT_DEBUG
-    ble.begin("GnuVario-E");
-		
+	if (GnuSettings.VARIOMETER_ENABLE_BT) {
+		TRACE();
 		return true;
-  }
-
-  return false;
+	}
+	else {
+		TRACE();
+		return false;
+	}
 }
 
 

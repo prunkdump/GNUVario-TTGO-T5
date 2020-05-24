@@ -102,7 +102,7 @@ void handleListFlights();
 void handleParams();
 void handleWifi();
 void handlePrintDirectory();
-void printDirectoryRecurse(String path);
+void printDirectoryRecurse(String path, boolean isRecursive);
 void handleFileDownload();
 void handleFileUpload();
 void handleFileDelete();
@@ -115,13 +115,14 @@ void handleFirmwareVersion();
 void handleUpgradeWeb();
 void handleWebConfig();
 void handleSaveWebConfig();
+void handleParseIgc();
 
 //////////////////////////////////////
 //              HELPERS            //
 /////////////////////////////////////
 
 String getFileSizeStringFromBytes(int bytes);
-void listDirectory(SdFile dir, int numTabs);
+void listDirectory(File dir, int numTabs);
 
 extern VarioWifiServer varioWifiServer;
 

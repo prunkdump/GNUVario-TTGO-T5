@@ -49,9 +49,9 @@ IGCHeader header;
 IGCSentence igc;
 GPSSentence igcSD;
 
-char DIRECTORY_FILES[10] = "vols/";
+char DIRECTORY_FILES[10] = "/vols/";
 
-#endif //HAVE_SDCARD	
+#endif //HAVE_SDCARD
 
 /***************/
 /* gps objects */
@@ -60,205 +60,221 @@ char DIRECTORY_FILES[10] = "vols/";
 NmeaParser nmeaParser;
 #endif //HAVE_GPS
 
-
 /********************/
 /* IGC sentence "B" */
 /********************/
-uint8_t GPSSentence::begin(double baroAlti) {
+uint8_t GPSSentence::begin(double baroAlti)
+{
 
   return 'B';
 }
 
-void GPSSentence::writePosition(Kalmanvert kalmanvert) {
+void GPSSentence::writePosition(Kalmanvert kalmanvert)
+{
 #ifdef HAVE_SDCARD
-	
+
 #ifdef SDCARD_DEBUG
-		SerialPort.print("WritePosition sdcardState : ");
-		SerialPort.println(sdcardState);
+  SerialPort.print("WritePosition sdcardState : ");
+  SerialPort.println(sdcardState);
 #endif //SDCARD_DEBUG
-	
-#ifdef HAVE_SDCARD          	
-  if( sdcardState == SDCARD_STATE_READY ) {
+
+#ifdef HAVE_SDCARD
+  if (sdcardState == SDCARD_STATE_READY)
+  {
 #ifdef VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
 #ifdef SDCARD_DEBUG
-		SerialPort.println("fileIGC : writePosition");
+    SerialPort.println("fileIGC : writePosition");
 #endif //SDCARD_DEBUG
 
-		fileIgc.write( igc.begin( kalmanvert.getCalibratedPosition() ) );
+    fileIgc.write(igc.begin(kalmanvert.getCalibratedPosition()));
 #else
 #ifdef SDCARD_DEBUG
-		SerialPort.println("fileIGC : writePosition");
+    SerialPort.println("fileIGC : writePosition");
 #endif //SDCARD_DEBUG
 
-		fileIgc.write( igc.begin( kalmanvert.getPosition() ) );
+    fileIgc.write(igc.begin(kalmanvert.getPosition()));
 #endif
   }
 #endif
 #else
 #ifdef SDCARD_DEBUG
-		SerialPort.println("Pas de carte SD");
-#endif //SDCARD_DEBUG	
+  SerialPort.println("Pas de carte SD");
+#endif //SDCARD_DEBUG
 #endif
-	
 }
 
-void GPSSentence::writeGGA(void) {
+void GPSSentence::writeGGA(void)
+{
 #ifdef HAVE_SDCARD
 #ifdef SDCARD_DEBUG
 //	SerialPort.print("writeGGA : ");
 #endif //SDCARD_DEBUG
 
-#ifdef HAVE_SDCARD          		
-	
-	while( igc.available() ) {
-		uint8_t tmpigc = igc.get();
-		
+#ifdef HAVE_SDCARD
+
+  while (igc.available())
+  {
+    uint8_t tmpigc = igc.get();
+
 #ifdef SDCARD_DEBUG
-		SerialPort.print(char(tmpigc));
+    SerialPort.print(char(tmpigc));
 #endif //SDCARD_DEBUG
 
-		fileIgc.write( char(tmpigc) );
-	}
+    fileIgc.write(char(tmpigc));
+  }
 #endif
-	
+
 #ifdef SDCARD_DEBUG
 //		SerialPort.println("");
 #endif //SDCARD_DEBUG
 #else
 #ifdef SDCARD_DEBUG
-		SerialPort.println("Pas de carte SD");
-#endif //SDCARD_DEBUG	
-#endif	
+  SerialPort.println("Pas de carte SD");
+#endif //SDCARD_DEBUG
+#endif
 }
 
-void GPSSentence::CreateIgcFile(uint8_t* dateNum, boolean noRecord) {
+void GPSSentence::CreateIgcFile(uint8_t *dateNum, boolean noRecord)
+{
 #ifdef HAVE_SDCARD
 
-    /* build date : convert from DDMMYY to YYMMDD */
-    uint8_t dateChar[8]; //two bytes are used for incrementing number on filename
-    uint8_t* dateCharP = dateChar;
-    uint32_t date = nmeaParser.date;
-		uint32_t tmpdate = date;
-/*		uint8_t dateNum[3];
+  /* build date : convert from DDMMYY to YYMMDD */
+  uint8_t dateChar[8]; //two bytes are used for incrementing number on filename
+  uint8_t *dateCharP = dateChar;
+  uint32_t date = nmeaParser.date;
+  uint32_t tmpdate = date;
+  /*		uint8_t dateNum[3];
 		uint8_t* dateNumP = dateNum;*/
-				
-    for(uint8_t i=0; i<3; i++) {
-      uint8_t num = ((uint8_t)(date%100));
-      dateCharP[0] = (num/10) + '0';
-      dateCharP[1] = (num%10) + '0';
-      dateCharP += 2;
-      date /= 100;
+
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    uint8_t num = ((uint8_t)(date % 100));
+    dateCharP[0] = (num / 10) + '0';
+    dateCharP[1] = (num % 10) + '0';
+    dateCharP += 2;
+    date /= 100;
+  }
+
+  date = tmpdate;
+#ifdef SDCARD_DEBUG
+  SerialPort.print("DateNum : ");
+#endif //SDCARD_DEBUG
+
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    uint8_t num = ((uint8_t)(date % 100));
+    dateNum[i] = num;
+    date /= 100;
+
+#ifdef SDCARD_DEBUG
+    SerialPort.print(num);
+    SerialPort.print(" - ");
+    SerialPort.print(dateNum[i]);
+    SerialPort.print(" / ");
+#endif //SDCARD_DEBUG
+  }
+
+#ifdef SDCARD_DEBUG
+  SerialPort.println("");
+#endif //SDCARD_DEBUG
+
+  char fileName[13];
+  char tmpstr[100];
+
+  for (int i = 0; i < 6; i++)
+    fileName[i] = dateChar[i];
+  int fileNameSize = 8;
+  for (int fileNumber = 0; fileNumber < LF16_FILE_NAME_NUMBER_LIMIT; fileNumber++)
+  {
+
+    /* build file name */
+    int digit = fileNumber;
+    int base = LF16_FILE_NAME_NUMBER_LIMIT / 10;
+    for (int i = fileNameSize - LF16_FILE_NAME_NUMBER_SIZE; i < fileNameSize; i++)
+    {
+      fileName[i] = '0' + digit / base;
+      digit %= base;
+      base /= 10;
     }
-
-    date = tmpdate;
-#ifdef SDCARD_DEBUG
-		SerialPort.print("DateNum : ");
-#endif //SDCARD_DEBUG
-
-    for(uint8_t i=0; i<3; i++) {
-      uint8_t num = ((uint8_t)(date%100));
-      dateNum[i] = num;
-      date /= 100;
-			
-#ifdef SDCARD_DEBUG
-			SerialPort.print(num);
-			SerialPort.print(" - ");
-			SerialPort.print(dateNum[i]);
-			SerialPort.print(" / ");
-#endif //SDCARD_DEBUG
-    }
+    fileName[8] = '.';
+    fileName[9] = 'I';
+    fileName[10] = 'G';
+    fileName[11] = 'C';
+    fileName[12] = '\0';
+    strcpy(tmpstr, DIRECTORY_FILES);
+    strcat(tmpstr, fileName);
+    if (!SDHAL_SD.exists(tmpstr))
+      break;
+  }
 
 #ifdef SDCARD_DEBUG
-		SerialPort.println("");
+  SerialPort.print("File name : ");
+  SerialPort.println((char *)fileName);
+  SerialPort.print("File : ");
+  SerialPort.println((char *)tmpstr);
 #endif //SDCARD_DEBUG
 
-    char fileName[13];
-		char tmpstr[100];
+  if (!noRecord)
+  {
 
-    for(int i=0; i<6; i++) fileName[i] = dateChar[i];
-    int fileNameSize = 8;
-    for(int fileNumber = 0; fileNumber<LF16_FILE_NAME_NUMBER_LIMIT; fileNumber++) {
-    
-      /* build file name */
-      int digit = fileNumber;
-      int base = LF16_FILE_NAME_NUMBER_LIMIT/10;
-      for(int i = fileNameSize - LF16_FILE_NAME_NUMBER_SIZE; i<fileNameSize; i++) {
-        fileName[i] = '0' + digit/base;
-        digit %= base;
-        base /= 10;
-      }
-      fileName[8]  = '.';
-      fileName[9] = 'I';  
-      fileName[10] = 'G';  
-      fileName[11] = 'C';  
-      fileName[12] = '\0';        
-			strcpy(tmpstr,DIRECTORY_FILES);
-			strcat(tmpstr,fileName);
-      if (!SDHAL_SD.exists(tmpstr)) break;
-    }
-    
-#ifdef SDCARD_DEBUG
-      SerialPort.print("File name : ");
-      SerialPort.println((char*)fileName);
-      SerialPort.print("File : ");
-      SerialPort.println((char*)tmpstr);
-#endif //SDCARD_DEBUG
-
-		if (!noRecord) {
-
-#ifdef HAVE_SDCARD          
-			/* create file */    
-//			fileIgc = SDHAL.open((char*)fileName, FILE_WRITE);
+#ifdef HAVE_SDCARD
+    /* create file */
 #ifdef SDFAT_LIB
-			if (fileIgc.open((char*)tmpstr, O_RDWR | O_CREAT)) {
+    if (fileIgc.open((char *)tmpstr, O_RDWR | O_CREAT))
+    {
 #else
-			fileIgc = SDHAL_SD.open((char*)tmpstr, FILE_WRITE);
-			if (fileIgc) {
+    fileIgc = SDHAL_SD.open((char *)tmpstr, FILE_WRITE);
+    if (fileIgc)
+    {
 #endif //SDFAT_LIB
-				sdcardState = SDCARD_STATE_READY;
+      sdcardState = SDCARD_STATE_READY;
 #ifdef SDCARD_DEBUG
-				SerialPort.println("createSDCardTrackFile : Write Header ");
-#endif //SDCARD_DEBUG
-     
-				/* write the header */
-				int16_t datePos = header.begin();
-				if( datePos >= 0 ) {
-					for (int i=0; i < 3;i++) {
-#ifdef SDCARD_DEBUG
-						SerialPort.print(headerStrings[i]);
-#endif //SDCARD_DEBUG
-						fileIgc.print(headerStrings[i]);
-					}
-
-#ifdef SDCARD_DEBUG
-					SerialPort.println("");
+      SerialPort.println("createSDCardTrackFile : Write Header ");
 #endif //SDCARD_DEBUG
 
-					/* write date : DDMMYY */
-					uint8_t* dateCharP = &dateChar[4];
-					for(int i=0; i<3; i++) {
-						fileIgc.write(char(dateCharP[0]));
+      /* write the header */
+      int16_t datePos = header.begin();
+      if (datePos >= 0)
+      {
+        for (int i = 0; i < 3; i++)
+        {
 #ifdef SDCARD_DEBUG
-						SerialPort.print(char(dateCharP[0]));
-#endif //SDCARD_DEBUG          
-
-						fileIgc.write(char(dateCharP[1]));
-
-#ifdef SDCARD_DEBUG
-						SerialPort.println(char(dateCharP[1]));
-#endif //SDCARD_DEBUG          
-          
-						dateCharP -= 2;
-					}
-
-					for (int i=4; i < HEADER_STRING_COUNT; i++) {
-#ifdef SDCARD_DEBUG
-						SerialPort.print(headerStrings[i]);
+          SerialPort.print(headerStrings[i]);
 #endif //SDCARD_DEBUG
-						fileIgc.print(headerStrings[i]);
-					}
-				}
-		 
+          fileIgc.print(headerStrings[i]);
+        }
+
+#ifdef SDCARD_DEBUG
+        SerialPort.println("");
+#endif //SDCARD_DEBUG
+
+        /* write date : DDMMYY */
+        uint8_t *dateCharP = &dateChar[4];
+        for (int i = 0; i < 3; i++)
+        {
+          fileIgc.write(char(dateCharP[0]));
+#ifdef SDCARD_DEBUG
+          SerialPort.print(char(dateCharP[0]));
+#endif //SDCARD_DEBUG
+
+          fileIgc.write(char(dateCharP[1]));
+
+#ifdef SDCARD_DEBUG
+          SerialPort.println(char(dateCharP[1]));
+#endif //SDCARD_DEBUG
+
+          dateCharP -= 2;
+        }
+
+        for (int i = 4; i < HEADER_STRING_COUNT; i++)
+        {
+#ifdef SDCARD_DEBUG
+          SerialPort.print(headerStrings[i]);
+#endif //SDCARD_DEBUG
+          fileIgc.print(headerStrings[i]);
+        }
+      }
+
       /* write the header *
       int16_t datePos = header.begin();
       if( datePos >= 0 ) {
@@ -309,29 +325,29 @@ void GPSSentence::CreateIgcFile(uint8_t* dateNum, boolean noRecord) {
           fileIgc.write(char(tmpchar));
         }				
       }*/
-			
-				fileIgc.flush();
-			
-			} else {
+
+      fileIgc.flush();
+    }
+    else
+    {
 #ifdef SDCARD_DEBUG
-				SerialPort.println("createSDCardTrackFile : SDCARD_STATE_ERROR ");
-#endif //SDCARD_DEBUG
-				sdcardState = SDCARD_STATE_ERROR; //avoid retry 
-			
-				for (int i=0; i<3; i++) dateNum[i] = 0;
-			}
+      SerialPort.println("createSDCardTrackFile : SDCARD_STATE_ERROR ");
+#endif                                  //SDCARD_DEBUG
+      sdcardState = SDCARD_STATE_ERROR; //avoid retry
+
+      for (int i = 0; i < 3; i++)
+        dateNum[i] = 0;
+    }
 #endif //HAVE_SDCARD
-		}
-//  return dateNumP;
+  }
+  //  return dateNumP;
 
 #else
 #ifdef SDCARD_DEBUG
-		SerialPort.println("Pas de carte SD");
-#endif //SDCARD_DEBUG	
-#endif	
-
+  SerialPort.println("Pas de carte SD");
+#endif //SDCARD_DEBUG
+#endif
 }
-
 
 /*
 writer.write_headers({
@@ -431,4 +447,3 @@ Engine RPM      4 bytes       RRRR                   Valid characters 0-9
 The engine data may be appended without the recommended GPS Altitude and Fix Accuracy provided that the I Record specifies that format.
 
 */
-

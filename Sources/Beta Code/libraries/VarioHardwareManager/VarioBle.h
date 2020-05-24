@@ -5,7 +5,7 @@
 
 #ifdef HAVE_BLUETOOTH
 
-#include "SimpleBLE.h"
+//#include "SimpleBLE.h"
 
 #ifdef HAVE_GPS
 #include <SerialNmea.h>
@@ -23,7 +23,7 @@ public:
     bool init();
 		bool update(double velocity, double position, double calibratedPosition);
 		
-		SimpleBLE ble;
+//		SimpleBLE ble;
 		boolean lastSentence  = false;
 
 #if defined(VARIOMETER_SENT_LXNAV_SENTENCE)

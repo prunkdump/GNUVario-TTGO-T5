@@ -94,6 +94,15 @@
 #define MAX_CAR_TITRE_CALIBR   			12
 #define MAX_CAR_TITRE_VEILLE				14			
 
+/******************************/
+/* The screen zone multi      */ 
+/*----------------------------*/
+class ScreenZoneMulti {
+  public:
+		uint8_t x, y, width, height, page;
+		void update();  
+};
+
 /************************/
 /* The screen scheduler */
 /************************/
@@ -250,8 +259,11 @@ class VarioScreen {
 	
 //  ScreenSchedulerObject* displayList;
 	ScreenSchedulerObject displayList[40];  //17];
+	ScreenZoneMulti				ZoneMultiList[5];
+
 	ScreenScheduler* schedulerScreen; 
 	uint8_t MaxObjectList = 0;
+	uint8_t MaxZoneList   = 0;
 	
 	virtual ~VarioScreen();
 

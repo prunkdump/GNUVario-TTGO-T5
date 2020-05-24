@@ -22,42 +22,44 @@
 // ESP32
 //********************
 
-	//********************
-	// SDFAT
-	//********************
+//********************
+// SDFAT
+//********************
 
 #if defined(SDFAT_LIB)
 
-	// SdFat software SPI template
+// SdFat software SPI template
 SdFatSoftSpi<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> SDHAL_SD; //sd;
 
-boolean SdCardHAL::begin(void){
+boolean SdCardHAL::begin(void)
+{
 
+	return (SDHAL_SD.begin(SD_CHIP_SELECT_PIN));
+}
 
-  return(SDHAL_SD.begin(SD_CHIP_SELECT_PIN));
-  }
-
-SdCardHAL SDHAL; 
+SdCardHAL SDHAL;
 
 #else
-	//********************
-  // SD
-	//********************
-	
+//********************
+// SD
+//********************
+
 //#include <mySD.h>
 
 #include "FS.h"
 #include "SD.h"
-#include "SPI.h"
+#include <SPIFFS.h>
+SPIClass SpiSdCard(HSPI);
 
-boolean SdCardHAL::begin(void){
-//	return(SDClass::begin(SDCARD_CS_PIN,SDCARD_MOSI_PIN,SDCARD_MISO_PIN,SDCARD_SCK_PIN));	
+boolean SdCardHAL::begin(void)
+{
+	//	return(SDClass::begin(SDCARD_CS_PIN,SDCARD_MOSI_PIN,SDCARD_MISO_PIN,SDCARD_SCK_PIN));
 
-	SPI.begin(SDCARD_SCK_PIN, SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_CS_PIN);
-	return(SDHAL_SD.begin(SDCARD_CS_PIN));
+	SpiSdCard.begin(SDCARD_SCK_PIN, SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_CS_PIN);
+	return (SDHAL_SD.begin(SDCARD_CS_PIN, SpiSdCard));
 };
 
-SdCardHAL SDHAL; 
+SdCardHAL SDHAL;
 
 #endif
 
@@ -73,10 +75,10 @@ SdCardHAL SDHAL;
 #include <SPI.h>
 #include <SdFat.h>
 
-boolean  SdCardHAL::begin(void){
-	return(SDClass::begin(SDCARD_CS_PIN));
+boolean SdCardHAL::begin(void)
+{
+	return (SDClass::begin(SDCARD_CS_PIN));
 };
 
-SdCardHAL SDHAL; 
+SdCardHAL SDHAL;
 #endif
-

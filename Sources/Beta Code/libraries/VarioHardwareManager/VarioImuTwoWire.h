@@ -29,7 +29,7 @@
  *                                                                               *
  *********************************************************************************
  */
- 
+
 #ifndef VARIOIMUTWOWIRE_H
 #define VARIOIMUTWOWIRE_H
 
@@ -47,19 +47,19 @@ class VarioImuTwoWire
 {
 
 public:
-    VarioImuTwoWire();
-    void   init();
-		bool   havePressure(void);
-		bool   updateData();
-		void   updateAlti();
-    double getAlti();
-    double getTemp();
-    double getAccel();
-		
+  VarioImuTwoWire();
+  void init();
+  bool havePressure(void);
+  bool updateData();
+  void updateAlti();
+  double getAlti();
+  double getTemp();
+  double getAccel();
+
 private:
-    double Alti;
-    double Temp;
-    double Accel;
+  double Alti;
+  double Temp;
+  double Accel;
 };
 
 #endif //TWOWIRESCHEDULER

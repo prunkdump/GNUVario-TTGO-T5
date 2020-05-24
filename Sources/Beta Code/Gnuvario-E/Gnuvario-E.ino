@@ -6,7 +6,7 @@
 
 #define VERSION      0
 #define SUB_VERSION  8
-#define BETA_CODE    1
+#define BETA_CODE    2
 #define DEVNAME      "JPG63/MICELPA/RATAMUSE"
 #define AUTHOR       "J"    //J=JPG63  P=PUNKDUMP  M=MICHELPA
 
@@ -242,6 +242,16 @@
 *               08/05/20             Compas Magnetique                                                *
 *                                    Correction affichage écran 2.91''                                *
 *                                    correction champs trop grand dans statistique                    *
+* v0.8 beta 2   15/05/20             Changement de librairie pour sdcard                              *
+*               16/05/20             Maj lib arduinojson                                              *
+*               16/05/20             Ajout raffraichissement écran toutes les 15min                   *
+*               17/05/20             Maj lib Adafruit_GFX_Library                                     *
+*                                    Nettoyage lib BLE                                                *
+*                                    Ajout position titre                                             *
+*                                    Ajout lib sqlite3                                                *
+*                                    Ajout VarioSqlFlight                                             *
+*               23/05/20             Correction bug d'affichage (valeur > affichage)                  *
+*                                    correction bug affichage alternatif finesse / taux de chute      *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -261,9 +271,10 @@
 * AJOUT - Espaces aeriens                                                                             *
 * AJOUT - Réglage sensibilité filtre kalman et vario                                                  *                                         
 * BUG   - Grésillement Buzzer                                                                         * 
-* BUG   - Affichage Heure ":" 291                                                                     *
-* BUG   - Affichage vario dans version 1.54                                                           *
 * BUG   - affichage alternatif finesse / taux de chute                                                *
+* AJOUT - Indication niveau de batterie                                                               *
+* Ajout - Indication charge batterie                                                                  *
+* BUG   - altitude enregistré non compensé                                                            *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -343,6 +354,7 @@
  *  - Nouvelle font d'affichage                                         *
  *  - Sensibilité du vario réglable                                     *
  *  - Compas Magnétique                                                 *
+ *  - Raffraichissement écran toutes les 15min                          *
  *                                                                      *
  ************************************************************************/
 
@@ -707,7 +719,7 @@ void setup()
 #if defined(ESP32)
   ESP_LOGI("SCREEN", "initialization screen");
 #endif //EPS32
-
+ 
   screen.init();
   screen.createScreenObjects();
   screen.begin();
@@ -725,7 +737,7 @@ void setup()
   /** Update Site web embarqué */
   /*****************************/
 
-#ifdef HAVE_SDCARD
+#if defined(HAVE_SDCARD) && defined(HAVE_WIFI)
   esp32FOTA.UpdateWwwDirectory();
 #endif //HAVE_SDCARD
 
@@ -863,7 +875,14 @@ void setup()
   //***********************************************
 
 #ifdef HAVE_BLUETOOTH
-  if (varioHardwareManager.initBt()) screen.btinfo->setBT();
+  if (varioHardwareManager.initBt()) {
+    TRACE();
+    screen.btinfo->setBT();
+  }
+  else {                              
+    TRACE();
+    screen.btinfo->unsetBT();
+  }
 #endif //HAVE_BLUETOOTH
 
   ButtonScheduleur.Set_StatePage(STATE_PAGE_VARIO);
@@ -955,7 +974,17 @@ void loop()
 
     if (GnuSettings.VARIOMETER_DISPLAY_INTEGRATED_CLIMB_RATE)
     {
-      if (varioData.haveNewClimbRate()) screen.varioDigit->setValue(varioData.getClimbRate());
+      if (varioData.haveNewClimbRate()) {
+/*        double tmpvalue = varioData.getClimbRate();
+#if (VARIOSCREEN_SIZE == 154)
+        if (tmpvalue > 9.9) tmpvalue = 9.9;
+#else
+        if (tmpvalue > 99.9) tmpvalue = 99.9;
+#endif
+        screen.varioDigit->setValue(tmpvalue);*/
+
+        screen.varioDigit->setValue(varioData.getClimbRate());
+      }
     }
     else
     {
@@ -970,6 +999,8 @@ void loop()
     {
       if (GnuSettings.RATIO_CLIMB_RATE > 1)
         screen.trendDigit->setValue(varioData.getTrend());
+      else
+        screen.trendDigit->setValue(0);
       screen.trendLevel->stateTREND(varioData.getStateTrend());
     }
   }
@@ -1749,11 +1780,14 @@ void loop()
   //**********************************************************
 
 #ifdef HAVE_GPS
-
+    
     if (varioData.updateSpeed())
     {
       screen.speedDigit->setValue(varioData.currentSpeed);
       screen.ratioDigit->setValue(varioData.ratio);
+    }
+    else {
+      screen.ratioDigit->setValue(0);
     }
 
 /*

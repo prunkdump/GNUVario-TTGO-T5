@@ -46,6 +46,9 @@
  *    1.0.15 09/03/20   Modification ScreenViewSound                             *
  *    1.0.16 08/04/20   Modification affichage des titres                        *
  *    1.1.0  29/04/20   Changement de font - repositionnement                    *
+ *    1.1.1  10/05/20   Correction affichage screenTime (:/h)                    *
+ *    1.1.2  11/05/20   Effacement zones multi                                   *
+ *    1.1.3  14/05/20   Raffraichissement de l'écran toutes les 15min            *
  *                                                                               *
  *********************************************************************************/
 
@@ -263,7 +266,7 @@ class VarioScreen {
 //  ScreenSchedulerObject* displayList;
 	ScreenSchedulerObject displayList[40];  //17];
 	ScreenZoneMulti				ZoneMultiList[5];
-	
+
 	ScreenScheduler* schedulerScreen; 
 	uint8_t MaxObjectList = 0;
 	uint8_t MaxZoneList   = 0;

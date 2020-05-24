@@ -27,7 +27,9 @@
 #include "soc/uart_struct.h"
 #include "BluetoothSerial.h"
 
+#include <HardwareConfig.h>
 #include <DebugConfig.h>
+#include <VarioSettings.h>
 
 #if defined(SERIAL_NMEA_BLUETOOTH_OUTPUT) && defined(HAVE_BLUETOOTH)
 BluetoothSerial SerialBT;
@@ -81,7 +83,17 @@ void SerialNmea::begin(unsigned long baud, bool rxEnable) {
   /******************/
   /* init bluetooth */
   /******************/
-  SerialBT.begin(VARIOMETER_MODEL);
+	
+  if (GnuSettings.VARIOMETER_ENABLE_BT)
+  {
+#ifdef BT_DEBUG
+//    SerialPort.setDebugOutput(true);
+    SerialPort.print("ESP32 SDK: ");
+    SerialPort.println(ESP.getSdkVersion());
+#endif //BT_DEBUG
+	
+		SerialBT.begin(VARIOMETER_MODEL);
+  }	
 #endif
 
   /*************/
