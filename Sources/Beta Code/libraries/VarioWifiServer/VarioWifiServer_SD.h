@@ -106,6 +106,7 @@ void printDirectoryRecurse(String path, boolean isRecursive);
 void handleFileDownload();
 void handleFileUpload();
 void handleFileDelete();
+void handleFileCreate();
 void deleteRecursive(String path);
 void handleNotFound();
 void handleFileUpdate();
@@ -116,6 +117,12 @@ void handleUpgradeWeb();
 void handleWebConfig();
 void handleSaveWebConfig();
 void handleParseIgc();
+void handleGetSites();
+void handleSetSite();
+void handleDelSite();
+void handleGetFlights();
+void handleSetFlight();
+void handleDelFlight();
 
 //////////////////////////////////////
 //              HELPERS            //
@@ -123,6 +130,7 @@ void handleParseIgc();
 
 String getFileSizeStringFromBytes(int bytes);
 void listDirectory(File dir, int numTabs);
+bool checkDbVersion();
 
 extern VarioWifiServer varioWifiServer;
 

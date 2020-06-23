@@ -26,7 +26,13 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
+#ifdef HAVE_BLUETOOTH
+#ifdef HAVE_BLE
+#include "VarioBle.h"
+#else
 #include "BluetoothSerial.h"
+#endif
+#endif
 
 /********************/
 /* output parameter */
@@ -63,7 +69,6 @@
 #define SERIAL_NMEA_CORE 1
 #define SERIAL_NMEA_PRIORITY 2
 
-
 /*********************/
 /* the GPS sentences */
 /*********************/
@@ -90,9 +95,10 @@
 
 #define SERIAL_NMEA_BUFFER_SIZE 128
 
-class SerialNmea {
+class SerialNmea
+{
 
- public:
+public:
   void begin(unsigned long baud, bool rxEnable);
   bool lockRMC(void);
   bool lockGGA(void);
@@ -103,13 +109,13 @@ class SerialNmea {
   void release(void);
   unsigned long getReceiveTimestamp(void);
   unsigned long getLastReceiveTimestamp(void);
-  
+
   void rxCompleteVect(uint8_t c);
   void udrEmptyVect(void);
   uint8_t buffer[SERIAL_NMEA_BUFFER_SIZE];
 
- private :
-  uart_t* uart;
+private:
+  uart_t *uart;
   TaskHandle_t schedulerTaskHandler;
   volatile bool txEnabled;
   volatile uint8_t state;
@@ -125,14 +131,18 @@ class SerialNmea {
   volatile uint8_t parityTag;
   volatile unsigned long receiveTimestamp;
   volatile unsigned long lastReceiveTimestamp;
-  static void uartScheduler(void* param);
+  static void uartScheduler(void *param);
   static void serialWrite(uint8_t c);
 };
 
 extern SerialNmea serialNmea;
 
-#if defined(SERIAL_NMEA_BLUETOOTH_OUTPUT) && defined(HAVE_BLUETOOTH)
+#if defined(SERIAL_NMEA_BLUETOOTH_OUTPUT)
+#if defined(HAVE_BLE)
+extern VarioBle SerialBT;
+#elif defined(HAVE_BLUETOOTH)
 extern BluetoothSerial SerialBT;
+#endif
 #endif
 
 #endif

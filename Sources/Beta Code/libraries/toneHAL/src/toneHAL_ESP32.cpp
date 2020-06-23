@@ -295,6 +295,258 @@ uint32_t ToneHalDAC_Esp32::remaining() {
 }
 
 #endif //TONEDAC_EXTENDED
+
+#elif defined(TONEXTDAC)
+/****************************************/
+/*            X T D A C		      				*/
+/****************************************/
+
+/***********************************/
+void ToneHalXTDAC_Esp32::init(void) {
+/***********************************/
+#ifdef SOUND_DEBUG
+	SerialPort.println("Init ToneXTDAC");
+	TRACE();
+#endif //SOUND_DEBUG
+
+  privateToneXTDacEsp32.init();
+#if defined(HAVE_AUDIO_AMPLI)
+	if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_INIT();
+
+#ifndef AUDIO_AMPLI_LOWPOWER
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif 
+#endif //HAVE_AUDIO_AMPLI
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::init(uint32_t pin) {
+/***********************************/
+#ifdef SOUND_DEBUG
+	SerialPort.println("Init ToneXTDAC");
+	TRACE();
+#endif //SOUND_DEBUG
+
+  privateToneXTDacEsp32.init(pin);
+#if defined(HAVE_AUDIO_AMPLI)
+	if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_INIT();
+
+#ifndef AUDIO_AMPLI_LOWPOWER
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif 
+#endif //HAVE_AUDIO_AMPLI
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::init(uint32_t pin1, uint32_t pin2) {
+/***********************************/
+#ifdef SOUND_DEBUG
+	SerialPort.println("Init ToneXTDAC");
+	TRACE();
+#endif //SOUND_DEBUG
+
+  privateToneXTDacEsp32.init(pin1);
+#if defined(HAVE_AUDIO_AMPLI)
+	if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_INIT();
+
+#ifndef AUDIO_AMPLI_LOWPOWER
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif 
+#endif //HAVE_AUDIO_AMPLI
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::tone(unsigned long frequency)
+/***********************************/           
+{
+#ifdef SOUND_DEBUG
+					SerialPort.print("tone - frequence : ");
+					SerialPort.println(frequency);
+#endif //SOUND_DEBUG
+	
+#if defined (TONEHAL_EXTENDED_VOLUME)
+	if (_toneMuted) {
+		
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+		if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+		return;
+	}
+
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif //HAVE_AUDIO_AMPLI
+	
+  privateToneXTDacEsp32.tone(frequency, _volume);
+#else
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+	privateToneXTDacEsp32.tone(frequency, privateToneXTDacEsp32.getVolume());
+#endif	
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::tone(unsigned long frequency , uint8_t volume)
+/***********************************/           
+{
+#ifdef SOUND_DEBUG
+					SerialPort.print("tone - frequence : ");
+					SerialPort.println(frequency);
+					SerialPort.print("tone - volume : ");
+					SerialPort.println(volume);
+#endif //SOUND_DEBUG
+	
+#if defined (TONEHAL_EXTENDED_VOLUME)
+	if (_toneMuted) {
+		
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+		if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+		
+		return;
+	}
+	if (volume > 10) volume = 10;
+	_volume = volume;
+#endif
+	
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif //HAVE_AUDIO_AMPLI
+	
+#ifdef TONEDAC_DEBUG	
+	SerialPort.print("volume toneHalXTDac = ");
+	SerialPort.println(volume);
+#endif TONEDAC_DEBUG
+	
+#ifdef TONEDAC_DEBUG	
+	SerialPort.println("privateToneXTDacEsp32(freq,vol)");
+#endif TONEDAC_DEBUG
+  privateToneXTDacEsp32.tone(frequency, volume*10);
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::tone(unsigned long frequency , uint8_t volume, unsigned long length)
+/***********************************/           
+{
+#ifdef SOUND_DEBUG
+					SerialPort.print("tone - frequence : ");
+					SerialPort.println(frequency);
+					SerialPort.print("tone - volume : ");
+					SerialPort.println(volume);
+					SerialPort.print("tone - length : ");
+					SerialPort.println(length);
+#endif //SOUND_DEBUG
+	
+#if defined (TONEHAL_EXTENDED_VOLUME)
+	if (_toneMuted) {
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+		if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+		return;
+	}
+	if (volume > 10) volume = 10;
+	_volume = volume;
+#endif
+
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+  privateToneXTDacEsp32.tone(frequency, volume*10);
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::tone(unsigned long frequency , uint8_t volume, unsigned long length, uint8_t background)
+/***********************************/
+{
+#ifdef SOUND_DEBUG
+					SerialPort.print("tone - frequence : ");
+					SerialPort.println(frequency);
+					SerialPort.print("tone - volume : ");
+					SerialPort.println(volume);
+					SerialPort.print("tone - length : ");
+					SerialPort.println(length);
+#endif //SOUND_DEBUG
+	
+#if defined (TONEHAL_EXTENDED_VOLUME)
+	if (_toneMuted) {
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+		if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+		return;
+	}
+	if (volume > 10) volume = 10;
+	_volume = volume;
+#endif
+
+	tone(frequency, volume*10, length);
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::noTone() {
+/***********************************/
+#ifdef SOUND_DEBUG
+					SerialPort.println("notone");
+#endif //SOUND_DEBUG
+
+#if defined(HAVE_AUDIO_AMPLI) && defined(AUDIO_AMPLI_LOWPOWER)	
+		if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+  privateToneXTDacEsp32.noTone();
+}
+		
+#if defined(TONEDAC_EXTENDED)
+/***********************************/
+void ToneHalXTDAC_Esp32::beginPlayWav(uint32_t srate)
+/***********************************/           
+{
+	privateToneXTDacEsp32.begin(srate);
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::endPlayWav()
+/***********************************/          
+{
+	privateToneXTDacEsp32.end();
+}
+
+/***********************************/
+void ToneHalXTDAC_Esp32::playWav(const char *fname) {
+/***********************************/
+  privateToneXTDacEsp32.play(fname);
+}
+
+/***********************************/
+bool ToneHalXTDAC_Esp32::isPlayingWav() {
+/***********************************/
+  return privateToneXTDacEsp32.isPlaying();
+}
+
+/***********************************/
+uint32_t ToneHalXTDAC_Esp32::duration() {
+/***********************************/
+  return privateToneXTDacEsp32.duration();
+}
+
+/***********************************/
+uint32_t ToneHalXTDAC_Esp32::remaining() {
+/***********************************/
+  return privateToneXTDacEsp32.remaining();
+}
+
+/***********************************
+void ToneHalXTDAC_Esp32::update() {
+/***********************************
+  privateToneXTDacEsp32.update();
+}*/
+
+#endif //TONEDAC_EXTENDED
+
 #elif defined(TONEAC)
 /****************************************/
 /*         P  W  M  - Push-Pull      		*/

@@ -177,7 +177,7 @@
 #define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 7
 #define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5
 
-#define VERTACCEL_STATIC_CALIBRATION
+//#define VERTACCEL_STATIC_CALIBRATION
 
 /*#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x29, 0xdf, 0xff, 0xff, 0x9f, 0x4a, 0xff, 0xff, 0xb5, 0xe9}
 #define VERTACCEL_ACCEL_CAL_BIAS {-3416, 9992, -31522}
@@ -210,7 +210,7 @@
 /* Possible values are :                                  */
 /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
 /*  - VARIOMETER_SENT_LK8000_SENTENCE                     */
-#define VARIOMETER_SENT_LXNAV_SENTENCE
+//#define VARIOMETER_SENT_LXNAV_SENTENCE
 
 /* When there is no GPS to sync variometer bluetooth sentences */
 /* set the delay between sendings in milliseconds.             */ 
@@ -235,7 +235,7 @@
 /* Set the GPS precision needed to use the GPS altitude value  */
 /* to calibrate the barometric altitude.                       */
 /*      !!! the best possible precision is 100 !!!             */ 
-#define VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD 350
+#define VARIOMETER_GPS_ALTI_CALIBRATION_PRECISION_THRESHOLD 250
 
 /* The GPS RMC and GGA sentences parameters */
 /* Check the SD card ouput or bluetooth output of gps-time-analysis */
@@ -264,7 +264,7 @@
 #define NMEA_GGA_TIME_PRECISION 1000
 #define NMEA_GGA_ALTI_PRECISION 10.0
 
-#elif defined(NEO_6M)
+#else if defined(NEO_6M)
 
 //NEO-6M
 #define NMEA_RMC_TAG "GPRMC"
@@ -319,5 +319,16 @@
 #define HAVE_BUTTON
 #define HAVE_WIFI
 #define HAVE_BLUETOOTH
+//#define HAVE_BLE
+#define HAVE_BDD
+
+
+#if defined(HAVE_WIFI) && defined(HAVE_BLUETOOTH)
+#undef HAVE_BLUETOOTH
+#endif
+
+#if defined(HAVE_BLUETOOTH) && defined(HAVE_BLE)
+#undef HAVE_BLUETOOTH
+#endif
 
 #endif

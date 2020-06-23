@@ -94,7 +94,7 @@ public:
 		void 		initTime(void);
 
     void   	update();
-		bool   	updateBle();
+		bool   	updateBluetooth();
 		void   	updateGps();
 		void    updateState();
 		bool 		updateSpeed(void);
@@ -155,7 +155,7 @@ public:
 		FlightHistory<50, 40> buzzerHistory;
 
 private:
-		int compteurErrorMPU = 0;
+		unsigned long compteurErrorMPU = 0;
 		int compteurBoucle = 0;
 
 

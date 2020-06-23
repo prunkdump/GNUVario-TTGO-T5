@@ -90,8 +90,8 @@
 #define DATA_DEBUG
 //#define BT_DEBUG
 //#define WIFI_DEBUG
-//#define SOUND_DEBUG
+#define SOUND_DEBUG
 //#define AGL_DEBUG
-
+#define SQL_DEBUG
 #endif //ENABLE_DEBUG
 #endif

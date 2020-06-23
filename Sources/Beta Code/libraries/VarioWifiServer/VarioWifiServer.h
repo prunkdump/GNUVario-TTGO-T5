@@ -31,22 +31,14 @@
  *           11/12/19   Changement de nom                                        *
  *                                                                               *
  *********************************************************************************/
- 
- /*
- *********************************************************************************
- *                    conversion image to cpp code                               *
- *                                                                               *
- *      https://javl.github.io/image2cpp/                                        *
- *                                                                               *
- *********************************************************************************/
 
 #ifndef VARIOWIFISERVER_H
 #define VARIOWIFISERVER_H
 
 #include <HardwareConfig.h>
 
-//#define ESP32WEBSERVEUR 
-//#define ESPASYNCWEBSERVER
+//#define ESP32WEBSERVEUR
+// #define ESPASYNCWEBSERVER
 
 // Serveur sur carte SD
 #include <VarioWifiServer_SD.h>

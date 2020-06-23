@@ -47,19 +47,19 @@
 /*            SCREEN          */
 /******************************/
 
-//#define VARIOSCREEN_SIZE 	154			//Ecran 1.54''
+#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
 //#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
-#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+//#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
 
 #if (VARIOSCREEN_SIZE == 154)
 #define DISPLAY_LOW_UPDATE 50
-#define DISPLAY_UPDATE     10
+#define DISPLAY_UPDATE    10
 #elif (VARIOSCREEN_SIZE == 290)
 #define DISPLAY_LOW_UPDATE 40
-#define DISPLAY_UPDATE     10
+#define DISPLAY_UPDATE    10
 #elif (VARIOSCREEN_SIZE == 291)
 #define DISPLAY_LOW_UPDATE 40
-#define DISPLAY_UPDATE     10
+#define DISPLAY_UPDATE    10
 #endif
 
 /***********************/
@@ -210,7 +210,7 @@
 /* Possible values are :                                  */
 /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
 /*  - VARIOMETER_SENT_LK8000_SENTENCE                     */
-#define VARIOMETER_SENT_LXNAV_SENTENCE
+// #define VARIOMETER_SENT_LXNAV_SENTENCE
 
 /* When there is no GPS to sync variometer bluetooth sentences */
 /* set the delay between sendings in milliseconds.             */ 
@@ -318,7 +318,15 @@
 #define HAVE_POWER_ALIM	
 #define HAVE_BUTTON
 #define HAVE_WIFI
-//#define HAVE_BLUETOOTH
-#define HAVE_BDD
+#define HAVE_BLUETOOTH
+#define HAVE_BLE
+
+#if defined(HAVE_WIFI) && defined(HAVE_BLUETOOTH) && !defined(HAVE_BLE)
+#undef HAVE_BLUETOOTH
+#endif
+
+#if defined(HAVE_BLE) && !defined(HAVE_BLUETOOTH)
+#define HAVE_BLUETOOTH
+#endif
 
 #endif

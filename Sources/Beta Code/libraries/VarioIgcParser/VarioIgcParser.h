@@ -21,6 +21,10 @@ private:
     int16_t endHeight;
     int16_t minHeight;
     int16_t maxHeight;
+    double_t startLat = -999;
+    double_t startLon = -999;
+    double_t endLat = -999;
+    double_t endLon = -999;
     String md5;
     String filename;
 
@@ -37,6 +41,10 @@ public:
     int16_t getEndHeight();
     int16_t getMinHeight();
     int16_t getMaxHeight();
+    double_t getStartLat();
+    double_t getStartLon();
+    double_t getEndLat();
+    double_t getEndLon();
     String getJson();
     String getFilename();
 };

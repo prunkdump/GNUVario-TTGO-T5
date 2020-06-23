@@ -59,6 +59,8 @@
 /*    1.3.6 07/04/20    Ajout ACCELERATION_MEASURE_STANDARD_DEVIATION            */
 /*                      Ajout LANGUAGE																					 */
 /*                      Ajout VARIOMETER_INTEGRATED_CLIMB_RATE                   */
+/*    1.3.7 09/06/20    Ajout VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE      */
+/*                      Modification VARIOMETER_SENT_LXNAV_SENTENCE              */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -75,7 +77,7 @@
 #endif
 
 
-#define PARAMS_VERSION "1.4"
+#define PARAMS_VERSION "1.5"
 
 /*----------------------------*/
 /*          DEFAULT           */
@@ -114,7 +116,13 @@
 #define DEFAULT_MS5611_ERROR_TONE_FREQHZ									2500
 #define DEFAULT_SDCARD_ERROR_TONE_FREQHZ									2000
 #define DEFAULT_BEEP_FREQ                  								800
+
+#define LK8000_SENTENCE																		0
+#define LXNAV_SENTENCE																		1
+
 #define DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE						1
+
+#define DEFAULT_BLUETOOTH_SEND_CALIBRATED_ALTITUDE        false
 
 #define DEFAULT_VARIOMETER_SSID_1													"your_SSID1"
 #define DEFAULT_VARIOMETER_PASSWORD_1											"your_PASSWORD_for SSID1"
@@ -302,7 +310,9 @@ class VarioSettings {
   /* Possible values are :                                  */
   /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
   /*  - VARIOMETER_SENT_LK8000_SENTENCE                     */
-  //boolean VARIOMETER_SENT_LXNAV_SENTENCE 				= DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE;
+  int VARIOMETER_SENT_LXNAV_SENTENCE 			      	= DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE;
+	
+	bool BLUETOOTH_SEND_CALIBRATED_ALTITUDE         = DEFAULT_BLUETOOTH_SEND_CALIBRATED_ALTITUDE;
 
   /* Alarm */
   /* Alarm SDCARD not insert */

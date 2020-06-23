@@ -93,7 +93,8 @@
 /*    1.4.7    02/07/19   Ajout isMute()                                           */
 /*    1.5.0    30/08/19		Ajout gestion commande ampli														 */
 /*    1.5.1  	 03/11/19		Modification des fonctions enableAmpli 									 */
-/*    1.5.2    10/010/20  Ajout TONEDACTIMER																			 */
+/*    1.5.2    10/01/20   Ajout TONEDACTIMER																			 */
+/*    1.5.3    14/06/20   Ajout update et TONEXTDAC                                */
 /*                                                                                 */
 /***********************************************************************************/
 
@@ -142,7 +143,8 @@
 //#define TONE // 1 pin PWM
 //#define	TONEAC // 2 pins Push-Pull PWM
 //#define	TONEDAC
-#define TONEDACTIMER
+#define TONEXTDAC
+//#define TONEDACTIMER
 //#define TONEI2S
 #endif
 
@@ -176,6 +178,8 @@ class ToneHal  {
     virtual void tone(unsigned long frequency, uint8_t volume, unsigned long length, uint8_t background) = 0;
 
 		virtual void noTone() = 0;
+		
+		virtual void update() = 0;
 
 #if defined (TONEHAL_EXTENDED_VOLUME)
 		

@@ -33,6 +33,7 @@
 #include <Arduino.h> 
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
+#include <VarioLog.h>
 
 #include "VarioImuTwoWire.h"
 #include "VarioData.h"
@@ -88,6 +89,8 @@ bool VarioImuTwoWire::updateData(void)
 #ifdef HAVE_ACCELEROMETER
   if (twScheduler.havePressure() && twScheduler.haveAccel())
   {
+		CompteurAccel = 0;
+		twScheduler.resetNewAccel();
     twScheduler.getTempAlti(Temp, Alti);
     Temp += GnuSettings.COMPENSATION_TEMP; //MPU_COMP_TEMP;
     Accel = twScheduler.getAccel(NULL);
@@ -103,6 +106,17 @@ bool VarioImuTwoWire::updateData(void)
 #endif //DATA_DEBUG
 				
 		return true;
+	} 
+	else if (twScheduler.haveNewAccel())
+	{
+		CompteurAccel++;
+		twScheduler.resetNewAccel();
+		if (CompteurAccel > 100) {
+			CompteurAccel = 0;
+			twScheduler.resetNewAccel();
+			MESSLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,"ERREUR MPU");
+			MESSLOG(LOG_TYPE_DEBUG,MS5611_DEBUG_LOG,"AUCUNE MESURE MS5611");       
+		}
 	}
 #else //HAVE_ACCELEROMETER
 	
@@ -130,7 +144,7 @@ bool VarioImuTwoWire::updateData(void)
 	}
 #endif
 
-  Temp = 0;
+/*  Temp = 0;
 	Alti = 0;
 	Accel =0;
 	
@@ -142,7 +156,7 @@ bool VarioImuTwoWire::updateData(void)
 	SerialPort.println(Temp);
 	SerialPort.print("Accel : ");
 	SerialPort.println(Accel);
-#endif //DATA_DEBUG
+#endif //DATA_DEBUG*/
 	
 	return false;
 }

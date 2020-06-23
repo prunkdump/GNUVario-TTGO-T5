@@ -56,6 +56,7 @@
 #define HAVE_PRESSURE 2
 #define HAVE_ACCEL 4
 #define HAVE_MAG 6
+#define HAVE_NEWACCEL 8
 #ifdef MPU_ENABLE_INT_PIN
 #define MPU_FIFO_EMPTIED 7
 #endif //MPU_ENABLE_INT_PIN
@@ -406,6 +407,7 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
 
   /* done ! */
   status |= (1 << HAVE_ACCEL);
+  status |= (1 << HAVE_NEWACCEL);
   
 #ifdef MPU_ENABLE_INT_PIN
   /* decrease FiFo counter */
@@ -435,6 +437,16 @@ void IRAM_ATTR TWScheduler::imuIntPinInterrupt(void) {
 bool TWScheduler::haveAccel(void) {
 
   return bisset(HAVE_ACCEL);
+}
+
+bool TWScheduler::haveNewAccel(void) {
+
+  return bisset(HAVE_NEWACCEL);
+}
+
+bool TWScheduler::resetNewAccel(void) {
+
+  return bunset(HAVE_NEWACCEL);
 }
 
 void TWScheduler::getRawAccel(int16_t* rawAccel, int32_t* quat) {

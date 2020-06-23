@@ -96,18 +96,30 @@ boolean VarioIgcParser::parseFile(String path)
             //trame trace
             // B1243314503488N00351234EA0088400927
             // B 12 43 31 4503488N 00351234E A 00884 00927
+            //lat lon DDMMmmmN  DDDMMmmmE
             String hms = buffer.substring(1, 7);
+            hms = hms.substring(0, 2) + ":" + hms.substring(2, 4) + ":" + hms.substring(4, 6);
             int16_t nPos = buffer.indexOf("N");
             int16_t ePos = buffer.indexOf("E");
             uint8_t aPos = buffer.indexOf("A");
-            String lat = buffer.substring(8, nPos);
-            String lon = buffer.substring(8, ePos);
-            int16_t height = buffer.substring(aPos + 6).toInt();
+            String lat = "";
+            String lon = "";
+            if (nPos != -1 && ePos != -1)
+            {
+                lat = buffer.substring(7, nPos);
+                lon = buffer.substring(nPos + 1, ePos);
+            }
+            int16_t height = buffer.substring(aPos + 1, aPos + 6).toInt();
 
             if (!startHeightSet)
             {
                 startHeightSet = true;
                 startHeight = height;
+                if (nPos != -1 && ePos != -1)
+                {
+                    startLat = lat.substring(0, 2).toDouble() + lat.substring(3, 8).toDouble() / 60000;
+                    startLon = lon.substring(0, 3).toDouble() + lon.substring(3, 8).toDouble() / 60000;
+                }
             }
             if (!startFlightTimeSet)
             {
@@ -118,6 +130,11 @@ boolean VarioIgcParser::parseFile(String path)
             minHeight = min(height, minHeight);
             maxHeight = max(height, maxHeight);
             endHeight = height;
+            if (nPos != -1 && ePos != -1)
+            {
+                endLat = lat.substring(0, 2).toDouble() + lat.substring(3, 8).toDouble() / 60000;
+                endLon = lon.substring(0, 3).toDouble() + lon.substring(3, 8).toDouble() / 60000;
+            }
         }
     }
 
@@ -274,6 +291,51 @@ String VarioIgcParser::getFilename()
     }
 }
 
+double_t VarioIgcParser::getStartLat()
+{
+    if (isParsed)
+    {
+        return startLat;
+    }
+    else
+    {
+        return 0;
+    }
+}
+double_t VarioIgcParser::getStartLon()
+{
+    if (isParsed)
+    {
+        return startLon;
+    }
+    else
+    {
+        return 0;
+    }
+}
+double_t VarioIgcParser::getEndLat()
+{
+    if (isParsed)
+    {
+        return endLat;
+    }
+    else
+    {
+        return 0;
+    }
+}
+double_t VarioIgcParser::getEndLon()
+{
+    if (isParsed)
+    {
+        return endLon;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 String VarioIgcParser::getJson()
 {
     String output;
@@ -292,6 +354,10 @@ String VarioIgcParser::getJson()
         doc["minHeight"] = minHeight;
         doc["maxHeight"] = maxHeight;
         doc["filename"] = filename;
+        doc["startLat"] = startLat;
+        doc["startLon"] = startLon;
+        doc["endLat"] = endLat;
+        doc["endLon"] = endLon;
     }
     else
     {

@@ -368,7 +368,7 @@ void VarioData::update(void)
 
 	if (varioHardwareManager.updateData()) 
 	{
-    compteurErrorMPU = 0;
+    compteurErrorMPU = millis();
 
 		alti						= varioHardwareManager.getAlti();
 		temperature			= varioHardwareManager.getTemp();
@@ -749,11 +749,9 @@ void VarioData::update(void)
     /*   ERREUR BAROMETRE / MPU                                   */
     /**************************************************************/
 
-    compteurErrorMPU++;
-    if (compteurErrorMPU > 20)
+    if (millis() - compteurErrorMPU > 2000)
     {
      SerialPort.println("ERREUR ERREUR BARO / ACCELEROMETRE");
-     compteurErrorMPU = 20;
 
       //**********************************************************
       //  DISABLE BEEPER
@@ -859,9 +857,9 @@ uint8_t VarioData::getVariometerState(){
 }
 
 //*******************************************
-bool VarioData::updateBle(){
+bool VarioData::updateBluetooth(){
 //*******************************************
-  return(varioHardwareManager.updateBle(kalmanvert.getVelocity(), kalmanvert.getPosition(), kalmanvert.getCalibratedPosition()));
+  return(varioHardwareManager.updateBluetooth(kalmanvert.getVelocity(), kalmanvert.getPosition(), kalmanvert.getCalibratedPosition()));
 }
 
 //*******************************************

@@ -107,6 +107,7 @@
 #include <Fonts/gnuvarioe18pt7b.h>
 #include <Fonts/gnuvarioe23pt7b.h>
 #include <Fonts/NotoSans6pt7b.h> //Picopixel.h>
+#include <Fonts/gnuvarioe12pt7b.h>
 
 /* minimum drift to update digit */
 #define VARIOSCREEN_DIGIT_DISPLAY_THRESHOLD 0.65

@@ -1111,7 +1111,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 	display.setTextColor(ColorText);
 	display.setTextSize(1);
 
-	display.setCursor(0, 15);
+	display.setCursor(10, 15);
 	display.print(varioLanguage.getText(TITRE_STAT));  //"STATISTIQUES");
 	display.setFont(&FreeSansBold9pt7b);
 	display.setTextColor(ColorText);
@@ -1615,12 +1615,12 @@ boolean VarioScreen::ScreenViewSound(void)
 
 		display.fillRect(4, 160, 123, 60, GxEPD_WHITE);
 
-		display.setFont(&FreeSansBold9pt7b);
+		display.setFont(&FreeSansBold12pt7b);
 		display.setTextColor(ColorText);
 		display.setTextSize(2);
 
-		if (volume == 10) display.setCursor(40, 200);
-		else 							display.setCursor(40+12, 200);
+		if (volume == 10) display.setCursor(38, 205);
+		else 							display.setCursor(38+12, 205);
 		display.print(volume);
 		
 		if (ButtonScheduleur.Get_StatePage() == STATE_PAGE_CONFIG_SOUND) {

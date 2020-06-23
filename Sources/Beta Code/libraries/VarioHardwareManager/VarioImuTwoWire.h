@@ -60,6 +60,7 @@ private:
   double Alti;
   double Temp;
   double Accel;
+	int	CompteurAccel = 0;
 };
 
 #endif //TWOWIRESCHEDULER

@@ -140,6 +140,8 @@ class TWScheduler {
   /* IMU part */
   /* tap callback is triggered by getRawAccel and getAccel */
   static bool haveAccel(void);
+  static bool haveNewAccel(void);
+  static bool resetNewAccel(void);
   static void getRawAccel(int16_t* rawAccel, int32_t* quat);
   static double getAccel(double* vertVector); //vertVector = NULL if not needed
 #ifdef AK89xx_SECONDARY

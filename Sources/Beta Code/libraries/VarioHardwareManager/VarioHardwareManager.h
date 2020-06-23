@@ -28,16 +28,20 @@
  *                                                                               *
  *********************************************************************************
  */
- 
+
 #ifndef VARIO_HARDWARE_MANAGER_H
 #define VARIO_HARDWARE_MANAGER_H
 
 #include <HardwareConfig.h>
-#include <VarioAlim.h>		
+#include <VarioAlim.h>
 #include <VarioSpeaker.h>
 #include <VarioImu.h>
 #include <VarioGps.h>
-#include <VarioBle.h>
+
+#ifdef HAVE_BLUETOOTH
+#include <VarioBluetooth.h>
+#endif
+
 
 /*******************/
 /* General objects */
@@ -50,38 +54,39 @@
 class VarioHardwareManager
 {
 private:
-    VarioAlim varioAlim;
-    VarioSpeaker varioSpeaker;
-    VarioImu varioImu;
-		VarioGps varioGps;
+	VarioAlim varioAlim;
+	VarioSpeaker varioSpeaker;
+	VarioImu varioImu;
+	VarioGps varioGps;
 #ifdef HAVE_BLUETOOTH
-		VarioBle varioBle;
+	VarioBluetooth varioBT;
 #endif
 
+
 public:
-    VarioHardwareManager();
-    void 		init();
-    void 		initAlim();
-    void 		initSpeaker();
-		void 		initSound();
-    void 		initImu();
-		void 		initGps();
-		bool 		initBt();
-		void 		initButton();
-		
- 		double 	firstAlti(void);
-		bool   	updateData(void);
-		
-    double 	getAlti();
-    double 	getTemp();
-    double 	getAccel();
-		
-		void 		testInactivity(double velocity);
-		
-		bool    updateBle(double velocity, double alti, double altiCalibrated);
-		bool    updateGps(Kalmanvert kalmanvert);
-	
-		unsigned long time_deep_sleep, sleepTimeoutSecs;		
+	VarioHardwareManager();
+	void init();
+	void initAlim();
+	void initSpeaker();
+	void initSound();
+	void initImu();
+	void initGps();
+	bool initBt();
+	void initButton();
+
+	double firstAlti(void);
+	bool updateData(void);
+
+	double getAlti();
+	double getTemp();
+	double getAccel();
+
+	void testInactivity(double velocity);
+
+	bool updateBluetooth(double velocity, double alti, double altiCalibrated);
+	bool updateGps(Kalmanvert kalmanvert);
+
+	unsigned long time_deep_sleep, sleepTimeoutSecs;
 };
 
 //**************************************************
@@ -98,7 +103,7 @@ extern "C"
 {
 #endif
 
-  uint8_t temprature_sens_read();
+	uint8_t temprature_sens_read();
 
 #ifdef __cplusplus
 }

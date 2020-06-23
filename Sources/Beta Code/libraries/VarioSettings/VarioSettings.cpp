@@ -61,6 +61,8 @@
 /*    1.3.6 07/04/20    Ajout ACCELERATION_MEASURE_STANDARD_DEVIATION            */
 /*                      Ajout LANGUAGE																					 */
 /*                      Ajout VARIOMETER_INTEGRATED_CLIMB_RATE                   */
+/*    1.3.7 09/06/20    Ajout VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE      */
+/*                      Modification VARIOMETER_SENT_LXNAV_SENTENCE              */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -267,13 +269,13 @@ boolean VarioSettings::readSDSettings(char *FileName, boolean *ModifiedValue){
   /* -> When flight start is detected                     */
     VARIOMETER_RECORD_WHEN_FLIGHT_START=toBoolean(settingValue);
    }
- /*  else if(settingName == "VARIOMETER_SENT_LXNAV_SENTENCE") {
-  / * What type of vario NMEA sentence is sent by bluetooth. */
+   else if(settingName == "VARIOMETER_SENT_LXNAV_SENTENCE") {
+  /* What type of vario NMEA sentence is sent by bluetooth. */
   /* Possible values are :                                  */
   /*  - VARIOMETER_SENT_LXNAV_SENTENCE                      */
-  /*  - VARIOMETER_SENT_LK8000_SENTENCE                     *
-    VARIOMETER_SENT_LXNAV_SENTENCE=toBoolean(settingValue);
-   }*/
+  /*  - VARIOMETER_SENT_LK8000_SENTENCE                     */
+    VARIOMETER_SENT_LXNAV_SENTENCE=settingValue.toInt(); //toBoolean(settingValue);
+   }
    else if(settingName == "ALARM_SDCARD") {
      /* Alarm */
      /* Alarm SDCARD not insert */
@@ -1006,7 +1008,7 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
-  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(16) + 1090;
+  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(17) + 1090;
   DynamicJsonDocument doc(capacity);
 
   SerialPort.println("deserialisation");
@@ -1463,11 +1465,17 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SerialPort.print("VARIOMETER_ENABLE_AGL : ");
   SerialPort.println(VARIOMETER_ENABLE_AGL);
 
-/*  tmpValue = Systeme["SENT_LXNAV_SENTENCE"]; 
-  if (tmpValue = 1) VARIOMETER_SENT_LXNAV_SENTENCE = true;
-  else              VARIOMETER_SENT_LXNAV_SENTENCE = false;
+	if (Vario.containsKey("SENT_LXNAV_SENTENCE")) {
+		tmpValue = Vario["SENT_LXNAV_SENTENCE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_VARIOMETER_SENT_LXNAV_SENTENCE;
+		MajFileParams = true;		
+		SerialPort.print("Defaut Recup - ");
+	}
+	VARIOMETER_SENT_LXNAV_SENTENCE =  tmpValue;
   SerialPort.print("SENT_LXNAV_SENTENCE : ");
-  SerialPort.println(VARIOMETER_SENT_LXNAV_SENTENCE);*/
+  SerialPort.println(VARIOMETER_SENT_LXNAV_SENTENCE);
 
 	if (Vario.containsKey("ACCELERATION_MEASURE_STANDARD_DEVIATION")) {
 		     tmpValueFloat = Vario["ACCELERATION_MEASURE_STANDARD_DEVIATION"]; 
@@ -1507,6 +1515,19 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SETTINGS_VARIO_PERIOD_COUNT = tmpValue;
   SerialPort.print("SETTINGS_VARIO_PERIOD_COUNT : ");
   SerialPort.println(SETTINGS_VARIO_PERIOD_COUNT);
+
+	if (Vario.containsKey("BLUETOOTH_SEND_CALIBRATED_ALTITUDE")) {
+		     tmpValue = Vario["BLUETOOTH_SEND_CALIBRATED_ALTITUDE"]; 
+		SerialPort.print("Json Recup - ");
+	} else {
+		tmpValue = DEFAULT_BLUETOOTH_SEND_CALIBRATED_ALTITUDE;
+		MajFileParams = true;												
+		SerialPort.print("Defaut Recup - ");
+	}
+  if (tmpValue == 1) BLUETOOTH_SEND_CALIBRATED_ALTITUDE = true;
+  else               BLUETOOTH_SEND_CALIBRATED_ALTITUDE = false;
+  SerialPort.print("BLUETOOTH_SEND_CALIBRATED_ALTITUDE : ");
+  SerialPort.println(BLUETOOTH_SEND_CALIBRATED_ALTITUDE);
 
 	//*****  FLIGHT START *****
 
@@ -1571,7 +1592,7 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 		SerialPort.print("Defaut Recup - ");
 	}
   if (tmpValue == 1) VARIOMETER_RECORD_WHEN_FLIGHT_START = true;
-  else              VARIOMETER_RECORD_WHEN_FLIGHT_START = false;
+  else               VARIOMETER_RECORD_WHEN_FLIGHT_START = false;
   SerialPort.print("RECORD_WHEN_FLIGHT_START : ");
   SerialPort.println(VARIOMETER_RECORD_WHEN_FLIGHT_START);
 
@@ -1657,7 +1678,7 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   // Use arduinojson.org/assistant to compute the capacity.
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 2*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(11) + JSON_OBJECT_SIZE(12) + 790;
 //	const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(12) + JSON_OBJECT_SIZE(13) + 1090;
-  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(16) + 1090;
+  const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(3) + 3*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(13) + JSON_OBJECT_SIZE(17) + 1090;
 	DynamicJsonDocument doc(capacity);
 
   SerialPort.println("****** GnuvarioE *******");
@@ -1765,6 +1786,7 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   if (VARIOMETER_SENT_LXNAV_SENTENCE) Systeme["SENT_LXNAV_SENTENCE"] = 1;
   else              									Systeme["SENT_LXNAV_SENTENCE"] = 0;
 */
+  Vario["VARIOMETER_SENT_LXNAV_SENTENCE"] = VARIOMETER_SENT_LXNAV_SENTENCE;
 
   Vario["ACCELERATION_MEASURE_STANDARD_DEVIATION"] = ACCELERATION_MEASURE_STANDARD_DEVIATION;
 
@@ -1772,6 +1794,9 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   else              				 						Vario["VARIOMETER_INTEGRATED_CLIMB_RATE"] = 0;
 
   Vario["SETTINGS_VARIO_PERIOD_COUNT"] = SETTINGS_VARIO_PERIOD_COUNT;
+	
+  if (BLUETOOTH_SEND_CALIBRATED_ALTITUDE) Vario["BLUETOOTH_SEND_CALIBRATED_ALTITUDE"] = 1;
+  else              				 						  Vario["BLUETOOTH_SEND_CALIBRATED_ALTITUDE"] = 0;
 	
 	//*****    Flight_Start *****
 
@@ -1999,6 +2024,7 @@ double Statistic::getGain(void) {
 				"ACCELERATION_MEASURE_STANDARD_DEVIATION": 0.35,
 				"VARIOMETER_INTEGRATED_CLIMB_RATE": 0,
 				"SETTINGS_VARIO_PERIOD_COUNT":5,
+				"BLUETOOTH_SEND_CALIBRATED_ALTITUDE":0,
    },
     "Flight start": {
         "FLIGHT_START_MIN_TIMESTAMP": 15000,
