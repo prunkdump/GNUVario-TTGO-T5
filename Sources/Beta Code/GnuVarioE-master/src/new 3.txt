@@ -1,0 +1,80 @@
+
+GxEPD2_BWU.H
+
+    void display(bool partial_update_mode = false)
+    {
+      epd2.writeImage(_buffer, 0, 0, WIDTH, _page_height);
+      epd2.refresh(partial_update_mode);
+      if (epd2.hasFastPartialUpdate)
+      {
+        epd2.writeImageAgain(_buffer, 0, 0, WIDTH, _page_height);
+      }
+      if (!partial_update_mode) epd2.powerOff();
+    }
+
+
+GxEPD2_154U
+
+void GxEPD2_154U::writeImage(const uint8_t bitmap[], int16_t x, int16_t y, int16_t w, int16_t h, bool invert, bool mirror_y, bool pgm)
+{
+  if (_initial_write) writeScreenBuffer(); // initial full screen buffer clean
+  delay(1); // yield() to avoid WDT on ESP8266 and ESP32
+  int16_t wb = (w + 7) / 8; // width bytes, bitmaps are padded
+  x -= x % 8; // byte boundary
+  w = wb * 8; // byte boundary
+  int16_t x1 = x < 0 ? 0 : x; // limit
+  int16_t y1 = y < 0 ? 0 : y; // limit
+  int16_t w1 = x + w < int16_t(WIDTH) ? w : int16_t(WIDTH) - x; // limit
+  int16_t h1 = y + h < int16_t(HEIGHT) ? h : int16_t(HEIGHT) - y; // limit
+  int16_t dx = x1 - x;
+  int16_t dy = y1 - y;
+  w1 -= dx;
+  h1 -= dy;
+  if ((w1 <= 0) || (h1 <= 0)) return;
+  if (!_using_partial_mode) _Init_Part();
+  _setPartialRamArea(x1, y1, w1, h1);
+  _writeCommand(0x24);
+  for (int16_t i = 0; i < h1; i++)
+  {
+    for (int16_t j = 0; j < w1 / 8; j++)
+    {
+      uint8_t data;
+      // use wb, h of bitmap for index!
+      int16_t idx = mirror_y ? j + dx / 8 + ((h - 1 - (i + dy))) * wb : j + dx / 8 + (i + dy) * wb;
+      if (pgm)
+      {
+#if defined(__AVR) || defined(ESP8266) || defined(ESP32)
+        data = pgm_read_byte(&bitmap[idx]);
+#else
+        data = bitmap[idx];
+#endif
+      }
+      else
+      {
+        data = bitmap[idx];
+      }
+      if (invert) data = ~data;
+      _writeData(data);
+    }
+  }
+  delay(1); // yield() to avoid WDT on ESP8266 and ESP32
+}
+
+void GxEPD2_154U::writeScreenBuffer(uint8_t value)
+{
+  _initial_write = false; // initial full screen buffer clean done
+  // this controller has no command to write "old data"
+  if (_initial_refresh) clearScreen(value);
+  else _writeScreenBuffer(value);
+}
+
+void GxEPD2_154U::_writeScreenBuffer(uint8_t value)
+{
+  if (!_using_partial_mode) _Init_Part();
+  _setPartialRamArea(0, 0, WIDTH, HEIGHT);
+  _writeCommand(0x24);
+  for (uint32_t i = 0; i < uint32_t(WIDTH) * uint32_t(HEIGHT) / 8; i++)
+  {
+    _writeData(value);
+  }
+}
