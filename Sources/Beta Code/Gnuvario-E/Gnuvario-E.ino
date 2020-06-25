@@ -263,6 +263,7 @@
 *                                    Ajout paramètre calibrated_gps pour IGC et BT                    *
 *                                    Correction paramètre trame BT                                    *
 *                                    Ajout fichier langue "anglais"                                   *
+*                23/06/20            Amélioration bluetooth                                           *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -286,7 +287,6 @@
 * AJOUT - écran charge batterie au démarrage                                                          *
 * AJOUT - alti GPS                                                                                    *
 * BUG   - derive alti                                                                                 *                                                                                
-* BUG   - trame BT                                                                                    *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -296,7 +296,6 @@
 * Boussole graphique                                                                                  *                                                                       
 * Création dynamique des objets screen                                                                *
 * Sens et vitesse du vent                                                                             *
-* verifier fonctionnement BT - trame non complete                                                     *
 * Espace aérien                                                                                       *
 * 2 Altitudes                                                                                         *
 * Recupération vol via USB                                                                            *                                                                                        
@@ -368,6 +367,7 @@
  *  - Compas Magnétique + compas GPS                                    *
  *  - Raffraichissement écran toutes les 15min                          *
  *  - Carnet de vol                                                     *
+ *  - BlueTooth trame xctracer                                          *
  *                                                                      *
  ************************************************************************/
 
@@ -492,6 +492,10 @@
   * DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne    * 
   * MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne *
   * INFOLOG(Text)                    Enregistre dans le fichier de log un texte                               *                                                                                                     
+  *************************************************************************************************************
+  *                                                                                                           *
+  * Téléchargement AGL : https://vps.skybean.eu/agl/                                                          *                                                                                                          
+  *                                                                                                           * 
   *************************************************************************************************************/
 
 //*****************************

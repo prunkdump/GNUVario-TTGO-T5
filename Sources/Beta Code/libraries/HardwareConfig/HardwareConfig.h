@@ -47,9 +47,9 @@
 /*            SCREEN          */
 /******************************/
 
-#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
+//#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
 //#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
-//#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
 
 #if (VARIOSCREEN_SIZE == 154)
 #define DISPLAY_LOW_UPDATE 50

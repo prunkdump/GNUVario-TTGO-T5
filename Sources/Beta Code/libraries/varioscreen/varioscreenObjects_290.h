@@ -101,12 +101,12 @@
 //#include <Fonts/MONOFONT22pt7b.h>
 //#include <Fonts/Audimat24pt7b.h>
 //#include <Fonts/Audimat26pt7b.h>
-#include <Fonts/FreeSansBold8pt7b.h>
+#include <FreeSansBold8pt7b.h>
 //#include <Fonts/jersey18pt7b.h>
-#include <Fonts/gnuvarioe14pt7b.h>
-#include <Fonts/gnuvarioe18pt7b.h>
-#include <Fonts/gnuvarioe23pt7b.h>
-#include <Fonts/NotoSans6pt7b.h> //Picopixel.h>
+#include <gnuvarioe14pt7b.h>
+#include <gnuvarioe18pt7b.h>
+#include <gnuvarioe23pt7b.h>
+#include <NotoSans6pt7b.h> //Picopixel.h>
 
 /* minimum drift to update digit */
 #define VARIOSCREEN_DIGIT_DISPLAY_THRESHOLD 0.65
