@@ -31,6 +31,7 @@
  *    1.0.3  18/04/20   Ajour reglage du kalman                                  *
  *                      Ajout intégration vario                                  *
  *    1.0.4  08/05/20   Ajout getCap                                             *
+ *    1.0.5  27/06/20   Ajout varioxbeeper                                       *
  *                                                                               *
  *********************************************************************************
  */
@@ -72,6 +73,8 @@
 #include <varioscreenGxEPD.h>
 
 #include <math.h>
+
+#include <VarioXBeeper.h>
 
 /**********************/
 /* SDCARD objects     */
@@ -268,6 +271,18 @@ bool VarioData::initSettings(bool Test_SD)
     {
       GnuSettings.readSDSettings(tmpFileName, &ModifValue);
     }
+		
+    //lecture parametre de configuration du son
+
+    strcpy(tmpFileName, "/variosound.cfg");
+
+    if (SDHAL_SD.exists(tmpFileName))
+    {
+      varioXBeeper.readSDSettings(tmpFileName);
+			varioXBeeper.majVarioSettings(&ModifValue);
+//			varioXBeeper.getFrequence(-1.5);
+    }
+		
 		return true;
   }
   else

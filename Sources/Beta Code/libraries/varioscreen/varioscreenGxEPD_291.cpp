@@ -1615,7 +1615,7 @@ boolean VarioScreen::ScreenViewSound(void)
 
 		display.fillRect(4, 160, 123, 60, GxEPD_WHITE);
 
-		display.setFont(&FreeSansBold12pt7b);
+		display.setFont(&gnuvarioe12pt7b);
 		display.setTextColor(ColorText);
 		display.setTextSize(2);
 

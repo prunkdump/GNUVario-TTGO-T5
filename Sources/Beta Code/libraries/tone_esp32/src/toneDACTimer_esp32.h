@@ -12,6 +12,8 @@
 /*                                                  */
 /****************************************************/
 
+#include <HardwareConfig.h>
+
 #if defined(ESP32) && defined(TONEDACTIMER)
 
 #include <Arduino.h>

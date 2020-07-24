@@ -264,6 +264,7 @@
 *                                    Correction paramètre trame BT                                    *
 *                                    Ajout fichier langue "anglais"                                   *
 *                23/06/20            Amélioration bluetooth                                           *
+*                28/06/20            Ajout VarioXBeeper                                               *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -286,7 +287,9 @@
 * BUG   - altitude enregistré non compensé                                                            *
 * AJOUT - écran charge batterie au démarrage                                                          *
 * AJOUT - alti GPS                                                                                    *
-* BUG   - derive alti                                                                                 *                                                                                
+* BUG   - derive alti                                                                                 *
+* BUG   - cap affiche 388																																							*
+* AJOUT - enregistrement alti compensé                                                                *                                                                                
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -577,6 +580,8 @@ VarioData varioData;
 
 #include <VarioSettings.h>
 #include <VarioLanguage.h>
+
+#include <VarioXBeeper.h>
 
 //*******************************
 // GESTION WIFI                 *

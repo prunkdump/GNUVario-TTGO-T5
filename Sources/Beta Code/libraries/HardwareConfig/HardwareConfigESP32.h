@@ -269,6 +269,7 @@ Fly stat        0xD0		26+2
 //#define	TONEAC 											// 2 pins Push-Pull PWM
 //#define	TONEDAC
 //#define TONEXTDAC
+//#define TONEDACTIMER
 //#define TONEI2S
 
 /*********************/

@@ -10,13 +10,14 @@
 /*                                                  */
 /****************************************************/
 
+#include "HardwareConfig.h"
+
 #if defined(ESP32) && defined (TONEDACTIMER)
 
 
 #include "toneDACTimer_esp32.h"
 #include <Arduino.h>
 #include "DebugConfig.h"
-#include "HardwareConfig.h"
 
 #ifdef SOUND_DEBUG
 #define ARDUINOTRACE_ENABLE 1
@@ -27,7 +28,7 @@
 #define ARDUINOTRACE_SERIAL SerialPort
 #include <ArduinoTrace.h>
 
-#include <SysCall.h>
+//#include <SysCall.h>
 
 // BEEP PIN
 #ifndef SPEAKER_PIN 
@@ -378,10 +379,26 @@ void IRAM_ATTR onTimer()
 				sIndex++;
 			}*/
 			
-	tmpstate = !tmpstate;		
+/*	tmpstate = !tmpstate;		
 	dacWrite(26, tmpstate * 255);
 
-  SysCall::yield();
+  SysCall::yield();*/
+	
+		dacWrite(Speaker_Pin, wavSamples[sIndex]);
+		if (sIndex==sampleCount-1)
+			{
+				sIndex = 0;	
+/*     toneDAC.tcDisable();
+				toneDAC.tcReset();
+				toneDAC.tcConfigure(toneDAC.sampleRate); //setup the timer counter based off of the user entered sample rate
+//start timer, once timer is done interrupt will occur and DAC value will be updated
+				toneDAC.tcStartCounter(); */
+			}
+		else
+			{		
+				sIndex++;
+			}
+	
 
   portEXIT_CRITICAL_ISR(&timerMux);	
 }

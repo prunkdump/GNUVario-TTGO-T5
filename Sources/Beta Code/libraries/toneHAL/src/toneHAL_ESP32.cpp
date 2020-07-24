@@ -51,7 +51,7 @@
 #define TONEDAC_VOLUME  //set to have volume control
 //#define TONEDAC_LENGTH  //set to have length control
 
-#if defined(TONEDAC)
+#if defined(TONEDAC) || defined(TONEDACTIMER)
 /****************************************/
 /*            D A C						*/
 /****************************************/
