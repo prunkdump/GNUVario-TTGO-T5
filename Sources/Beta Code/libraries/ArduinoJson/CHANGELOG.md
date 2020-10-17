@@ -1,6 +1,23 @@
 ArduinoJson: change log
 =======================
 
+v6.16.1 (2020-08-04)
+-------
+
+* Fixed `deserializeJson()` that stopped reading after `{}` (issue #1335)
+
+v6.16.0 (2020-08-01)
+-------
+
+* Added comparisons (`>`, `>=`, `==`, `!=`, `<`, and `<=`) between `JsonVariant`s
+* Added string deduplication (issue #1303)
+* Added `JsonString::operator!=`
+* Set `ARDUINOJSON_DECODE_UNICODE` to `1` by default
+* Fixed `copyArray()` not working with `String`, `ElementProxy`, and `MemberProxy`
+* Fixed error `getOrAddElement is not a member of ElementProxy` (issue #1311)
+* Fixed excessive stack usage when compiled with `-Og` (issues #1210 and #1314)
+* Fixed `Warning[Pa093]: implicit conversion from floating point to integer` on IAR compiler (PR #1328 by @stawiski)
+
 v6.15.2 (2020-05-15)
 -------
 

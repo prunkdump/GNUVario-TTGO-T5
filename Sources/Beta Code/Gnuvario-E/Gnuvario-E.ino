@@ -6,7 +6,7 @@
 
 #define VERSION 0
 #define SUB_VERSION 8
-#define BETA_CODE 3
+#define BETA_CODE 4
 #define DEVNAME "JPG63/MICELPA/RATAMUSE"
 #define AUTHOR "J" //J=JPG63  P=PUNKDUMP  M=MICHELPA
 
@@ -265,6 +265,21 @@
 *                                    Ajout fichier langue "anglais"                                   *
 *                23/06/20            Amélioration bluetooth                                           *
 *                28/06/20            Ajout VarioXBeeper                                               *
+*                26/07/20            Renomage TONEDAC en TONEDACCOSINE                                *
+*                                    Ajout affichage tension                                          *
+* 0.8 Beta 4     11/09/20            Nouvelle bibliothèque toneHalI2S                                 *                                   
+*                                    Nouvelle bibliothèque de gestion des paramètres du son           *
+*                13/09/20            Modifie beeper pour utiliser varioXBeeper                        *                    
+*                26/09/20            Modifier Tonehal32 PWM pour accepter toutes les Pins dand        *
+*                                    HarwareConfig SPEAKER_PIN                                        *
+*                27/09/20            Ajout DISPLAY_LIGHT sur l'écran 1.54''                           *
+*                04/10/20            Correction beeper                                                *
+*                                    Correction affichage radio / trend                               *
+*                05/10/20            Ajout gestion PCB 3                                              *
+*                09/10/20            Correction deep-sleep pour V3                                    *
+*                                    Mise à jour GpxEpd2                                              *
+*                15/10/20            Correction bug affichage heure / duree sur ecran 2.91            *
+*                17/10/20            Ajout Gestion de la version                                      *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -280,28 +295,25 @@
 * BUG   - download à verifier                                                                         *
 *                                                                                                     *        
 * v0.8                                                                                                *       
-* AJOUT - Espaces aeriens                                                                             *
 * BUG   - Grésillement Buzzer                                                                         * 
-* AJOUT - Indication niveau de batterie                                                               *
 * Ajout - Indication charge batterie                                                                  *
 * BUG   - altitude enregistré non compensé                                                            *
 * AJOUT - écran charge batterie au démarrage                                                          *
 * AJOUT - alti GPS                                                                                    *
 * BUG   - derive alti                                                                                 *
-* BUG   - cap affiche 388																																							*
-* AJOUT - enregistrement alti compensé                                                                *                                                                                
+* BUG   - sensibilité vario                                                                           *
+* BUG   - compas GPS à verifier / problème compas magnétique                                          *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
 * Gérer le son via le DAC                                                                             *
 * revoir volume du son ToneESP32                                                                      *
-* Refaire gestion du son (parametrage via xctracer)                                                   *
 * Boussole graphique                                                                                  *                                                                       
 * Création dynamique des objets screen                                                                *
 * Sens et vitesse du vent                                                                             *
 * Espace aérien                                                                                       *
 * 2 Altitudes                                                                                         *
-* Recupération vol via USB                                                                            *                                                                                        
+* Recupération vol via USB                                                                            *  
 *******************************************************************************************************/
 
 /************************************************************************
@@ -371,6 +383,10 @@
  *  - Raffraichissement écran toutes les 15min                          *
  *  - Carnet de vol                                                     *
  *  - BlueTooth trame xctracer                                          *
+ *  - Ajout indication niveau de batterie dans la page de demarrage     *
+ *  - Correction BUG d'affichage                                        *
+ *  - Ajout gestion du paramètrage du son                               *
+ *  - Ajout de la gestion du PCB V3                                     *
  *                                                                      *
  ************************************************************************/
 
@@ -407,6 +423,7 @@
 * wifi.cfg                 paramètres de configuration du wifi          *
 * log.cfg                  paramètres de configuration du fichier de log*
 * variocal.cfg             paramètres de calibration du MPU             *
+* variosound.cfg           paramètrage du son                           *
 * record00cal.igc          fichier contenant les mesures utiles au      *
 *                          calcul de la calibration                     *
 * HardwareConfig.h         parametres matériels communs                 *
@@ -431,10 +448,15 @@
 *                       INDEX.HTM                                      *
 *                       INDEXB.JS                                      *
 *                       INDEXB~1.MAP                                   *
+*               DB/                     - repertoire de base de donnees*        
+*                       VOL.DB          - carnet de vol                *
+*               GNUVARIOEN.jso          - fichier de langue            *                        
+*               GNUVARIOFR.JSO          - fichier de langue            *
 *               RECORD00.CAL            - fichier de calibration       *
 *               PARAMS.JSO              - fichier de configuration     *
 *               LOG.CFG                 - Paramètres de debug          *
 *               VARIOCAL.CFG            - Paramètres de calibration    *
+*               SOUNDCAL.CFG            - Paramètrage du son           *
 *               WIFI.CFG                - Paramètres Wifi              *
 *                                                                      *
 ************************************************************************/
@@ -448,59 +470,85 @@
 *                                                                      *
 ************************************************************************/
 
+/*************************************************************************************************************
+*                                                                                                            *
+*                                            UTILISATION DES TOUCHES                                         *                                                                                       
+*   Ecran         Touche      Fonction                                                                       *
+*                                                                                                            *
+*   Init          Gauche      passage en mode Wifi                                                           *                                                                                                              
+*   Init          Droite      Calibration                                                                    * 
+*                                                                                                            *
+*   Vario         Centre      Coupe et remet le son (Mute)                                                   *
+*   Vario         Centre 3s   Mode veille                                                                    *
+*   Vario         Gauche      écran précédent                                                                *
+*   Vario         Droite      écran suivant                                                                  *
+*   Vario         Gauche 2s   Calibrarion manuel du baro via l'AGL                                           *
+*   Vario         Gauche 0    Déclenchement de l'enregistrement du vol si en attente                         *
+*                                                                                                            *
+*   Wifi          Gauche      Sort du mode Wifi                                                              *
+*                                                                                                            *
+*   Sound         Gauche      baisse le volume                                                               *
+*   Sound         Droit       Monte le volume                                                                *
+*   Sound         Centre      Entre dans la configuration / Valide la configuration                          *
+*                                                                                                            *
+*   Sleep         Gauche      Valide la mise en veille                                                       * 
+*                                                                                                            *
+*   Calibration   Centre      Démarre la calibration                                                         *                                                                                                        
+*   Calibration   Gauche      Sort du mode calibration (reboot)                                              *
+*                                                                                                            *
+**************************************************************************************************************
+*                                                                                                            *
+* Debbug                                                                                                     *
+*                                                                                                            *
+* TRACE();                  Affiche sur le moniteur serie le numero de ligne, le nom du fichier              *
+* DUMP(someValue);          Affcihe sur le moniteur serie la variable ainsi que le fichier et la ligne       *
+* SDUMP(someText);          Affiche sur le moniteur serie le texte ainsi que le fichier et la ligne          *
+*                                                                                                            *
+* TRACELOG(type, module)           Enregistre dans le fichier de log le fichier et la ligne                  *
+* DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne     * 
+* MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne  *
+* INFOLOG(Text)                    Enregistre dans le fichier de log un texte                                *                                                                                                     
+**************************************************************************************************************
+*                                                                                                            *
+* Téléchargement AGL : https://vps.skybean.eu/agl/                                                           *                                                                                                          
+*                                                                                                            * 
+**************************************************************************************************************
+*                                                                                                            *
+* Timer                                                                                                      *
+*          0 :                                                                                               *
+*          1 : screen                                                                                        *
+*          2 : XT_DAC_Audio / ToneDACTimer / I2S                                                             *
+*          3 : TwoWireScheduler                                                                              *
+*                                                                                                            *
+**************************************************************************************************************/
+
 /**************************************************************************************************************
- *              Liens utiles                                                                                  *
  *                                                                                                            *
- * https://learn.sparkfun.com/tutorials/9dof-razor-imu-m0-hookup-guide/all#libraries-and-example-firmware     *        
+ * Flash Tool                                                                                                 *               
+ * https://www.espressif.com/en/support/download/other-tools?keys=&field_type_tid%5B%5D=13                    *                                                                                        
  *                                                                                                            *
- * AGL : https://vps.skybean.eu/agl/                                                                          *
+ *************************************************************************************************************/
+
+/**************************************************************************************************************
  *                                                                                                            *
+ *       Librairie et code                                                                                    *
+ *                                                                                                            *
+ *  xt_dac_audio                                                                                              *
+ *     https://www.xtronical.com/the-dacaudio-library-download-and-installation/                              *                                                                            
+ *                                                                                                            *    
  **************************************************************************************************************/
 
-/*************************************************************************************************************
+ /*************************************************************************************************************
+  *      Literature                                                                                           *
   *                                                                                                           *
-  *                                            UTILISATION DES TOUCHES                                        *                                                                                       
-  *   Ecran         Touche      Fonction                                                                      *
+  *      MPU9250                                                                                              *                                                                                                     
+  *    https://learn.sparkfun.com/tutorials/9dof-razor-imu-m0-hookup-guide/all#libraries-and-example-firmware *        
+  *    https://www.enib.fr/~kerhoas/rescapt_cours_mpu9250.html                                                *
+  *    https://fr.wikiversity.org/wiki/Micro_contr%C3%B4leurs_AVR/Travail_pratique/Utilisation_du_MPU9250     *
+  *    https://www.instructables.com/id/Tilt-Compensated-Compass/                                             *
   *                                                                                                           *
-  *   Init          Gauche      passage en mode Wifi                                                          *                                                                                                              
-  *   Init          Droite      Calibration                                                                   *
-  *                                                                                                           *
-  *   Vario         Centre      Coupe et remet le son (Mute)                                                  *
-  *   Vario         Centre 3s   Mode veille                                                                   *
-  *   Vario         Gauche      écran précédent                                                               *
-  *   Vario         Droite      écran suivant                                                                 *
-  *   Vario         Gauche 2s   Calibrarion manuel du baro via l'AGL                                          *
-  *   Vario         Gauche 0    Déclenchement de l'enregistrement du vol si en attente                        *
-  *                                                                                                           *
-  *   Wifi          Gauche      Sort du mode Wifi                                                             *
-  *                                                                                                           *
-  *   Sound         Gauche      baisse le volume                                                              *
-  *   Sound         Droit       Monte le volume                                                               *
-  *   Sound         Centre      Entre dans la configuration / Valide la configuration                         *
-  *                                                                                                           *
-  *   Sleep         Gauche      Valide la mise en veille                                                      * 
-  *                                                                                                           *
-  *   Calibration   Centre      Démarre la calibration                                                        *                                                                                                        
-  *   Calibration   Gauche      Sort du mode calibration (reboot)                                             *
-  *                                                                                                           *
-  *************************************************************************************************************
-  *                                                                                                           *
-  * Debbug                                                                                                    *
-  *                                                                                                           *
-  * TRACE();                  Affiche sur le moniteur serie le numero de ligne, le nom du fichier             *
-  * DUMP(someValue);          Affcihe sur le moniteur serie la variable ainsi que le fichier et la ligne      *
-  * SDUMP(someText);          Affiche sur le moniteur serie le texte ainsi que le fichier et la ligne         *
-  *                                                                                                           *
-  * TRACELOG(type, module)           Enregistre dans le fichier de log le fichier et la ligne                 *
-  * DUMPLOG(type, module, variable)  Enregistre dans le fichier de log la variable, le fichier et la ligne    * 
-  * MESSLOG(type, module, Text)      Enregistre dans le fichier de log un message avac la fichier et la ligne *
-  * INFOLOG(Text)                    Enregistre dans le fichier de log un texte                               *                                                                                                     
-  *************************************************************************************************************
-  *                                                                                                           *
-  * Téléchargement AGL : https://vps.skybean.eu/agl/                                                          *                                                                                                          
-  *                                                                                                           * 
   *************************************************************************************************************/
-
+ 
 //*****************************
 // DEBBUGAGE                  *
 //*****************************
@@ -662,6 +710,50 @@ void setup()
   delay(VARIOMETER_POWER_ON_DELAY);
 #endif
 
+  /************************/
+  /*  VERSION / HARDWARE  */
+  /************************/
+
+  SerialPort.print("VERSION : ");
+  SerialPort.println(VARIOVERSION);
+
+#if (VARIOVERSION == 154) 
+  SerialPort.println("VERSION : 1");
+#elif ((VARIOVERSION == 254) || (VARIOVERSION == 290) || (VARIOVERSION == 291)) 
+  SerialPort.println("VERSION : 2");
+#elif ((VARIOVERSION == 390) || (VARIOVERSION == 391)) 
+  SerialPort.println("VERSION : 3");
+#else
+  SerialPort.println("VERSION : XXX");
+#endif
+
+  SerialPort.print("PCB VERSION : ");
+  SerialPort.println(PCB_VERSION);
+
+#if (VARIOSCREEN_SIZE == 154)
+  SerialPort.println("ECRAN : 1.54");
+#elif (VARIOSCREEN_SIZE == 290)
+  SerialPort.println("ECRAN : 2.90 PAYSAGE");
+#elif (VARIOSCREEN_SIZE == 291)
+  SerialPort.println("ECRAN : 2.90 PORTRAIT");
+#endif
+
+#if defined (L86)
+  SerialPort.println("GPS : L86");
+#elif defined (ATGM336H)
+  SerialPort.println("GPS : ATGM336H");
+#elif defined (NEO_6M)
+  SerialPort.println("GPS : NEO_6M");
+#else
+  SerialPort.println("GPS : XXXXX");
+#endif
+
+#if defined (HAVE_BLUETOOTH)
+  SerialPort.println("BLUETOOTH : Enable");
+#elif defined (HAVE_BLE)
+  SerialPort.println("BLE : Enable");
+#endif
+  
   /************************/
   /*    BOOT SEQUENCE     */
   /************************/
@@ -973,7 +1065,7 @@ void loop()
     {
       if (varioData.haveNewClimbRate())
       {
-        double tmpvalue = varioData.getClimbRate();
+/*        double tmpvalue = varioData.getClimbRate();
 #if (VARIOSCREEN_SIZE == 154)
         if (tmpvalue > 9.9)
           tmpvalue = 9.9;
@@ -985,15 +1077,15 @@ void loop()
         if (tmpvalue < -99.9)
           tmpvalue = -99.9;
 #endif
-        screen.varioDigit->setValue(tmpvalue);
+        screen.varioDigit->setValue(tmpvalue);*/
 
-        //       screen.varioDigit->setValue(varioData.getClimbRate());
+        screen.varioDigit->setValue(varioData.getClimbRate());
       }
     }
     else
     {
 
-      double tmpvalue = varioData.getVelocity();
+/*      double tmpvalue = varioData.getVelocity();
 #if (VARIOSCREEN_SIZE == 154)
       if (tmpvalue > 9.9)
         tmpvalue = 9.9;
@@ -1005,9 +1097,9 @@ void loop()
       if (tmpvalue < -99.9)
         tmpvalue = -99.9;
 #endif
-      screen.varioDigit->setValue(tmpvalue);
+      screen.varioDigit->setValue(tmpvalue);*/
 
-      //      screen.varioDigit->setValue(varioData.getVelocity());
+      screen.varioDigit->setValue(varioData.getVelocity());
     }
 
     //**********************************************************
@@ -1022,6 +1114,7 @@ void loop()
         screen.trendDigit->setValue(0);
       screen.trendLevel->stateTREND(varioData.getStateTrend());
     }
+    screen.trendDigit->reset();
   }
 
   //**********************************************************
@@ -1037,6 +1130,19 @@ void loop()
 //    SerialPort.println("beeper update");
 #endif //PROG_DEBUG
 #endif //HAVE_SPEAKER
+
+
+  //**********************************************************
+  //  TRAITEMENT DU SON
+  //**********************************************************
+
+  //***************************************
+  //  TEST
+  //***************************************
+#if defined(TONEXTDAC) || defined(TONEI2S) 
+  toneHAL.update();
+#endif
+
 
   //**********************************************************
   //  EMISSION TRAME BT
@@ -1163,13 +1269,15 @@ void loop()
 
   if (varioData.updateSpeed())
   {
-    screen.speedDigit->setValue(varioData.currentSpeed);
+    screen.speedDigit->setValue(varioData.getSpeed()); //currentSpeed);
     screen.ratioDigit->setValue(varioData.ratio);
   }
   else
   {
     screen.ratioDigit->setValue(0);
   }
+
+  screen.ratioDigit->reset();
 
 #endif //HAVE_GPS
 
@@ -1277,18 +1385,18 @@ void loop()
     }
 
 #ifdef AGL_MANAGER_H
-    varioData.currentHeight = varioData.aglManager.getHeight();
+    varioData.setCurrentHeight(varioData.aglManager.getHeight());
 #ifdef PROG_DEBUG
     SerialPort.print("Height : ");
-    SerialPort.println(varioData.currentHeight);
+    SerialPort.println(varioData.getCurrentHeight());
 #endif //PROG_DEBUG
-    screen.heightDigit->setValue(varioData.currentHeight);
+    screen.heightDigit->setValue(varioData.getCurrentHeight());
 #endif
 
     if (nmeaParser.haveNewAltiValue())
     {
-      varioData.gpsAlti = nmeaParser.getAlti();
-      varioData.aglManager.setAltiGps(varioData.gpsAlti);
+      varioData.setGpsAlti(nmeaParser.getAlti());
+      varioData.aglManager.setAltiGps(varioData.getGpsAlti());
     }
   }
 
@@ -1301,15 +1409,21 @@ void loop()
   //  UPDATE DISPLAY
   //**********************************************************
 
+  if (varioData.displayUpdateState)
+  {
+
 #ifdef PROG_DEBUG
-  //SerialPort.println("Update Screen");
+    //SerialPort.println("Update Screen");
 #endif //PROG_DEBUG
 
-  if (screen.schedulerScreen->displayStep())
-  {
-    screen.updateScreen();
+    if (screen.schedulerScreen->displayStep())
+    {
+      screen.updateScreen();
+    }
   }
 
+  varioData.displayUpdateState = false;
+  
 #endif //HAVE_SCREEN
 
   //**********************************************************
@@ -1324,6 +1438,17 @@ void loop()
 
 #ifdef HAVE_AUDIO_AMPLI
 //  toneHAL.enableAmpli();
+#endif
+
+  //**********************************************************
+  //  TRAITEMENT DU SON
+  //**********************************************************
+
+  //***************************************
+  //  TEST
+  //***************************************
+#if defined(TONEXTDAC) || defined(TONEI2S)
+  toneHAL.update();
 #endif
 
   /*******************************/

@@ -1,0 +1,81 @@
+Pour t'expliquer voilà un cas (certe rare) mais qui peut se produire.
+C'est pour expliquer.
+
+-> Tu veux actualiser l'écran donc tu créé la tâche d'actualisation
+(genericTask dans ton code)
+-> Mais freeRTOS n'est pas obligé de lancer la tâche de suite, il peut
+laisser tourner encore la tâche initiale un moment si il veut.
+-> Cette tâche initiale peut aller plus loin et arriver à un test de
+"stateDisplay" est penser que la tâche n'est pas en cours puisqu'elle
+n'a pas encore démarrée.
+-> Il lance alors un accès au buffer en écriture en mettant à jour une
+partie de l'écran
+-> FreeRTOS démarre alors la tâche d'affichage et va lire un buffer à
+moitié modifié
+
+Bref ça fait un conflit avec la bibliothèque qui est appelée deux fois
+en même temps.
+
+En plus tu as mis la priorité de la tache d'affichage à 2. Ce n'est
+pas logique car ce n'est pas une tâche importante. Ce qui est
+important c'est la boucle principale qui gère les données. Et en
+mettant la priorité à 2 tu pousse freeRTOS a executer cette tache
+d'abord. C'est même possible qu'il donne pleine priorité à cette
+tâche. Du coup la taĉhe ne sert presque à rien (à part la tache du MPU
+avec la priorité à 10 je crois, c'est la seule qui peut prendre le
+dessus).
+
+Si tu n'est pas très à l'aise avec les Mutex il faut que tu regarde le
+code de TwoWireSchuler.cpp.
+
+Voici en vrac mes idées :
+
+-> La tâche d'actualisation, tu la créé avec la priorité 1 et tu ne la
+fait jamais retourner (et tu ne la tue jamais). La tache est un gros
+while(1) qui commence par un xTaskNotifyWait. Regarde
+"TWScheduler::interruptScheduler" comme exemple. N'oublie pas de
+sauvegarder le taskHandler lors de la création de la tâche. Regarde
+"TWScheduler::init" comme exemple. Tu peux créer al tache dans le
+init.
+
+-> Dans le init tu créé aussi un Mutex pour protéger la bibliothèque.
+Regarde "TWScheduler::init" pour la création des mutex.
+
+-> Dans la tâche d'actualisation de l'écran tu protège les appels à la
+bibliothèque avec le mutex (du coup il faut que tu déplace le
+display.setFullWindow() dans la tache entre les mutex. Ca donnerais un
+truc du genre (attention je ne comprend pas tout sur la bibliothèque
+d'écran c'est à toi d'adapter)
+
+xSemaphoreTake(screenMutex, portMAX_DELAY);
+display.setFullWindow();
+display.display(true);
+display.epd2.powerOff();
+xSemaphoreGive(screenMutex);
+
+-> pour déclencher l'actualisation tu as juste à réveiller la tâche
+avec xTaskNotify (cf TWScheduler::timerCallback mais sans "fromISR" et
+sans le if qui ne sert à rien)
+
+-> ensuite il faut protéger les autres appels de la bibliothèque. Il
+sont tous dans displayStep (les autres ne sont pas importants car ils
+utilisent firstpage/nextpage). Donc en gros ça donne un truc comme ça
+:
+
+void ScreenScheduler::displayStep(void) {
+
+   if( xSemaphoreTake( screenMutex, ( TickType_t ) 0 ) ) {
+      ...
+      le code de displayStep
+      ...
+      xSemaphoreGive(screenMutex);
+  }
+}
+
+-> n'oublie pas de virer ton ancienne protection avec stateDisplay.
+
+Voilà. N'hésites pas si quelques chose n'est pas clair. Car la c'est
+important de bien comprendre le fonctionnment.
+
+Et je suis content que tu apprécie mon aide  ;) En espérant que ça
+résolve les blocages.

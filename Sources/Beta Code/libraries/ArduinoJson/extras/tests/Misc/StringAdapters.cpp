@@ -6,6 +6,7 @@
 #include "progmem_emulation.hpp"
 #include "weird_strcmp.hpp"
 
+#include <ArduinoJson/Strings/ArduinoStringAdapter.hpp>
 #include <ArduinoJson/Strings/ConstRamStringAdapter.hpp>
 #include <ArduinoJson/Strings/FlashStringAdapter.hpp>
 #include <ArduinoJson/Strings/SizedRamStringAdapter.hpp>
@@ -114,6 +115,21 @@ TEST_CASE("std::string") {
   CHECK(adapter.size() == 5);
 }
 
+TEST_CASE("Arduino String") {
+  ::String str("bravo");
+  ArduinoStringAdapter adapter = adaptString(str);
+
+  CHECK(adapter.compare(NULL) > 0);
+  CHECK(adapter.compare("alpha") > 0);
+  CHECK(adapter.compare("bravo") == 0);
+  CHECK(adapter.compare("charlie") < 0);
+
+  CHECK(adapter.equals("bravo"));
+  CHECK_FALSE(adapter.equals("charlie"));
+
+  CHECK(adapter.size() == 5);
+}
+
 TEST_CASE("custom_string") {
   custom_string str("bravo");
   StlStringAdapter<custom_string> adapter = adaptString(str);
@@ -144,5 +160,13 @@ TEST_CASE("IsString<T>") {
 
   SECTION("const __FlashStringHelper*") {
     CHECK(IsString<const __FlashStringHelper*>::value == true);
+  }
+
+  SECTION("const char*") {
+    CHECK(IsString<const char*>::value == true);
+  }
+
+  SECTION("const char[]") {
+    CHECK(IsString<const char[8]>::value == true);
   }
 }
