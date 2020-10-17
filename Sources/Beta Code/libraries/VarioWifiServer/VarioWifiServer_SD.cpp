@@ -46,6 +46,7 @@
 /*                      Ajout écran d'infoi lors de l'update Internet            */
 /*    1.2.15 13/02/20   Nettoyage code mort, refactoring                         */
 /*    1.2.13 16/02/20   refactoring variowifiserver                              */
+/*    1.2.14 27/07/20   Ajout handleVoltage                                      */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -83,6 +84,8 @@ extern VarioSettings GnuSettings;
 #include <VarioIgcParser.h>
 
 #include <VarioSqlFlight.h>
+
+#include <VarioHardwareManager.h>
 
 #define TAG "server"
 
@@ -393,6 +396,9 @@ void VarioWifiServer::start(void)
 
   // suppression d'un site
   server.on("/site", HTTP_DELETE, handleDelSite);
+
+	// affichage info tension
+	server.on("/voltage", HTTP_GET, handleVoltage);
 
   //Aucun route spécifique, on regarde si il s'agit d'un fichier du répertoire www
   server.onNotFound(handleNotFound);
@@ -1985,6 +1991,51 @@ bool checkDbVersion()
   TRACE();
   return true;
 }
+
+/***********************************/
+void handleVoltage()
+{
+  /***********************************/
+  /*
+	//recuperation des info de tension
+	server.on("/voltage", HTTP_GET, handleVoltage);
+*/
+#ifdef WIFI_DEBUG
+  SerialPort.println("handleVoltage");
+#endif
+
+  if (server.uri() != "/voltage")
+  {
+    returnFail("BAD URL");
+  }
+
+	String output;
+
+	output = "{\n";
+
+	output += "\"Voltage\":{\n";
+	output += "\"input\": " + String(varioHardwareManager.varioAlim.getVoltage()) + ",\n";
+	output += "\"tension\": " + String(varioHardwareManager.varioAlim.getTension()) + ",\n";
+	output += "\"capacite\": " + String(varioHardwareManager.varioAlim.getCapacite()) + ",\n";
+  output += "\n}";
+		
+#ifdef WIFI_DEBUG
+  SerialPort.println(output);
+#endif
+
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "application/json", "");
+  //WiFiClient client = server.client();
+
+  server.sendContent(output);
+
+  //correction bug chunk transfer webserver
+  server.sendContent("");
+  server.client().stop();
+  TRACE();
+}
+
 
 VarioWifiServer varioWifiServer;
 

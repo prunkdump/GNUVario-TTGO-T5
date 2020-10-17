@@ -41,7 +41,7 @@
  *    1.0.10 09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
  *    1.0.11 17/02/20   Ajout 2.90 et 2.91                                       *
  *                      Ajout FONTLARGE / FONTNORMAL                             *
- *    1.0.11 25/02/20   Ajout ScreenBackground									 *	
+ *    1.0.11 25/02/20   Ajout ScreenBackground									                 *	
  *    1.0.12 04/03/20   Réorganisation de l'affichage des variable               *  
  *    1.0.13 04/03/20   Ajout affichage alti agl                                 *
  *    1.0.14 07/03/20   Correction xSemaphore                                    *
@@ -53,6 +53,9 @@
  *    1.1.3  14/05/20   Raffraichissement de l'écran toutes les 15min            *
  *    1.1.4  17/05/20   Ajout position titre avac setPositionTitle               *
  *		1.1.5  23/05/20   Passage vario en -XX.X								  								 *
+ *    1.1.6  27/07/20   Affichage de la batterie au démarrage                    *
+ *    1.1.7  04/10/20   Modification position finesse                            *
+ *                      Modification position titre finesse                      *
  *                                                                               *
  *********************************************************************************/
  
@@ -102,6 +105,8 @@
 #include <AglManager.h>
 
 #include <VarioLanguage.h>
+
+#include <VarioHardwareManager.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -190,8 +195,10 @@ TaskHandle_t VarioScreen::screenTaskHandler;
 #define VARIOSCREEN_SPEED_ANCHOR_Y 193
 #define VARIOSCREEN_SPEED_UNIT_ANCHOR_X 48
 #define VARIOSCREEN_SPEED_UNIT_ANCHOR_Y 168
-#define VARIOSCREEN_GR_ANCHOR_X 80                  //Finesse
+#define VARIOSCREEN_GR_ANCHOR_X 85                  //Finesse
 #define VARIOSCREEN_GR_ANCHOR_Y 193
+#define VARIOSCREEN_TREND_ANCHOR_X 80                  //Tendence
+#define VARIOSCREEN_TREND_ANCHOR_Y 193
 #define VARIOSCREEN_INFO_ANCHOR_X 94				// icone USB
 #define VARIOSCREEN_INFO_ANCHOR_Y 20
 #define VARIOSCREEN_VOL_ANCHOR_X 0				//Volume
@@ -210,8 +217,8 @@ TaskHandle_t VarioScreen::screenTaskHandler;
 #define VARIOSCREEN_ELAPSED_TIME_ANCHOR_Y 243
 #define VARIOSCREEN_BT_ANCHOR_X 110
 #define VARIOSCREEN_BT_ANCHOR_Y 20
-#define VARIOSCREEN_TREND_ANCHOR_X 105 //120
-#define VARIOSCREEN_TREND_ANCHOR_Y 58  //111
+#define VARIOSCREEN_TRENDLVL_ANCHOR_X 105 //120
+#define VARIOSCREEN_TRENDLVL_ANCHOR_Y 58  //111
 //#define VARIOSCREEN_SEPARATIONLINE_ANCHOR_X 0
 //#define VARIOSCREEN_SEPARATIONLINE_ANCHOR_Y 0
 #define VARIOSCREEN_WIND_ANCHOR_X 90
@@ -225,7 +232,7 @@ TaskHandle_t VarioScreen::screenTaskHandler;
 #define VARIOSCREEN_SPEED_TITLE_X 5
 #define VARIOSCREEN_SPEED_TITLE_Y 160
 #define VARIOSCREEN_GR_TITLE_X 80
-#define VARIOSCREEN_GR_TITLE_Y 160
+#define VARIOSCREEN_GR_TITLE_Y 161
 #define VARIOSCREEN_TIME_TITLE_X 30
 #define VARIOSCREEN_TIME_TITLE_Y 210
 #define VARIOSCREEN_ELAPSED_TIME_TITLE_X 30
@@ -401,7 +408,7 @@ void VarioScreen::createScreenObjectsPage0(void) {
 	ratioDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 2, 0, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_RATIO, TAILLE_FONT, MAX_CAR_TITRE_TCHUTE);
 	ratioDigit->setPositionTitle(VARIOSCREEN_GR_TITLE_X,VARIOSCREEN_GR_TITLE_Y);
 
-	trendDigit = new ScreenDigit(VARIOSCREEN_GR_ANCHOR_X, VARIOSCREEN_GR_ANCHOR_Y, 3, 1, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_TREND, TAILLE_FONT, MAX_CAR_TITRE_FINESSE);
+	trendDigit = new ScreenDigit(VARIOSCREEN_TREND_ANCHOR_X, VARIOSCREEN_TREND_ANCHOR_Y, 3, 1, false, true, ALIGNLEFT, true, DISPLAY_OBJECT_TREND, TAILLE_FONT, MAX_CAR_TITRE_FINESSE);
 	trendDigit->setPositionTitle(VARIOSCREEN_GR_TITLE_X,VARIOSCREEN_GR_TITLE_Y);
 	btinfo = new BTInfo(VARIOSCREEN_BT_ANCHOR_X, VARIOSCREEN_BT_ANCHOR_Y);
 	volLevel = new VOLLevel(VARIOSCREEN_VOL_ANCHOR_X, VARIOSCREEN_VOL_ANCHOR_Y);
@@ -410,7 +417,7 @@ void VarioScreen::createScreenObjectsPage0(void) {
 
 	recordIndicator = new RECORDIndicator(VARIOSCREEN_RECCORD_ANCHOR_X, VARIOSCREEN_RECCORD_ANCHOR_Y);
 
-	trendLevel = new TRENDLevel(VARIOSCREEN_TREND_ANCHOR_X, VARIOSCREEN_TREND_ANCHOR_Y);
+	trendLevel = new TRENDLevel(VARIOSCREEN_TRENDLVL_ANCHOR_X, VARIOSCREEN_TRENDLVL_ANCHOR_Y);
 
 
 	satLevel = new SATLevel(VARIOSCREEN_SAT_ANCHOR_X, VARIOSCREEN_SAT_ANCHOR_Y);
@@ -861,15 +868,16 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 
 		display.setCursor(30, 130);
 		display.println("Version");
-		if (Beta_Code > 0) {
-			sprintf(tmpbuffer," Beta %01d", Beta_Code);
-  		display.setCursor(30, 150);
-		  display.print(tmpbuffer);
-		}
 		sprintf(tmpbuffer,"%02d.%02d-", Version, Sub_Version);
-		display.setCursor(30, 170);
+		display.setCursor(30, 150);
 		display.print(tmpbuffer);
 		display.print(Author);
+		if (Beta_Code > 0) {
+			sprintf(tmpbuffer," Beta %01d", Beta_Code);
+  		display.setCursor(30, 170);
+		  display.print(tmpbuffer);
+		}
+		
 		sprintf(tmpbuffer,"%s", __DATE__);
 		display.setCursor(15, 190);
 		display.print(tmpbuffer);
@@ -878,6 +886,14 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 		display.setTextSize(1);
 		display.setCursor(5, 230);
 		display.print("GNUVARIO-E");
+		
+		sprintf(tmpbuffer,"%03d", varioHardwareManager.varioAlim.getCapacite());
+		String tmpstr = String(tmpbuffer) +"% (";
+		sprintf(tmpbuffer,"%.2f", varioHardwareManager.varioAlim.getTension());
+		tmpstr = tmpstr + String(tmpbuffer) + "v)";
+		display.setCursor(10, 270);
+		display.print(tmpstr);
+
   }
   while (display.nextPage());
 	
@@ -896,7 +912,7 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 			TmplastDisplayTimestamp = millis();
 			compteur++;
 		
-		  display.fillRect(3, 260, 128, -50, GxEPD_WHITE);
+		  display.fillRect(3, 250, 128, -40, GxEPD_WHITE);
 
 		  if ((compteur % 2) == 0) {
 				display.setCursor(5, 230);

@@ -26,6 +26,9 @@
 /*  1.1     30/08/19     Ajout message de debug                                                    */
 /*  1.2     01/11/19     Suppression de la gestion du volume dans beeper - le volume ne sera géré  */
 /*                       que dans toneHAL                                                          */
+/*  1.3      13/09/20    Ajout VarioXBeeper                                                        */
+/*  1.3.1    17/09/20    Ajout duty / cycle variable et parametrable                               */
+/*  1.3.2    02/10/20    Calcul en milliseconde                                                    */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -36,54 +39,63 @@
 #include <DebugConfig.h>
 #include <HardwareConfig.h>
 
+#include <VarioXBeeper.h>
+
+#define BEEPERVARIABLE
+
 Beeper beeper(volumeDefault);
  
 /***************************************************************************************************/
 Beeper::Beeper(uint8_t baseVolume) {
 /***************************************************************************************************/
 
+/*
 #ifdef SOUND_DEBUG
     SerialPort.print("Beeper - volume : ");
 		SerialPort.println(baseVolume);
 #endif //BUTTON_DEBUG
 
 
-  /* save volume */
+  // save volume 
   //volume = baseVolume;
   
-  /* set threshold */
+  // set threshold 
   setThresholds(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY);
   
-  /* init private vars */
+  // init private vars 
   beepStartTime = 0;
   beepState = 0;
   beepType = BEEP_TYPE_SILENT;	
 	
-//	toneHAL.init();
+//	toneHAL.init();*/
+
+  init(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY,baseVolume);
+
 }
 
 /***************************************************************************************************/
 Beeper::Beeper(uint32_t pin, uint8_t baseVolume) {
 /***************************************************************************************************/
-#ifdef SOUND_DEBUG
+/*#ifdef SOUND_DEBUG
     SerialPort.print("Beeper - pin : ");
 		SerialPort.println(pin);
     SerialPort.print("Beeper - volume : ");
 		SerialPort.println(baseVolume);
 #endif //BUTTON_DEBUG
 
-  /* save volume */
+  // save volume 
  // volume = baseVolume;
   
-  /* set threshold */
+  // set threshold 
   setThresholds(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY);
   
-  /* init private vars */
+  // init private vars 
   beepStartTime = 0;
   beepState = 0;
   beepType = BEEP_TYPE_SILENT;	
 	
-//	toneHAL.init(pin);
+//	toneHAL.init(pin);*/
+  init(BEEP_VELOCITY_DEFAULT_SINKING_THRESHOLD, BEEP_VELOCITY_DEFAULT_CLIMBING_THRESHOLD, BEEP_VELOCITY_DEFAULT_NEAR_CLIMBING_SENSITIVITY,baseVolume);
 }
 
 /***************************************************************************************************/
@@ -91,6 +103,8 @@ void Beeper::init(double sinkingThreshold, double climbingThreshold, double near
 /***************************************************************************************************/
 #ifdef SOUND_DEBUG
     SerialPort.println("Beeper : init");
+    SerialPort.print("Beeper - volume : ");
+		SerialPort.println(baseVolume);
 #endif //BUTTON_DEBUG
 
   /* save volume */
@@ -103,14 +117,20 @@ void Beeper::init(double sinkingThreshold, double climbingThreshold, double near
   beepStartTime = 0;
   beepState = 0;
   beepType = BEEP_TYPE_SILENT;
+
+	//init le duty / cycle
+	CLIMBING_BEEP_HIGH_LENGTH = 500;
+	CLIMBING_BEEP_LOW_LENGTH  = 500;
+	CLIMBING_BEEP_LENGTH = (CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH);
+
 }
 
 /***************************************************************************************************/
 void Beeper::setThresholds(double sinkingThreshold, double climbingThreshold, double nearClimbingSensitivity) {
 /***************************************************************************************************/
 
-  beepSinkingThreshold = sinkingThreshold;
-  beepGlidingThreshold = climbingThreshold - nearClimbingSensitivity;
+  beepSinkingThreshold  = sinkingThreshold;
+  beepGlidingThreshold  = climbingThreshold - nearClimbingSensitivity;
   beepClimbingThreshold = climbingThreshold;
 }
 
@@ -169,10 +189,23 @@ void Beeper::setBeepParameters(double velocity) {
   /* save velocity */
   beepVelocity = velocity;
 
+#ifdef BEEPERVARIABLE	
+	double tmpcycle;
+	double tmpduty;
+#endif
+
   /* compute the beep freq that depend to beep type */
   switch( beepType ) {
   case BEEP_TYPE_SINKING :
-    beepFreq = SINKING_BEEP_FREQ_COEFF * velocity + SINKING_BEEP_BASE_FREQ;
+    beepFreq = varioXBeeper.getFrequence(velocity); //SINKING_BEEP_FREQ_COEFF * velocity + SINKING_BEEP_BASE_FREQ;
+	
+#ifdef BEEPERVARIABLE	
+		tmpcycle = varioXBeeper.getCycle(velocity);
+		tmpduty  = varioXBeeper.getDuty(velocity) / 100.0;
+		CLIMBING_BEEP_HIGH_LENGTH = tmpcycle * tmpduty;
+		CLIMBING_BEEP_LOW_LENGTH  = tmpcycle * (1 - tmpduty);
+		CLIMBING_BEEP_LENGTH = tmpcycle;  //(CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH);
+#endif //BEEPERVARIABLE
     break;
 
   case BEEP_TYPE_SILENT :
@@ -180,13 +213,46 @@ void Beeper::setBeepParameters(double velocity) {
     break;
 
   case BEEP_TYPE_GLIDING :
-    beepFreq = CLIMBING_BEEP_FREQ_COEFF * velocity + CLIMBING_BEEP_BASE_FREQ;
+    beepFreq = varioXBeeper.getFrequence(velocity); //CLIMBING_BEEP_FREQ_COEFF * velocity + CLIMBING_BEEP_BASE_FREQ;
+
+#ifdef BEEPERVARIABLE	
+		tmpcycle = varioXBeeper.getCycle(velocity);
+		tmpduty  = varioXBeeper.getDuty(velocity) / 100.0;
+		CLIMBING_BEEP_HIGH_LENGTH = tmpcycle * tmpduty;
+		CLIMBING_BEEP_LOW_LENGTH  = tmpcycle * (1 - tmpduty);
+		CLIMBING_BEEP_LENGTH = tmpcycle; //(CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH);
+/*		CLIMBING_BEEP_LENGTH = varioXBeeper.getCycle(velocity);
+		tmpduty  = varioXBeeper.getDuty(velocity) / 100.0;
+		CLIMBING_BEEP_HIGH_LENGTH = (CLIMBING_BEEP_LENGTH * tmpduty);
+		CLIMBING_BEEP_LOW_LENGTH  = (CLIMBING_BEEP_LENGTH * (1 - tmpduty));*/
+#endif //BEEPERVARIABLE
     break;
 
   case BEEP_TYPE_CLIMBING :
-    beepFreq = CLIMBING_BEEP_FREQ_COEFF * velocity + CLIMBING_BEEP_BASE_FREQ;
+    beepFreq = varioXBeeper.getFrequence(velocity); //CLIMBING_BEEP_FREQ_COEFF * velocity + CLIMBING_BEEP_BASE_FREQ;
+
+#ifdef BEEPERVARIABLE	
+		tmpcycle = varioXBeeper.getCycle(velocity);
+		tmpduty  = varioXBeeper.getDuty(velocity) / 100.0;
+		CLIMBING_BEEP_HIGH_LENGTH = tmpcycle * tmpduty;
+		CLIMBING_BEEP_LOW_LENGTH  = tmpcycle * (1 - tmpduty);
+		CLIMBING_BEEP_LENGTH = tmpcycle; //(CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH);
+#endif //BEEPERVARIABLE
     break;
   }
+
+#ifdef SOUND_DEBUG
+		SerialPort.print("CYCLE : ");
+		SerialPort.println(tmpcycle);
+		SerialPort.print("DUTY : ");
+		SerialPort.println(tmpduty);
+    SerialPort.print("CLIMBING_BEEP_HIGH_LENGTH : ");
+    SerialPort.println(CLIMBING_BEEP_HIGH_LENGTH);
+    SerialPort.print("CLIMBING_BEEP_LOW_LENGTH : ");
+    SerialPort.println(CLIMBING_BEEP_LOW_LENGTH);
+    SerialPort.print("CLIMBING_BEEP_LENGTH : ");
+    SerialPort.println(CLIMBING_BEEP_LENGTH);
+#endif //BUTTON_DEBUG
 
 }
 
@@ -305,6 +371,25 @@ void Beeper::setVelocity(double velocity) {
   }
 }
 
+//
+//un beep patern est un truc du genre
+// ----____
+// c'est a dire une bip suivi d'un silence
+// a la base il est indépendant de la vitesse à laquelle on le lis
+// pour les bip rapides il faut le lire plus vite et pour les bips
+// lents moins vite.
+// Par contre il peut être avec un long bip et un court silence :
+// --------__
+// ou à l'inverse un court beep et un long silence
+// --________
+// Mais pour l'instant dans le code actuel le partern reste fixe. Et
+// donc le duty cycle ne change pas. 
+//
+// l'objectif de cette fonction est de savoir où on en est de la lecture du patern
+// elle doit mettre à jour beepPaternPosition
+// comme le partern boucle la position de départ n'est pas toujours au début du patern
+// elle est donnée par beepPaternBasePosition et elle a démarré au temps beepStartTime
+
 /***************************************************************************************************/
 void Beeper::setBeepPaternPosition(double velocity) {
 /***************************************************************************************************/
@@ -318,22 +403,39 @@ void Beeper::setBeepPaternPosition(double velocity) {
   /***********************************/
   /* check if the beep have a patern */
   /***********************************/
+  // si le beep n'est pas une alarm ou si c'est le bip de degeulante il
+  // n'y a pas de patern. Cette fonction ne sert à rien.
+  // on retourne
   if( !haveAlarm &&
       (beepType == BEEP_TYPE_SINKING || beepType == BEEP_TYPE_SILENT) ) {
     return;
   }
   
+  //on calcule le temps qui s'est écoulé depuis le début de lecture du patern
+  //en seconde.
   unsigned long currentTime = millis();
-  double currentLength = (double)(currentTime - beepStartTime) / 1000.0;
+  double currentLength = (double)(currentTime - beepStartTime);
 
   /*******************************************/
   /* does the position depends on velocity ? */
   /*******************************************/
+  // il y a des partern qui doivent être joué à des vitesses différentes (bip de montée)
+  // et d'autre a vitesse constante (les alarmes)
   if( !haveAlarm &&
       beepType == BEEP_TYPE_CLIMBING ) {
-    currentLength *= (beepVelocity * CLIMBING_BEEP_VELOCITY_FILTER_COEFF + CLIMBING_BEEP_VELOCITY_FILTER_BASE);
+		//BEEP DE MONTE
+    // ici on calcule la position dans le patern en fonction de la vitesse
+    // plus la vitesse est élevée plus on avance vite dans le patern
+//    currentLength *= (beepVelocity * CLIMBING_BEEP_VELOCITY_FILTER_COEFF + CLIMBING_BEEP_VELOCITY_FILTER_BASE);
 
     /* avoid going backward */
+    //ici c'est subtil
+    // on ne veut pas revenir en arrière de la lecture. Ca pourrait arriver si le vitesse baisse
+    // trop vite et qu'il n'y a pas assez de temps qui s'est écoulé entre temps.
+    //
+    // Du coup on vérifie que la nouvelle position (currentLength + beepPaternBasePosition)
+    // est bien supérieur à la précédente (le précédent beepPaternPosition).
+    // et on ne met a jour beepPaternPosition que si on avance.
     if( currentLength + beepPaternBasePosition > beepPaternPosition ) {
       beepPaternPosition = currentLength + beepPaternBasePosition;
     }
@@ -351,30 +453,32 @@ void Beeper::setBeepPaternPosition(double velocity) {
     if( bst_isset(CLIMBING_ALARM) ) {
       /* if alarm done, reset */
       if( beepPaternPosition > CLIMBING_ALARM_LENGTH ) {
-	bst_unset(CLIMBING_ALARM);
-	beepStartTime = currentTime;
-	beepPaternBasePosition = 0.0;
-	beepPaternPosition = 0.0;
-	setBeepPaternPosition(velocity);
-	bst_set(BEEP_NEW_FREQ);
-	return;
+				bst_unset(CLIMBING_ALARM);
+				beepStartTime = currentTime;
+				beepPaternBasePosition = 0.0;
+				beepPaternPosition = 0.0;
+				setBeepPaternPosition(velocity);
+				bst_set(BEEP_NEW_FREQ);
+				return;
       }
     }
     /* sinking alarm */
     else {
       /* if alarm done reset */
       if( beepPaternPosition > SINKING_ALARM_LENGTH ) {
-	bst_unset(SINKING_ALARM);
-	beepStartTime = currentTime;
-	beepPaternBasePosition = 0.0;
-	beepPaternPosition = 0.0;
-	setBeepPaternPosition(velocity);
-	bst_set(BEEP_NEW_FREQ);
-	return;
+				bst_unset(SINKING_ALARM);
+				beepStartTime = currentTime;
+				beepPaternBasePosition = 0.0;
+				beepPaternPosition = 0.0;
+				setBeepPaternPosition(velocity);
+				bst_set(BEEP_NEW_FREQ);
+				return;
       }
     }
   }
   /* looping patern case */
+  // ici on calcule la nouvelle position quand le patern boucle et que l'on a dépassé
+  // la taille du patern
   else {
     double loopingPaternLength;
     if(  beepType == BEEP_TYPE_GLIDING ) {
@@ -383,10 +487,15 @@ void Beeper::setBeepPaternPosition(double velocity) {
       loopingPaternLength = CLIMBING_BEEP_LENGTH;
     }
 
+    // tant que la position sort du patern
+    // on soustrait la longeur du patern
+    // afin de boucler
+    // en général il n'y aura qu'une soustraction
     while( beepPaternPosition > loopingPaternLength ) {
         beepPaternPosition -= loopingPaternLength;
         beepStartTime = millis();
         beepPaternBasePosition = beepPaternPosition;
+				//On met à jour CLIMBING_BEEP_HIGH_LENGTH
     }
   }
 }

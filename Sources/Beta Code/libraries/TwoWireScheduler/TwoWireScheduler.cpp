@@ -26,6 +26,10 @@
 /*  1.1     21/08/19     Ajout getTempAlti(double& temp, double& alti)                             */
 /*  1.2     04/09/19		 Modification nom bibliothèque MS5611                                      */
 /*  1.3     15/11/19     modif delayMicroseconds(400);                                             */
+/*  1.4     24/09/20     Modif calcul Nord magnetique - ajout gyroscope                            */
+/*  1.4.1   25/09/20     Ajout debug                                                               */
+/*  1.4.2   06/10/20     Ajout void TWScheduler::disableAcquisition()                              */
+/*  1.4.3   09/10/20     Correction disableAcquisition                                             */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -51,12 +55,24 @@
 #include <vertaccel.h>
 #endif
 
+#include <DebugConfig.h>
+
+#ifdef TWOWIRESCH_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
 #define TEMP_READ 0
 #define PRESS_READ 1
 #define HAVE_PRESSURE 2
 #define HAVE_ACCEL 4
 #define HAVE_MAG 6
 #define HAVE_NEWACCEL 8
+#define HAVE_GYRO 16
+#define HAVE_NEWGYRO 32
 #ifdef MPU_ENABLE_INT_PIN
 #define MPU_FIFO_EMPTIED 7
 #endif //MPU_ENABLE_INT_PIN
@@ -70,7 +86,7 @@ TWScheduler twScheduler;
 /*********************/
 /* static class data */
 /*********************/
-uint8_t volatile TWScheduler::status = 0;   //no problem to not release at start as there is no values
+uint16_t volatile TWScheduler::status = 0;   //no problem to not release at start as there is no values
 #ifdef HAVE_BMP280 
 uint8_t volatile TWScheduler::bmp280Output[2*3];  //two bmp280 output measures
 uint8_t volatile TWScheduler::bmp280Count = TWO_WIRE_SCHEDULER_BMP280_SHIFT;
@@ -99,6 +115,8 @@ SemaphoreHandle_t TWScheduler::magMutex;
 TaskHandle_t TWScheduler::schedulerTaskHandler;
 hw_timer_t* TWScheduler::timer;
 
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+bool IntEnable = true;
 
 #ifdef HAVE_BMP280
 /***************/
@@ -408,6 +426,9 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
   /* done ! */
   status |= (1 << HAVE_ACCEL);
   status |= (1 << HAVE_NEWACCEL);
+
+  status |= (1 << HAVE_GYRO);
+  status |= (1 << HAVE_NEWGYRO);
   
 #ifdef MPU_ENABLE_INT_PIN
   /* decrease FiFo counter */
@@ -497,6 +518,112 @@ double TWScheduler::getAccel(double* vertVector) {
   return vertAccel;
 }
 
+bool TWScheduler::haveGyro(void) {
+
+  return bisset(HAVE_GYRO);
+}
+
+bool TWScheduler::haveNewGyro(void) {
+
+  return bisset(HAVE_NEWGYRO);
+}
+
+bool TWScheduler::resetNewGyro(void) {
+
+  return bunset(HAVE_NEWGYRO);
+}
+
+void TWScheduler::getRawGyro(int16_t* rawGyro, int32_t* quat) {
+  
+  /***************/
+  /* check gyro */
+  /***************/
+
+  /* first copy fifo packet */
+  uint8_t fifoPacket[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH];
+  xSemaphoreTake(imuMutex, portMAX_DELAY);
+  for(int i = 0; i<LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++) {
+    fifoPacket[i] =  imuOutput[i];
+  }
+  bunset(HAVE_GYRO);
+  xSemaphoreGive(imuMutex);
+  
+
+  /* parse FiFo packet to get raw measures */
+  uint8_t tap;
+  fastMPUParseFIFO(fifoPacket, rawGyro, NULL, quat, tap);
+
+  /* check tap : use callback if needed */
+  fastMPUCheckTap(tap);
+}
+
+void TWScheduler::getRawAccelGyro(int16_t* rawAccel, int16_t* rawGyro, int32_t* quat) {
+  
+  /***************/
+  /* check accel */
+  /***************/
+
+  /* first copy fifo packet */
+  uint8_t fifoPacket[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH];
+  xSemaphoreTake(imuMutex, portMAX_DELAY);
+  for(int i = 0; i<LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++) {
+    fifoPacket[i] =  imuOutput[i];
+  }
+  bunset(HAVE_ACCEL);
+  xSemaphoreGive(imuMutex);
+  
+
+  /* parse FiFo packet to get raw measures */
+  uint8_t tap;
+  fastMPUParseFIFO(fifoPacket, rawGyro, rawAccel, quat, tap);
+
+  /* check tap : use callback if needed */
+  fastMPUCheckTap(tap);
+}
+  
+
+void TWScheduler::getAccelGyro(double* vertVector, double* gyroVector) {
+
+  /*****************/
+  /* get raw accel */
+  /*****************/
+  int16_t rawAccel[3];
+  int32_t quat[4];
+  
+  getRawAccel(rawAccel, quat);
+	
+	DUMP(rawAccel[0]);
+	DUMP(rawAccel[1]);
+	DUMP(rawAccel[2]);
+  
+  /* compute vertVector and vertAccel */
+  double vertAccel;
+  if( vertVector ) {
+    vertaccel.compute(rawAccel, quat, vertVector, vertAccel);
+  } else {
+    double tmpVertVector[3];
+    vertaccel.compute(rawAccel, quat, tmpVertVector, vertAccel);
+  }
+
+  int16_t rawGyro[3];
+  getRawGyro(rawGyro, quat);
+
+	DUMP(rawGyro[0]);
+	DUMP(rawGyro[1]);
+	DUMP(rawGyro[2]);
+  
+  /* compute vertVector and vertAccel */
+  double vertGyro;
+  if( gyroVector ) {
+    vertaccel.computeGyro(rawGyro, quat, gyroVector, vertGyro);
+  } else {
+    double tmpGyroVector[3];
+    vertaccel.computeGyro(rawGyro, quat, tmpGyroVector, vertGyro);
+  }
+
+  /* done */
+//  return vertAccel;
+}
 
 #ifdef AK89xx_SECONDARY
 /************/
@@ -588,6 +715,20 @@ void TWScheduler::getNorthVector(double* vertVector, double* northVector) {
   vertaccel.computeNorthVector(vertVector, rawMag, northVector);
 }
 
+void TWScheduler::getNorthVector2(double* vertVector, double* gyroVector, double* northVector) {
+
+  /* get raw mag */
+  int16_t rawMag[3];
+  getRawMag(rawMag);
+
+	DUMP(rawMag[0]);
+	DUMP(rawMag[1]);
+	DUMP(rawMag[2]);
+
+  /* compute north vector */
+  vertaccel.computeNorthVector2(vertVector, gyroVector, rawMag, northVector);
+}
+
 #endif //AK89xx_SECONDARY
 #endif //HAVE_ACCELEROMETER
 
@@ -638,7 +779,50 @@ void TWScheduler::init(void) {
   
 }
 
+void TWScheduler::disableAcquisition() {
+	IntEnable = false;
+	SDUMP("DISABLE INTERRUPT ***************");
+	SDUMP("DISABLE INTERRUPT ***************");
+	DUMP(IntEnable);
+	
+	vTaskSuspend( schedulerTaskHandler );
+	timerAlarmDisable(timer);
+	
+#ifdef MPU_ENABLE_INT_PIN
+  detachInterrupt(VARIO_MPU_INT_PIN);
+#endif
+	
+	intTW.release();
+	
+#ifdef VARIO_TW_SDA_PIN
+	detachInterrupt(VARIO_TW_SDA_PIN);
+#endif
 
+#ifdef VARIO_TW_SCL_PIN
+	detachInterrupt(VARIO_TW_SCL_PIN);
+#endif
+	
+	TRACE();
+/*
+Decoding stack results
+0x40155b47: i2cRelease at C:\Users\jean-phi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.4\cores\esp32\esp32-hal-i2c.c line 1561
+0x400e210e: IntTW::start(unsigned char*, unsigned char, unsigned char, void (*)()) at C:\Users\jean-phi\Documents\Arduino\libraries\IntTW\IntTW.cpp line 168
+0x400e2ef3: TWScheduler::ms5611Interrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 240
+0x400e33f2: TWScheduler::mainInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 815
+0x400e3464: TWScheduler::interruptScheduler(void*) at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 791
+0x4008ee65: vPortTaskWrapper at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/port.c line 143
+
+0x40155c23: i2cRelease at C:\Users\jean-phi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.4\cores\esp32\esp32-hal-i2c.c line 1561
+0x400e2136: IntTW::start(unsigned char*, unsigned char, unsigned char, void (*)()) at C:\Users\jean-phi\Documents\Arduino\libraries\IntTW\IntTW.cpp line 168
+0x400e30c2: TWScheduler::imuReadFifoData() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 417
+0x400e30eb: TWScheduler::imuInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 370
+0x400e3469: TWScheduler::mainInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 848
+0x400e34d0: TWScheduler::interruptScheduler(void*) at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 818
+0x4008ee65: vPortTaskWrapper at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/port.c line 143
+
+*/	
+	
+}
 
 void TWScheduler::interruptScheduler(void* param) {
 

@@ -69,6 +69,7 @@
  *    1.2.1  15/05/20   Modification screentime                                  *
  *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
  *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
+ *    1.2.4  15/10/20   Correction bug affichage heure / duree                   *
  *                                                                               *
  *********************************************************************************/
  
@@ -397,10 +398,10 @@ ScreenDigit::ScreenDigit(uint16_t anchorX, uint16_t anchorY, uint16_t width, uin
   SerialPort.println("Constructeur ScreenDigit : ");
   SerialPort.print("Type :  ");
   SerialPort.println(displayTypeID);
-  SerialPort.print("X : ");
+/*  SerialPort.print("X : ");
   SerialPort.print(box_x);
   SerialPort.print("    Y: ");
-  SerialPort.println(box_y);
+  SerialPort.println(box_y);*/
   SerialPort.print("width : ");
   SerialPort.print(width);
   SerialPort.print("    precision :  ");
@@ -2626,25 +2627,6 @@ void ScreenTime::show(void) {
   SerialPort.println("Show : ScreenTime");
 #endif //SCREEN_DEBUG
 
-//  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
-  display.fillRect(posX-70, posY-32, 16, 34, GxEPD_WHITE);
-// 	display.drawRect(posX-70, posY-32, 16, 34, GxEPD_BLACK);
-
-
-  if (dot_or_h == false) {
-#ifdef SCREEN_DEBUG
-		SerialPort.println("dot_or_h  : H");
-#endif //SCREEN_DEBUG
-
-    display.drawBitmap(posX-70, posY-24,hicons,  16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
-	}
-  else {	
-#ifdef SCREEN_DEBUG
-		SerialPort.println("dot_or_h  : DOT");
-#endif //SCREEN_DEBUG
-  
-    display.drawBitmap(posX-70, posY-26, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
-	}
 #ifdef SCREEN_DEBUG2
   SerialPort.print("time : ");
   SerialPort.print(time[2]);
@@ -2658,6 +2640,28 @@ void ScreenTime::show(void) {
 
   minute.setValue(time[1]);
   minute.show();
+
+//  display.fillRect(posX-70, posY-32, 65, 34, GxEPD_WHITE);
+//  display.fillRect(posX-54, posY-32, 16, 34, GxEPD_WHITE);
+// 	display.drawRect(posX-70, posY-32, 16, 34, GxEPD_BLACK);
+
+
+  if (!dot_or_h) {
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : H");
+#endif //SCREEN_DEBUG
+
+    display.fillRect(posX-70, posY-32, 16, 34, GxEPD_WHITE);
+    display.drawBitmap(posX-70, posY-24,hicons,  16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
+  else {	
+#ifdef SCREEN_DEBUG
+		SerialPort.println("dot_or_h  : DOT");
+#endif //SCREEN_DEBUG
+  
+    display.fillRect(posX-54, posY-32, 16, 34, GxEPD_WHITE);
+    display.drawBitmap(posX-54, posY-26, doticons, 16, 24, GxEPD_BLACK);   //GxEPD_BLACK);
+	}
 
 /*  if (!dot_or_h) {	
 #ifdef SCREEN_DEBUG2

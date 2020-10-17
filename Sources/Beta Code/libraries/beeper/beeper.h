@@ -26,6 +26,9 @@
 /*  1.1     30/08/19     Ajout message de debug                                                    */
 /*  1.2     01/11/19     Suppression de la gestion du volume dans beeper - le volume ne sera géré  */
 /*                       que dans toneHAL                                                          */
+/*  1.3      13/09/20    Ajout VarioXBeeper                                                        */
+/*  1.3.1    17/09/20    Ajout duty / cycle variable et parametrable                               */
+/*  1.3.2    02/10/20    Calcul en milliseconde                                                    */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -55,9 +58,9 @@
 /* THE CLIMBING BEEP */
 /*********************/
 /* length of beep in vertical meters */ 
-#define CLIMBING_BEEP_HIGH_LENGTH 0.5
+/*#define CLIMBING_BEEP_HIGH_LENGTH 0.5
 #define CLIMBING_BEEP_LOW_LENGTH 0.5
-#define CLIMBING_BEEP_LENGTH (CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH)
+#define CLIMBING_BEEP_LENGTH (CLIMBING_BEEP_HIGH_LENGTH + CLIMBING_BEEP_LOW_LENGTH)*/
 
 /* climbing beep sound freq computation : BEEP_FREQ_COEFF * velocity + BEEP_BASE_FREQ */
 #define CLIMBING_BEEP_BASE_FREQ 386.0
@@ -65,8 +68,8 @@
 
 /* climbing beep velocity filter */
 /* filteredVelocity = beepVelocity * BEEP_VELOCITY_FILTER_COEFF + BEEP_VELOCITY_FILTER_BASE */
-#define CLIMBING_BEEP_VELOCITY_FILTER_BASE 1.62
-#define CLIMBING_BEEP_VELOCITY_FILTER_COEFF 0.51
+#define CLIMBING_BEEP_VELOCITY_FILTER_BASE 1620 //1.62
+#define CLIMBING_BEEP_VELOCITY_FILTER_COEFF 510 //0.51
 
 /********************/
 /* THE SINKING BEEP */
@@ -77,15 +80,15 @@
 /********************/
 /* THE GLIDING BEEP */
 /********************/
-#define GLIDING_BEEP_HIGH_LENGTH 0.10
-#define GLIDING_BEEP_LOW_LENGTH 1.40
+#define GLIDING_BEEP_HIGH_LENGTH 100 //0.10
+#define GLIDING_BEEP_LOW_LENGTH 1400 //1.40
 #define GLIDING_BEEP_LENGTH (GLIDING_BEEP_HIGH_LENGTH + GLIDING_BEEP_LOW_LENGTH)
 
 /**********************/
 /* THE CLIMBING ALARM */
 /**********************/
-#define CLIMBING_ALARM_HIGH_LENGTH 0.10
-#define CLIMBING_ALARM_LOW_LENGTH 0.30
+#define CLIMBING_ALARM_HIGH_LENGTH 100 //0.10
+#define CLIMBING_ALARM_LOW_LENGTH 300 //0.30
 #define CLIMBING_ALARM_LENGTH (CLIMBING_ALARM_HIGH_LENGTH + CLIMBING_ALARM_LOW_LENGTH)
 
 #define  CLIMBING_ALARM_FREQ 1000.0
@@ -93,7 +96,7 @@
 /*********************/
 /* THE SINKING ALARM */
 /*********************/
-#define SINKING_ALARM_LENGTH 0.7
+#define SINKING_ALARM_LENGTH 700 //0.7
 
 #define SINKING_ALARM_FREQ 100.0 
 
@@ -174,6 +177,14 @@ class Beeper {
   double 				beepPaternPosition;
   uint8_t 			beepState;
   uint8_t 			beepType;
+	
+	/*********************/
+/* THE CLIMBING BEEP */
+/*********************/
+/* length of beep in vertical meters */ 
+	int CLIMBING_BEEP_HIGH_LENGTH;  // = 0.5;
+	int CLIMBING_BEEP_LOW_LENGTH; //  = 0.5;
+  int CLIMBING_BEEP_LENGTH;
 
   void 		setBeepParameters(double velocity);
   void 		setBeepPaternPosition(double velocity);

@@ -31,7 +31,7 @@ extern "C" {
 #include "esp32-hal-dac.h"
 }
 
-#include "XT_DAC_Audio.h"
+#include "XT_DAC_Audio2.h"
 
 class ToneXTDacEsp32 {
 

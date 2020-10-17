@@ -18,6 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/***************************************************************************************************/
+/*                                     VERTACCEL                                                   */
+/*                                                                                                 */
+/*  Ver     Date                                                                                   */
+/*  1.0                                                                                            */
+/*  1.1     24/09/20     Modif calcul nord magnetique - ajout gyroscopes                           */
+/*                                                                                                 */
+/***************************************************************************************************/
+
 #include <vertaccel.h>
 
 #include <Arduino.h>
@@ -246,6 +255,9 @@ void Vertaccel::compute(int16_t *imuAccel, int32_t *imuQuat, double* vertVector,
   vertAccel = (vertVector[0]*ra[0] + vertVector[1]*ra[1] + vertVector[2]*ra[2]) * VERTACCEL_G_TO_MS;
 }
 
+/* compute vertical vector and vertical accel from IMU data */
+void Vertaccel::computeGyro(int16_t *imuGyro, int32_t *imuQuat, double* gyroVector, double& vertGyro) {
+}
 
 #ifdef AK89xx_SECONDARY
 void Vertaccel::computeNorthVector(double* vertVector, int16_t* mag, double* northVector) {
@@ -297,6 +309,57 @@ void Vertaccel::computeNorthVector(double* vertVector, int16_t* mag, double* nor
   northVector[0] = (1+vertVector[0]*vertVector[0]/vertVector[2])*n[0] + (vertVector[0]*vertVector[1]/vertVector[2])*n[1] - vertVector[0]*n[2];
   northVector[1] = (vertVector[0]*vertVector[1]/vertVector[2])*n[0] + (1+vertVector[1]*vertVector[1]/vertVector[2])*n[1] - vertVector[1]*n[2];
 }
+
+void Vertaccel::computeNorthVector2(double* vertVector, double* gyroVector, int16_t* mag, double* northVector) {
+
+  /*-------------------------------*/
+  /*   north vector computation    */
+  /*-------------------------------*/
+  
+  double n[3];
+
+#ifndef VERTACCEL_STATIC_CALIBRATION
+  int64_t calibratedMag;
+  calibratedMag = ((int64_t)mag[0]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_00;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[0] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[1]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_01;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[1] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[2]) << GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_02;
+  calibratedMag *= ((int64_t)GnuSettings.VARIO_VERTACCEL_MAG_CAL_PROJ_SCALE + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[2] = ((double)calibratedMag)/((double)((int64_t)1 << (GnuSettings.VARIO_VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+  
+#else
+  /* inline for optimization */
+  int64_t calibratedMag;
+  calibratedMag = ((int64_t)mag[0]) << VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)settings.magCal.bias[0];
+  calibratedMag *= ((int64_t)settings.magCal.scale + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[0] = ((double)calibratedMag)/((double)((int64_t)1 << (VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[1]) << VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)settings.magCal.bias[1];
+  calibratedMag *= ((int64_t)settings.magCal.scale + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[1] = ((double)calibratedMag)/((double)((int64_t)1 << (VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+
+  calibratedMag = ((int64_t)mag[2]) << VERTACCEL_MAG_CAL_BIAS_MULTIPLIER;
+  calibratedMag -= (int64_t)settings.magCal.bias[2];
+  calibratedMag *= ((int64_t)settings.magCal.scale + ((int64_t)1 << VERTACCEL_CAL_SCALE_MULTIPLIER));
+  n[2] = ((double)calibratedMag)/((double)((int64_t)1 << (VERTACCEL_MAG_CAL_BIAS_MULTIPLIER + VERTACCEL_CAL_SCALE_MULTIPLIER + LIGHT_INVENSENSE_MAG_PROJ_SCALE_SHIFT)));
+#endif
+        
+  /* compute north vector by applying rotation from v to z to vector n */
+  vertVector[2] = -1.0 - vertVector[2];
+  northVector[0] = (1+vertVector[0]*vertVector[0]/vertVector[2])*n[0] + (vertVector[0]*vertVector[1]/vertVector[2])*n[1] - vertVector[0]*n[2];
+  northVector[1] = (vertVector[0]*vertVector[1]/vertVector[2])*n[0] + (1+vertVector[1]*vertVector[1]/vertVector[2])*n[1] - vertVector[1]*n[2];
+}
+
 #endif
 
 
@@ -312,6 +375,27 @@ uint8_t Vertaccel::readRawAccel(int16_t* accel, int32_t* quat) {
   return haveValue;
 }
 
+uint8_t Vertaccel::readRawGyro(int16_t* gyro, int32_t* quat) {
+
+  uint8_t haveValue = 0;
+
+  while( fastMPUReadFIFO(gyro, NULL, quat) >= 0 ) {
+    haveValue = 1;
+  }
+
+  return haveValue;
+}
+
+uint8_t Vertaccel::readRawSensor(int16_t* gyro, int16_t* accel, int32_t* quat) {
+
+  uint8_t haveValue = 0;
+
+  while( fastMPUReadFIFO(gyro, accel, quat) >= 0 ) {
+    haveValue = 1;
+  }
+
+  return haveValue;
+}
   
 #ifdef AK89xx_SECONDARY
 uint8_t Vertaccel::readRawMag(int16_t* mag) {

@@ -291,7 +291,7 @@ void ToneDacEsp32::tcStartCounter()
 void IRAM_ATTR onTimer() 
 /***********************************/
 {
-  portENTER_CRITICAL_ISR(&timerMux);
+  portENTER_CRITICAL(&timerMux);
 /*  interruptCounter++;
  
 	if (waveForm != WAVEFORM_WAV) { 
@@ -384,7 +384,7 @@ void IRAM_ATTR onTimer()
 
   SysCall::yield();*/
 	
-		dacWrite(Speaker_Pin, wavSamples[sIndex]);
+//		dacWrite(Speaker_Pin, wavSamples[sIndex]);
 		if (sIndex==sampleCount-1)
 			{
 				sIndex = 0;	
@@ -400,7 +400,7 @@ void IRAM_ATTR onTimer()
 			}
 	
 
-  portEXIT_CRITICAL_ISR(&timerMux);	
+  portEXIT_CRITICAL(&timerMux);	
 }
 
 
@@ -441,7 +441,7 @@ void ToneDacEsp32::init(uint32_t pin) {
   wavSamples = (int *) malloc(SAMPLECOUNT * sizeof(int));
 	genForm(SAMPLECOUNT); //function generates sine wave
 	
-  timer = timerBegin(0, 8, true);
+  timer = timerBegin(2, 240, true);
 	timerAttachInterrupt(timer, &onTimer, true);
 }
 

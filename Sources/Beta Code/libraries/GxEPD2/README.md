@@ -13,7 +13,7 @@
 - 4k7/10k resistor divider may not work with flat cable extensions or Waveshare 4.2 board, use level converter then
 - do not forget to connect GND
 - the actual Waveshare display boards now have level converters and series regulator, safe for 5V
-- use 4k7 pull-down on SS for ESP8266 for boards with level converters
+- use 3k3 pull-down on SS for ESP8266 for boards with level converters
 - note that 7.5" e-paper displays don't work reliable if fed from 3.3V Arduino pin
 
 ### Paged Drawing, Picture Loop
@@ -55,6 +55,7 @@
 - GDEW0154M09    1.54" b/w 200x200
 - GDEW0154M10    1.54" b/w 152x152 DES
 - GDEW0154Z04    1.54" b/w/r 200x200
+- GDEH0154Z90    1.54" b/w/r, replacement for GDEW0154Z04
 - GDE0213B1      2.13" b/w
 - GDEH0213B72    2.13" b/w, replacement for GDE0213B1
 - GDEH0213B73    2.13" b/w, new replacement for GDE0213B1, GDEH0213B72
@@ -69,12 +70,14 @@
 - GDEW0371W7     3.7" b/w
 - GDEW042T2      4.2" b/w
 - GDEW042Z15     4.2" b/w/r
+- ACeP565        5.65" Waveshare 5.65" 7-color e-paper display 600x448
 - GDEW0583T7     5.83" b/w
 - GDEW0583T8     5.83" b/w 648x460
 - GDEW075T8      7.5" b/w
 - GDEW075T7      7.5" b/w 800x480
 - GDEW075Z09     7.5" b/w/r
 - GDEW075Z08     7.5" b/w/r 800x480
+- GDEH075Z90     7.5" b/w/r 880x528
 - GDEW1248T3    12.48 b/w 1304x984
 #### Supported SPI e-paper panels & boards from Waveshare: compare with Good Display, same panel
 #### other supported panels
@@ -84,7 +87,31 @@
 - promotion panels from suppliers are welcome, to add support to GxEPD2
 - donation panels from users are welcome, to add support to GxEPD2
 
-### Version 1.2.9
+### Version 1.2.13
+- added support for GDEH0154Z90 1.54" 200x200 b/w/r, replacement for GDEW0154Z04
+- GDEH0154Z90 has partial window addressing, but no partial window refresh
+- added some missing constructor examples, e.g. for IT8951 Driver HAT on Due
+- cleaned-up wiring information in the examples
+#### Version 1.2.12
+- fixed GxEPD2_MinimumExample.ino to draw black on white (white on white was invisible)
+- added example GxEPD2_HelloWorld.ino
+- updated wiring info and constructor parameters for the actual Waveshare e-Paper ESP8266 Driver Board
+- added some missing explicit initializers (nobody noticed as compilers usually initialize simple members)
+#### Version 1.2.11
+- added support for Waveshare 5.65" 7-color e-paper display 600x448
+- the unknown controller of this display doesn't support partial update, as far as known
+- 7-color graphics support is available with class GxEPD2_7C
+- 7-color graphics support requires paging even on ESP32
+- 7-color graphics support causes heavy paging on Arduino UNO, gets very slow
+- refresh is quite fast for a color e-paper display: 12 seconds
+#### Version 1.2.10
+- added support for GDEH075Z90 7.5" b/w/r 880x528
+- the controller of GDEH075Z90 supports partial update, but refesh is full screen
+- the controller of GDEH075Z90 doesn't support differential update (not possible on 3-color anyway)
+- note: the connector of  the GDEH075Z90 is mirrored; connects downward on DESPI-C02
+- added optional init parameter "reset_duration" in ms, same default 20ms as before
+- reset_duration = 2 may help with "clever" reset circuit of newer boards from Waveshare
+#### Version 1.2.9
 - added support for GDEW0154T8 1.54" b/w 152x152
 - added support for GDEW0154M09 1.54" b/w 200x200
 - added support for GDEW0154M10 1.54" b/w 152x152 DES

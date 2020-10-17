@@ -18,6 +18,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/***************************************************************************************************/
+/*                                     VERTACCEL                                                   */
+/*                                                                                                 */
+/*  Ver     Date                                                                                   */
+/*  1.0                                                                                            */
+/*  1.1     24/09/20     Modif calcul nord magnetique - ajout gyroscopes                           */
+/*                                                                                                 */
+/***************************************************************************************************/
+
 #ifndef VERTACCEL_H
 #define VERTACCEL_H
 
@@ -160,14 +169,19 @@ class Vertaccel{
 
   /* access to sensors */
   static uint8_t readRawAccel(int16_t* accel, int32_t* quat);
+	static uint8_t readRawGyro(int16_t* gyro, int32_t* quat);
+	static uint8_t readRawSensor(int16_t* gyro, int16_t* accel, int32_t* quat);
+
 #ifdef AK89xx_SECONDARY
   static uint8_t readRawMag(int16_t* mag);
 #endif //AK89xx_SECONDARY
 
   /* compute measures */
   void compute(int16_t *imuAccel, int32_t *imuQuat, double* vertVector, double& vertAccel);
+  void computeGyro(int16_t *imuGyro, int32_t *imuQuat, double* gyroVector, double& vertGyro);
 #ifdef AK89xx_SECONDARY
   void computeNorthVector(double* vertVector, int16_t* mag, double* northVector);
+  void computeNorthVector2(double* vertVector, double* gyroVector, int16_t* mag, double* northVector);
 #endif
   
   /* calibration class methods */

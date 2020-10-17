@@ -54,7 +54,6 @@
 class VarioHardwareManager
 {
 private:
-	VarioAlim varioAlim;
 	VarioSpeaker varioSpeaker;
 	VarioImu varioImu;
 	VarioGps varioGps;
@@ -64,6 +63,8 @@ private:
 
 
 public:
+	VarioAlim varioAlim;
+
 	VarioHardwareManager();
 	void init();
 	void initAlim();

@@ -31,13 +31,16 @@
 
 #include "GxEPD2_EPD.h"
 #include "epd3c/GxEPD2_154c.h"
+#include "epd3c/GxEPD2_154_Z90c.h"
 #include "epd3c/GxEPD2_213c.h"
 #include "epd3c/GxEPD2_290c.h"
 #include "epd3c/GxEPD2_270c.h"
 #include "epd3c/GxEPD2_420c.h"
 #include "epd3c/GxEPD2_583c.h"
+#include "epd3c/GxEPD2_565c.h"
 #include "epd3c/GxEPD2_750c.h"
 #include "epd3c/GxEPD2_750c_Z08.h"
+#include "epd3c/GxEPD2_750c_Z90.h"
 
 template<typename GxEPD2_Type, const uint16_t page_height>
 class GxEPD2_3C : public GxEPD2_GFX_BASE_CLASS
@@ -52,6 +55,7 @@ class GxEPD2_3C : public GxEPD2_GFX_BASE_CLASS
     {
       _page_height = page_height;
       _pages = (HEIGHT / _page_height) + ((HEIGHT % _page_height) > 0);
+      _mirror = false;
       _using_partial_mode = false;
       _current_page = 0;
       setFullWindow();
@@ -107,7 +111,7 @@ class GxEPD2_3C : public GxEPD2_GFX_BASE_CLASS
       _color_buffer[i] = (_color_buffer[i] | (1 << (7 - x % 8)));
       if (color == GxEPD_WHITE) return;
       else if (color == GxEPD_BLACK) _black_buffer[i] = (_black_buffer[i] & (0xFF ^ (1 << (7 - x % 8))));
-      else if (color == GxEPD_RED) _color_buffer[i] = (_color_buffer[i] & (0xFF ^ (1 << (7 - x % 8))));
+      else if ((color == GxEPD_RED) || (color == GxEPD_YELLOW)) _color_buffer[i] = (_color_buffer[i] & (0xFF ^ (1 << (7 - x % 8))));
     }
 
     void init(uint32_t serial_diag_bitrate = 0) // = 0 : disabled
@@ -121,10 +125,11 @@ class GxEPD2_3C : public GxEPD2_GFX_BASE_CLASS
     // init method with additional parameters:
     // initial false for re-init after processor deep sleep wake up, if display power supply was kept
     // only relevant for b/w displays with fast partial update
+    // reset_duration = 20 is default; a value of 2 may help with "clever" reset circuit of newer boards from Waveshare 
     // pulldown_rst_mode true for alternate RST handling to avoid feeding 5V through RST pin
-    void init(uint32_t serial_diag_bitrate, bool initial, bool pulldown_rst_mode = false)
+    void init(uint32_t serial_diag_bitrate, bool initial, uint16_t reset_duration = 20, bool pulldown_rst_mode = false)
     {
-      epd2.init(serial_diag_bitrate, initial, pulldown_rst_mode);
+      epd2.init(serial_diag_bitrate, initial, reset_duration, pulldown_rst_mode);
       _using_partial_mode = false;
       _current_page = 0;
       setFullWindow();
@@ -136,7 +141,7 @@ class GxEPD2_3C : public GxEPD2_GFX_BASE_CLASS
       uint8_t red = 0xFF;
       if (color == GxEPD_WHITE);
       else if (color == GxEPD_BLACK) black = 0x00;
-      else if (color == GxEPD_RED) red = 0x00;
+      else if ((color == GxEPD_RED) || (color == GxEPD_YELLOW)) red = 0x00;
       for (uint16_t x = 0; x < sizeof(_black_buffer); x++)
       {
         _black_buffer[x] = black;

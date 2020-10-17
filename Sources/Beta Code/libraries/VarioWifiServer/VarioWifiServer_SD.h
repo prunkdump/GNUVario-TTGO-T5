@@ -21,6 +21,7 @@
 /*    1.2.12 25/01/20   Correction Upload                                        */
 /*                      Ajout HandleFirmwareVersion / handleUpgradeWeb           */
 /*    1.2.13 16/02/20   refactoring variowifiserver                              */
+/*    1.2.14 27/07/20   Ajout handleVoltage                                      */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -123,6 +124,7 @@ void handleDelSite();
 void handleGetFlights();
 void handleSetFlight();
 void handleDelFlight();
+void handleVoltage();
 
 //////////////////////////////////////
 //              HELPERS            //

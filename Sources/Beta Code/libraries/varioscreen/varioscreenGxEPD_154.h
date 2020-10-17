@@ -43,7 +43,12 @@
  *    1.0.14 09/03/20   Modification ScreenViewSound                             *
  *    1.0.15 08/04/20   Modification affichage des titres                        *
  *    1.1.0  29/04/20   Changement de font - repositionnement                    *
+ *    1.1.1  10/05/20   Correction affichage screenTime (:/h)                    *
+ *    1.1.2  11/05/20   Effacement zones multi                                   *
  *    1.1.3  17/05/20   Ajout position titre avac setPositionTitle               *
+ *		1.1.4  23/05/20   Passage vario en -XX.X								  								 *
+ *    1.1.5  27/07/20   Affichage de la batterie au démarrage                    *
+ *    1.1.6  27/09/20   Ajout DISPLAY_LIGHT                                      *
  *                                                                               *
  *********************************************************************************/
 
@@ -270,13 +275,18 @@ class VarioScreen {
 
   void init(void);
   void createScreenObjects(void);
+#ifdef DISPLAY_LIGHT	
+	void createScreenObjectsPageLight(void);
+	void createScreenObjectsDisplayPageLight(void);
+#else	
 	void createScreenObjectsPage0(void);
 	void createScreenObjectsDisplayPage0(void);
+#endif
 	void createScreenObjectsPage1(void);
 	void createScreenObjectsDisplayPage1(void);
 	void createScreenObjectsPage10(void);
 	void createScreenObjectsDisplayPage10(void);
-
+	
   void begin(void);
 	
 //  void  getTextBounds(char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);

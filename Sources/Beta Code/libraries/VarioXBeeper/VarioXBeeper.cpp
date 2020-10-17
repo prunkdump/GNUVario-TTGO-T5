@@ -24,6 +24,7 @@
 /*                                                                               */
 /*  version    Date     Description                                              */
 /*    1.0    27/06/20                                                            */
+/*    1.0.1  27/09/20   Modif valeur de retour getFrenquence                     */
 /*                                                                               */
 /*********************************************************************************/
 /*                                                                               */
@@ -327,11 +328,11 @@ void VarioXBeeper::majVarioSettings(boolean *ModifiedValue)
 }
 
 /*********************************************/
-float VarioXBeeper::getFrequence(float vario) 
+uint16_t VarioXBeeper::getFrequence(float vario) 
 /*********************************************/
 {
 	float m, p;
-  float retour;
+  uint16_t retour;
 
 #ifdef SDCARD_DEBUG
 	SerialPort.print("calcul frequence -- vario = ");

@@ -141,6 +141,7 @@ class IntTW {
   bool transmitting(void);
   bool succeeded(void);
   void stop(void); //force stop in case of keeping bus
+	void release(void);
 
   /* blocking methods below (wait for transfert finished) */
   // return true on success

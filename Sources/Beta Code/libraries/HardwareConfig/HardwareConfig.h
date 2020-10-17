@@ -1,10 +1,6 @@
 #ifndef _HARDWARECONFIG_H_
 #define _HARDWARECONFIG_H_
 
-#include <HardwareConfigPRO.h>
-#include <HardwareConfigESP32.h>
-#include <HardwareConfigMK0.h>
-
 /* HardwareConfig -- 
  *
  * Copyright 2019 Jean-philippe GOI
@@ -40,26 +36,47 @@
 /*    1.0.7  06/10/19   Ajout R�solution de l'ecran                              */
 /*    1.0.8  22/10/19   Ajout �cran 2.13''                                       */
 /*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
+/*    1.0.10 27/09/20   Ajout DISPLAY_LIGHT                                      */
+/*    1.0.11 05/10/20   Ajout gestion PCB3																			 */
 /*                                                                               */
 /*********************************************************************************/
+
+//VERSION
+//#define VARIOVERSION 154     //Version 1 avec ecran 1.54
+//#define VARIOVERSION 254     //Version 2 avec ecran 1.54
+//#define VARIOVERSION 290     //Version 2 avec ecran 2.90 paysage
+//#define VARIOVERSION 291     //Version 2 avec ecran 2.90 portrait
+//#define VARIOVERSION 390     //Version 3 avec ecran 2.90 paysage
+#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
+
+#include <HardwareConfigPRO.h>
+#include <HardwareConfigESP32.h>
+#include <HardwareConfigMK0.h>
 
 /******************************/
 /*            SCREEN          */
 /******************************/
 
+#if ((VARIOVERSION == 154) || (VARIOVERSION == 254)) 
 #define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
-//#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
-//#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 390)) 
+#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
+#elif ((VARIOVERSION == 291) || (VARIOVERSION == 391)) 
+#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#else
+#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
+#endif
 
 #if (VARIOSCREEN_SIZE == 154)
 #define DISPLAY_LOW_UPDATE 50
 #define DISPLAY_UPDATE    10
+#define DISPLAY_LIGHT
 #elif (VARIOSCREEN_SIZE == 290)
 #define DISPLAY_LOW_UPDATE 40
 #define DISPLAY_UPDATE    10
 #elif (VARIOSCREEN_SIZE == 291)
-#define DISPLAY_LOW_UPDATE 40
-#define DISPLAY_UPDATE    10
+#define DISPLAY_LOW_UPDATE 300 //40
+#define DISPLAY_UPDATE    300 //10
 #endif
 
 /***********************/
@@ -245,8 +262,29 @@
 #define NB_ACQUISITION_FIX_GPS 20
 
 // GPS MODEL
+#if (PCB_VERSION == 3)
+	// PCB 3
+#define L86
+#else
 #define ATGM336H
 //#define NEO_6M
+//#define L86
+#endif
+
+#if defined(ATGM336H)
+#undef NEO_6M
+#undef L86
+#endif
+
+#if defined(NEO_6M)
+#undef ATGM336H
+#undef L86
+#endif
+
+#if defined(L86)
+#undef ATGM336H
+#undef NEO_6M
+#endif
 
 #if defined(ATGM336H)
 //ATGM336H
@@ -264,7 +302,7 @@
 #define NMEA_GGA_TIME_PRECISION 1000
 #define NMEA_GGA_ALTI_PRECISION 10.0
 
-#else if defined(NEO_6M)
+#elif defined(NEO_6M)
 
 //NEO-6M
 #define NMEA_RMC_TAG "GPRMC"
@@ -274,6 +312,21 @@
 #define NMEA_GGA_TIME_PRECISION 100
 #define NMEA_GGA_ALTI_PRECISION 10.0
 
+#elif defined(L86)
+//L86
+
+#define NMEA_RMC_TAG "GNRMC"
+#define NMEA_GGA_TAG "GPGGA"
+
+/* precision = 10^(number of digit after dot in gps ouput) */
+/* check the gps-time-analysis output to check the precision */
+/* RMC speed is at 8th position */
+/* GGA time is at 2th position */
+/* GGA Alti is at 10th position */
+/* be carefull, time precision is an int */
+#define NMEA_RMC_SPEED_PRECISION 100.0
+#define NMEA_GGA_TIME_PRECISION 1000
+#define NMEA_GGA_ALTI_PRECISION 10.0
 #endif 
 
 /******************************/

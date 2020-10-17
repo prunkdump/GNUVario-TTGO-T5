@@ -31,6 +31,8 @@
 /*    1.0.5  10/09/19   Ajout VARIO_SDA_PIN, VARIO_SCL_PIN 											 */
 /*		1.0.6	 19/09/19   Modification parametrage en fonction des PCBs            */
 /*    1.0.7  06/10/19   Deplacement resolution d'ecran dans hardwareConfig.h     */
+/*    1.0.8  27/06/20   Ajoit gestion I2S                                        */
+/*    1.0.9  05/10/20   Ajout PCB V3                                             */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -130,13 +132,21 @@ Fly stat        0xD0		26+2
 
 #if defined(ESP32)
 
-/* Version PCB 															*/
-/* 0 pas de PCB definit											*/
-/* 1 PCB V1 pour TTGO-T5 version 1.6     		*/
-/* 2 PCB V2 pour TTGO-T5 version 1.6 et 2.4 */
+/* Version PCB 															 */
+/* 0 pas de PCB definit										 	 */
+/* 1 PCB V1 pour TTGO-T5 version 1.64''   	 */
+/* 2 PCB V2 pour TTGO-T5 version 1.64 et 2.9 */
+/* 3 PCB V3 pour TTGO-T5 version 2.9''       */
 
+#if (VARIOVERSION == 154) 
+#define PCB_VERSION 1
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 254)) 
 #define PCB_VERSION 2
-
+#elif ((VARIOVERSION == 390) || (VARIOVERSION == 391)) 
+#define PCB_VERSION 3
+#else
+#define PCB_VERSION 0
+#endif
 
 /******************************/
 /*            SCREEN          */
@@ -214,6 +224,15 @@ Fly stat        0xD0		26+2
 /*************************/
 
 #if (PCB_VERSION == 2)
+	// PCB 2
+#define pinGpsRXD  (33)
+	
+/* GPS / bluetooth pins */
+#define SERIAL_NMEA_RX_PIN 33
+#define SERIAL_NMEA_TX_PIN 34
+
+#elif (PCB_VERSION == 3)
+	// PCB 3
 #define pinGpsRXD  (33)
 	
 /* GPS / bluetooth pins */
@@ -250,7 +269,13 @@ Fly stat        0xD0		26+2
 #define AUDIO_AMPLI_LOWPOWER				//Activation/desactivation de l'ampli à chaque tone/notone (economie d'énergie)
 
 #if (PCB_VERSION == 2)
+	// PCB 2
+#define PIN_AUDIO_AMP_ENA     19			//Enabled ampli class D
+#define HAVE_AUDIO_AMPLI	
+//#define AUDIO_AMP_MODE_LOW					
 
+#elif (PCB_VERSION == 3)
+	// PCB 3
 #define PIN_AUDIO_AMP_ENA     19			//Enabled ampli class D
 #define HAVE_AUDIO_AMPLI	
 //#define AUDIO_AMP_MODE_LOW					
@@ -264,10 +289,19 @@ Fly stat        0xD0		26+2
 #define SPEAKER_PIN 					25			//or 26
 #define TONE_PIN_CHANNEL 			0				// or 1
 
+#define AUDIO_I2S_CONFIG
+#define DAC_INTERNE     // Definit si le DAC interne est utilisé
+
+#define I2S_NUM         (0)
+#define I2S_BCK_IO      (26)  //(GPIO_NUM_13)   //BCLK
+#define I2S_WS_IO       (25)  //(GPIO_NUM_15)   //LRC
+#define I2S_DO_IO       (14) //(GPIO_NUM_21)   //DIN
+#define I2S_DI_IO       (-1)
+
 #define AUDIO_TYPE_INTERFACE
 #define TONE 													// 1 pin PWM
 //#define	TONEAC 											// 2 pins Push-Pull PWM
-//#define	TONEDAC
+//#define	TONEDACCOSINE
 //#define TONEXTDAC
 //#define TONEDACTIMER
 //#define TONEI2S
@@ -278,6 +312,11 @@ Fly stat        0xD0		26+2
 /*********************/
 
 #if (PCB_VERSION == 2)
+	// PCB 2
+#define VARIO_TW_SDA_PIN 27
+#define VARIO_TW_SCL_PIN 32
+#elif (PCB_VERSION == 3)
+	// PCB 3
 #define VARIO_TW_SDA_PIN 27
 #define VARIO_TW_SCL_PIN 32
 #else
@@ -293,9 +332,17 @@ Fly stat        0xD0		26+2
 /*********************/
 
 #if (PCB_VERSION == 2)
+	// PCB 2
 #define VARIO_SDA_PIN 27
 #define VARIO_SCL_PIN 32	
 #define VARIO_MPU_INT_PIN 26
+#define GPIO_MPU_INT GPIO_NUM_26
+#elif (PCB_VERSION == 3)
+	// PCB 3
+#define VARIO_SDA_PIN 27
+#define VARIO_SCL_PIN 32	
+#define VARIO_MPU_INT_PIN 26
+#define GPIO_MPU_INT GPIO_NUM_26
 #else
 #define VARIO_SDA_PIN 21
 #define VARIO_SCL_PIN 22
@@ -306,6 +353,10 @@ Fly stat        0xD0		26+2
 /*************************/
 
 #if (PCB_VERSION == 2)
+	// PCB 2
+#define POWER_PIN 12
+#elif (PCB_VERSION == 3)
+	// PCB 3
 #define POWER_PIN 12
 #else
 #define POWER_PIN 27

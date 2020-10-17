@@ -31,6 +31,9 @@
  *    1.0.3  18/04/20   Ajour reglage du kalman                                  *
  *                      Ajout intégration vario                                  *
  *    1.0.4  08/05/20   Ajout getCap                                             *
+ *    1.0.5  27/06/20   Ajout varioxbeeper                                       *
+ *    1.0.6  30/07/20   Ajout gestion valeur maximum des données                 *
+ *    1.0.7  27/09/20   Ajout test sur lecture des fichiers de config            *
  *                                                                               *
  *********************************************************************************
  */
@@ -108,6 +111,11 @@ public:
 		int    	getStateTrend();
 		uint8_t getVariometerState();
 		int 		getCap();
+		double  getSpeed();
+		void    setCurrentHeight(double height);
+		double  getCurrentHeight();
+		void    setGpsAlti(double gpsalti);
+		double  getGpsAlti();
 		
 		bool 	 	haveNewClimbRate();
 				
@@ -115,11 +123,8 @@ public:
 		void 		enableflightStartComponents(void);
 		
 		int 		compteurGpsFix = 0;
-		double 	gpsAlti = 0;
 		uint8_t gpsFix = 0;
 
-		double 	currentHeight = 0;
-		double 	currentSpeed  = 0;
 		double  ratio = 0;
 
 		long 		voltage = 0;
@@ -178,6 +183,9 @@ private:
 		double 	climbRateBuzzer;
 		bool   	haveNewClimbRateDataBuzzer = false;
 		uint8_t variometerState;
+		double 	currentSpeed  = 0;
+		double 	gpsAlti = 0;
+		double 	currentHeight = 0;
 		
 		bool 		CompteurStartFlyEnable 	= false;
 		unsigned long	TimeStartFly;
@@ -188,6 +196,8 @@ private:
 		int 		bearing = 0;
 		int 		moyCap = 0;
 		int			nbMesureCap = 0;
+		
+		float constrainAngle360(float dta);
 };
 
 extern VarioData varioData;

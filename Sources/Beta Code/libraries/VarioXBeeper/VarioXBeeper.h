@@ -24,6 +24,7 @@
 /*                                                                               */
 /*  version    Date     Description                                              */
 /*    1.0    27/06/20                                                            */
+/*    1.0.1  27/09/20   Modif valeur de retour getFrenquence                     */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -54,7 +55,7 @@ public:
   boolean init(void);
   boolean readSDSettings(char *FileName);
 	void majVarioSettings(boolean *ModifiedValue);
-	float getFrequence(float vario);
+	uint16_t getFrequence(float vario);
 	int getCycle(float vario);
 	int getDuty(float vario);
 	

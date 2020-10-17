@@ -5,7 +5,8 @@
 #pragma once
 
 #include <ArduinoJson/Configuration.hpp>
-#include <ArduinoJson/Operators/VariantOperators.hpp>
+#include <ArduinoJson/Variant/VariantOperators.hpp>
+#include <ArduinoJson/Variant/VariantShortcuts.hpp>
 #include <ArduinoJson/Variant/VariantTo.hpp>
 
 #ifdef _MSC_VER
@@ -17,6 +18,7 @@ namespace ARDUINOJSON_NAMESPACE {
 
 template <typename TArray>
 class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
+                     public VariantShortcuts<ElementProxy<TArray> >,
                      public Visitable {
   typedef ElementProxy<TArray> this_type;
 
@@ -49,14 +51,6 @@ class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
   FORCE_INLINE this_type& operator=(T* src) {
     getOrAddUpstreamElement().set(src);
     return *this;
-  }
-
-  FORCE_INLINE bool operator==(VariantConstRef rhs) const {
-    return static_cast<VariantConstRef>(getUpstreamElement()) == rhs;
-  }
-
-  FORCE_INLINE bool operator!=(VariantConstRef rhs) const {
-    return static_cast<VariantConstRef>(getUpstreamElement()) != rhs;
   }
 
   FORCE_INLINE void clear() const {
@@ -139,6 +133,10 @@ class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
 
   VariantRef getElement(size_t index) const {
     return getOrAddUpstreamElement().getElement(index);
+  }
+
+  VariantRef getOrAddElement(size_t index) const {
+    return getOrAddUpstreamElement().getOrAddElement(index);
   }
 
   FORCE_INLINE void remove(size_t index) const {

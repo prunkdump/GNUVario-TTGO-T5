@@ -27,6 +27,7 @@
 /*    1.1    30/08/19   Ajout gestion commande Ampli                             */
 /*    1.1.1  12/01/20   Ajout Trace                                              */
 /*    1.2    13/06/20   Ajout XTDAC                                              */
+/*    1.2.1  26/07/20   Renomage lib TONEDAC en TONEDACCOSINE                    */
 /*                                                                               */
 /*********************************************************************************/
  
@@ -39,8 +40,8 @@
 
 #include <toneHAL.h>
 
-#if defined(TONEDAC) || defined(TONEDACTIMER)
-#include <toneDAC_esp32.h>
+#if defined(TONEDACCOSINE) || defined(TONEDACTIMER)
+#include <toneDACCosine_esp32.h>
 #include <toneDACTimer_esp32.h>
 
 class ToneHalDAC_Esp32 : public ToneHal {
@@ -135,7 +136,7 @@ class ToneHal_Esp32 : public ToneHal {
 
 #elif defined(TONEI2S)
 
-class ToneHalI2S_Esp32 : ToneHal{
+/*class ToneHalI2S_Esp32 : ToneHal{
 	public:
 
 		void init(void);
@@ -160,7 +161,31 @@ class ToneHalI2S_Esp32 : ToneHal{
     uint32_t remaining();		
 };	
 
-#define ToneHAL ToneHalI2S_Esp32	
+#define ToneHAL ToneHalI2S_Esp32	*/
+
+#include <toneI2S_esp32.h>
+
+class ToneHal_Esp32 : public ToneHal {
+	public:
+
+		void init(void);
+	  void init(uint32_t pin);
+    void init(uint32_t pin1, uint32_t pin2);
+    void tone(unsigned long frequency);
+    void tone(unsigned long frequency, uint8_t volume);
+    void tone(unsigned long frequency, uint8_t volume, unsigned long length);
+    void tone(unsigned long frequency, uint8_t volume, unsigned long length, uint8_t background);
+
+		void noTone();
+		
+		void update();
+		
+	protected:
+		uint32_t _pin;
+		ToneI2SEsp32 privateToneI2SEsp32;
+};	
+
+#define ToneHAL ToneHal_Esp32	
 
 #endif //Interface type
 

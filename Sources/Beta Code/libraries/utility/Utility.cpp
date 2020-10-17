@@ -28,6 +28,7 @@
 /*    1.2      15/10/19    Ajout test SDCARD                                     */
 /*    1.3      23/11/19    Modification deep sleep                               */
 /*    1.4      28/11/19    Modif changement librairie sdfat                      */
+/*    1.5      06/10/20    Modification deep_sleep                               */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -51,6 +52,8 @@
 #ifdef HAVE_SCREEN
 #include <varioscreenGxEPD.h>
 #endif
+
+#include "VarioImuTwoWire.h"
 
 #include "driver/rtc_io.h"
 
@@ -219,12 +222,19 @@ void deep_sleep(String Message) {
 	toneHAL.disableAmpli();
 	#endif
 	//	rtc_gpio_isolate(GPIO_NUM_12);
+
+	twScheduler.disableAcquisition();
 	
 	rtc_gpio_isolate(GPIO_BUTTON_A);
 	rtc_gpio_isolate(GPIO_BUTTON_C);
+#ifdef GPIO_MPU_INT
+	rtc_gpio_isolate(GPIO_MPU_INT);
+#endif
 
 	display.powerOff();
 	
+	delay(1000);
+    SerialPort.println("Sleep now");
 	esp_deep_sleep_start();
 	SerialPort.println("This will never be printed");		
 }

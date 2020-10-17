@@ -95,6 +95,8 @@
 /*    1.5.1  	 03/11/19		Modification des fonctions enableAmpli 									 */
 /*    1.5.2    10/01/20   Ajout TONEDACTIMER																			 */
 /*    1.5.3    14/06/20   Ajout update et TONEXTDAC                                */
+/*    1.5.4    26/07/20   Ajout TONEDACCOSINE                                      */
+/*    1.5.5    29/08/20   Ajout TONEI2S pour l'ESP32                               */
 /*                                                                                 */
 /***********************************************************************************/
 
@@ -115,7 +117,7 @@
 /*  ESP32         PWM 1 pin                         OK                             */
 /*                PWM 2 pins                        not yet developed              */
 /*                DAC                               in development                 */
-/*                I2S                               not yet developed              */
+/*                I2S                               in development                 */
 /*                                                                                 */
 /***********************************************************************************/                
  
@@ -142,7 +144,8 @@
 
 //#define TONE // 1 pin PWM
 //#define	TONEAC // 2 pins Push-Pull PWM
-//#define	TONEDAC
+//#define TONEDAC 
+//#define	TONEDACCOSINE
 #define TONEXTDAC
 //#define TONEDACTIMER
 //#define TONEI2S
@@ -197,13 +200,14 @@ class ToneHal  {
 		uint8_t _volume = 10;	
 		bool 		_toneMuted = false;
 
-#endif //TONEHAL_EXTENDED_VOLUME		
-
 #ifdef HAVE_AUDIO_AMPLI
 		void AUDIO_AMP_DISABLE(void);
 		void AUDIO_AMP_ENABLE(void);
 		void AUDIO_AMP_INIT(void);
 #endif //HAVE_AUDIO_AMPLI
+
+#endif //TONEHAL_EXTENDED_VOLUME		
+
 };
 
 

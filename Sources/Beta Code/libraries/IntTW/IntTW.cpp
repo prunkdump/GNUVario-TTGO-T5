@@ -187,7 +187,9 @@ bool IntTW::succeeded(void) {
 
 /* never keeping bus */	
 void IntTW::stop(void) {
-  
+}  
+void IntTW::release(void) {
+  i2cRelease(i2c); 
 }
 
 /**********************/

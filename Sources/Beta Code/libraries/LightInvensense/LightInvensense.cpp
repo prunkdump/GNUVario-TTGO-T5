@@ -231,6 +231,7 @@ const uint8_t compressedFirmware[] PROGMEM = {
 #define COMPRESSED_DMP_LPF_CFG (0x2)
 #define COMPRESSED_DMP_RATE_DIV_CFG (0x4)
 #define COMPRESSED_DMP_PAQUET_RAW_ACCEL
+#define COMPRESSED_DMP_PAQUET_GYRO
 #define COMPRESSED_DMP_PAQUET_QUAT
 #define COMPRESSED_DMP_PAQUET_GESTURE
 #define COMPRESSED_DMP_PAQUET_TAP
@@ -1045,11 +1046,12 @@ void fastMPUParseFIFO(uint8_t* dmpPaquet, int16_t *gyro, int16_t *accel, int32_t
 #endif
 
 #ifdef COMPRESSED_DMP_PAQUET_RAW_ACCEL
-  for(int i = 0; i<3; i++ ) {
-    accel[i] = ((int16_t)(dmpPaquetP[0]) << 8) | (int16_t)(dmpPaquetP[1]);
-    dmpPaquetP += 2;
-  }
-
+	if (accel) {
+		for(int i = 0; i<3; i++ ) {
+			accel[i] = ((int16_t)(dmpPaquetP[0]) << 8) | (int16_t)(dmpPaquetP[1]);
+			dmpPaquetP += 2;
+		}
+	}
   /*
   accel[0] = ((int16_t)fifo_data[ii+0] << 8) | fifo_data[ii+1];
   accel[1] = ((int16_t)fifo_data[ii+2] << 8) | fifo_data[ii+3];
@@ -1058,10 +1060,12 @@ void fastMPUParseFIFO(uint8_t* dmpPaquet, int16_t *gyro, int16_t *accel, int32_t
 #endif
 
 #ifdef COMPRESSED_DMP_PAQUET_GYRO
-  for(int i = 0; i<3; i++ ) {
-    gyro[i] = ((int16_t)(dmpPaquetP[0]) << 8) | (int16_t)(dmpPaquetP[1]);
-    dmpPaquetP += 2;
-  }
+	if (gyro) {
+		for(int i = 0; i<3; i++ ) {
+			gyro[i] = ((int16_t)(dmpPaquetP[0]) << 8) | (int16_t)(dmpPaquetP[1]);
+			dmpPaquetP += 2;
+		}
+	}
 
   /*
   gyro[0] = ((int16_t)fifo_data[ii+0] << 8) | fifo_data[ii+1];

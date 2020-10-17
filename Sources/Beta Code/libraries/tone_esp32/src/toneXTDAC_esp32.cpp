@@ -24,7 +24,7 @@
 #define ARDUINOTRACE_SERIAL SerialPort
 #include <ArduinoTrace.h>
 
-#include "XT_DAC_Audio.h"
+#include "XT_DAC_Audio2.h"
 
 // BEEP PIN
 #if not defined(SPEAKER_PIN)
@@ -56,8 +56,12 @@ static int invert = 2;          // invert MSB to get sine waveform
 		// BEEP PIN
 uint8_t Speaker_Pin;	 
 
-XT_DAC_Audio_Class DacAudio(25,0);                                            // Create the main player class object. Use GPIO 25 (DAC pin) and timer 0
-XT_Instrument_Class Bip(INSTRUMENT_ORGAN);
+int16_t PROGMEM TwinkleTwinkle[] = {1000,SCORE_END};
+
+XT_DAC_Audio_Class DacAudio(25,2);                                            // Create the main player class object. Use GPIO 25 (DAC pin) and timer 0
+//XT_Instrument_Class Bip(INSTRUMENT_ORGAN);
+XT_Beeper_Class Bip(TwinkleTwinkle,TEMPO_PRESTISSIMO,INSTRUMENT_ORGAN); // TEMPO_ALLEGRO,INSTRUMENT_ORGAN);     // Music score object, handles tunes. Pass Music Data,Tempo, Instrument 
+
 
 #if defined(TONEDAC_EXTENDED)
 #endif //TONEDAC_EXTENDED
@@ -151,9 +155,10 @@ void ToneXTDacEsp32::tone(unsigned long frequency
 	  {
 	    _tDAC_volume = volume;
 			uint8_t scaleVolume;
-			DacAudio.DacVolume=100;
 		}
 #endif
+
+//	DacAudio.DacVolume=_tDAC_volume;
 
   if (frequency > 10000) frequency = 10000;
 	_frequency = frequency;
@@ -168,12 +173,13 @@ void ToneXTDacEsp32::tone(unsigned long frequency
   dac_offset_set(channelDAC, offset);
   dac_invert_set(channelDAC, invert);*/
 
-   Bip.SetFrequency(frequency);
+//   Bip.SetFrequency(frequency);
+  TwinkleTwinkle[0] = frequency;
 #ifdef HAVE_AUDIO_AMPLI
   if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
 #endif //HAVE_AUDIO_AMPLI
 
-   DacAudio.Play(&Bip);     
+  DacAudio.Play(&Bip);     
 
 	#ifdef TONEDAC_LENGTH
   if (length > 0 && background) {  // Background tone playing, returns control to your sketch.

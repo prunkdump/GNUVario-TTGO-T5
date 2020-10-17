@@ -66,6 +66,8 @@
  *    1.2.0  29/04/20   Modification font screedigit                             *
  *    1.2.1  15/05/20   Modification screentime                                  *
  *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
+ *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
+ *    1.2.4  15/10/20   Correction bug affichage heure / duree                   *
  *                                                                               *
  *********************************************************************************/
 #ifndef VARIOSCREENOBJECTS_291_H

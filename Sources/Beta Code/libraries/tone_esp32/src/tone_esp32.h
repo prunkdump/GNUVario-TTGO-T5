@@ -43,6 +43,10 @@
 
 #if defined(ESP32)
 
+#include "HardwareConfig.h"
+
+#if defined(TONE)
+
 #include "Arduino.h"
 //#include "utility\HardwareConfig.h"
 
@@ -105,6 +109,8 @@ uint8_t _tAC_volume[10] = { 4, 22, 44, 58, 66, 80, 100, 134, 200, 250 }; // Duty
     void setBeep(uint16_t frequency, uint16_t duration);
 
 };
+
+#endif //TONE
 
 #else
 #error “This library only supports boards with ESP32 processor.”

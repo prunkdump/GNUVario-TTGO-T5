@@ -52,6 +52,8 @@
  *    1.1.2  11/05/20   Effacement zones multi                                   *
  *    1.1.3  17/05/20   Ajout position titre avac setPositionTitle               *
  *		1.1.4  23/05/20   Passage vario en -XX.X								  								 *
+ *		1.1.5  23/05/20   Passage vario en -XX.X								  								 *
+ *    1.1.6  27/07/20   Affichage de la batterie au démarrage                    *
  *																				                                       *
  *********************************************************************************/
  
@@ -101,6 +103,8 @@
 #include <AglManager.h>
 
 #include <VarioLanguage.h>
+
+#include <VarioHardwareManager.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -837,18 +841,31 @@ void VarioScreen::ScreenViewInit(uint8_t Version, uint8_t Sub_Version, String Au
 
 		display.setCursor(152, 20);
 		display.println("Version");
+		
 		if (Beta_Code > 0) {
+			sprintf(tmpbuffer,"%02d.%02d-", Version, Sub_Version);
+			String tmpstr = String(tmpbuffer)+Author;
 			sprintf(tmpbuffer," Beta %01d", Beta_Code);
-  		display.setCursor(155, 40);
-		  display.print(tmpbuffer);
+			tmpstr = tmpstr + String(tmpbuffer);
+  		display.setCursor(130, 40);
+		  display.print(tmpstr);
+		} else {
+			sprintf(tmpbuffer,"%02d.%02d-", Version, Sub_Version);
+			display.setCursor(156, 40);
+			display.print(tmpbuffer);
+			display.print(Author);
 		}
-		sprintf(tmpbuffer,"%02d.%02d-", Version, Sub_Version);
-		display.setCursor(156, 60);
-		display.print(tmpbuffer);
-		display.print(Author);
+		
 		sprintf(tmpbuffer,"%s", __DATE__);
-		display.setCursor(132, 85);
+		display.setCursor(142, 60);
 		display.print(tmpbuffer);
+
+		sprintf(tmpbuffer,"%03d", varioHardwareManager.varioAlim.getCapacite());
+		String tmpstr = String(tmpbuffer) +"% (";
+		sprintf(tmpbuffer,"%.2f", varioHardwareManager.varioAlim.getTension());
+		tmpstr = tmpstr + String(tmpbuffer) + "v)";
+		display.setCursor(140, 85);
+		display.print(tmpstr);
 
 		display.setFont(&FreeSansBold9pt7b);
 		display.setTextSize(1);
