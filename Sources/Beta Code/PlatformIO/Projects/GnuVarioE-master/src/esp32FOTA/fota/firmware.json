@@ -1,0 +1,7 @@
+{
+    "type": "esp32-fota-http",
+    "version": 2,
+    "host": "140.82.118.4",
+    "port": 80,
+    "bin": "/jpg63/Gnuvario_for_TTGO-T5/tree/master/Sources/esp32-fota-http-2.bin"
+}
