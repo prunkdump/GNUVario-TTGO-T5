@@ -1,0 +1,414 @@
+/*****************************************************************************/
+/*                                                                           */
+/*                        Libraries ToneXTDAC ESP32                          */
+/*                                                                           */
+/*  version    Date        Description                                       */
+/*    1.0      13/06/20                                                      */
+/*                                                                           */
+/*****************************************************************************/
+
+#include <Arduino.h>
+#include "DebugConfig.h"
+#include "HardwareConfig.h"
+
+#if defined(ESP32) && defined(TONEI2S)
+
+#include "toneI2S_esp32.h"
+
+#ifdef SOUND_DEBUG
+#define ARDUINOTRACE_ENABLE 1
+#else
+#define ARDUINOTRACE_ENABLE 0
+#endif
+
+#define ARDUINOTRACE_SERIAL SerialPort
+#include <ArduinoTrace.h>
+
+#ifndef _DEBUG_H_
+#define TONEDAC_DEBUG					//debug Tone
+//#define SerialPort Serial
+#endif
+
+#ifndef PIN_AUDIO_AMP_ENA
+#define PIN_AUDIO_AMP_ENA 			34
+#endif
+
+#ifndef HAVE_AUDIO_AMPLI
+//#define HAVE_AUDIO_AMPLI
+#endif //HAVE_AUDIO_AMPLI
+
+//#define AUDIO_AMP_ENABLE()   {GPIO.out1_w1ts.val = ((uint32_t)1 << (PIN_AUDIO_AMP_ENA - 32));}
+//#define AUDIO_AMP_DISABLE()  {GPIO.out1_w1tc.val = ((uint32_t)1 << (PIN_AUDIO_AMP_ENA - 32));}
+
+#ifndef AUDIO_I2S_CONFIG
+
+#define DAC_INTERNE     // Definit si le DAC interne est utilisé
+
+#define I2S_NUM         (0)
+#define I2S_BCK_IO      (26)  //(GPIO_NUM_13)   //BCLK
+#define I2S_WS_IO       (25)  //(GPIO_NUM_15)   //LRC
+#define I2S_DO_IO       (14) //(GPIO_NUM_21)   //DIN
+#define I2S_DI_IO       (-1)
+
+#endif
+
+//#define   DAC_16B           // Definit si le DAC externe est utiliser en 16bit ou en 8bits
+
+#ifdef DAC_INTERNE    
+#undef DAC_16B
+#endif
+
+#define   SAMPLE_RATE    (16000)
+
+#ifdef  DAC_16B
+uint16_t   COEF_AMP   =  32727; 
+#else
+uint8_t    COEF_AMP   =  127;  
+#endif
+
+#define I2S_DMA_BUFFER  (256)
+
+//Configuration I2S
+
+i2s_config_t i2s_config =
+{
+  .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX
+#ifdef DAC_INTERNE
+    | I2S_MODE_DAC_BUILT_IN),
+#else
+    ),
+#endif  
+  .sample_rate = SAMPLE_RATE,
+  .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+  .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+#ifdef DAC_INTERNE
+  .communication_format = (i2s_comm_format_t)I2S_COMM_FORMAT_I2S_MSB,
+#elif defined (DAC_16B)
+  .communication_format = (i2s_comm_format_t)I2S_COMM_FORMAT_I2S, 
+#else
+  .communication_format = (i2s_comm_format_t)(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB), //I2S_COMM_FORMAT_I2S_MSB,
+#endif  
+  .intr_alloc_flags = 0,   // Default interrupt priority
+  .dma_buf_count = 2,
+  .dma_buf_len = I2S_DMA_BUFFER * 4, //maxPhase * 4,
+  .use_apll = false,
+  .tx_desc_auto_clear = true
+};
+
+i2s_pin_config_t pin_config = {
+  .bck_io_num   = I2S_BCK_IO,  //26, //this is BCK pin
+  .ws_io_num    = I2S_WS_IO,   //25,     // this is LRCK pin
+  .data_out_num = I2S_DO_IO,  //14, //13, //22, // this is DATA output pin
+  .data_in_num  = -1   //Not used
+};
+
+
+//uint8_t buffer[I2S_DMA_BUFFER * 4]; //MaxPhase * 4];  
+
+//#define MaxPhase (int)(SAMPLE_RATE  /WAVE_FREQ_HZ) //55
+int 			maxPhase;  // = MaxPhase;   // Should make 800 Hz, gives 1600 Hz and all of the harmonics as well
+
+uint32_t 	currentSample, compteur, maxSample;
+
+bool 		 	actif = false;
+int 			phase;
+float 		ecartPhase;
+int16_t   TabSinus[360];
+
+int 			interruptCounter;
+int 			totalInterruptCounter;
+uint8_t   VOLUME_I2S =  100;  //0 à 100
+
+ 
+hw_timer_t * timerI2S = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+bool consumeData(void);
+
+#if defined(TONEI2S_EXTENDED)
+#endif //TONEI2S_EXTENDED
+
+//********************************************* 
+void IRAM_ATTR onTimer() {
+//********************************************* 
+  portENTER_CRITICAL_ISR(&timerMux);
+  interruptCounter++;
+
+  consumeData();
+    
+  portEXIT_CRITICAL_ISR(&timerMux);
+ 
+}
+
+//********************************************* 
+bool consumeData(void) {
+//********************************************* 
+
+  while (actif) {
+/*    float rad = (float)phase / maxPhase * (float)PI2;
+    uint16_t sample = (sin(rad) + 1) * (int)((float)(COEF_AMP / 10) * VOLUME);   // Full amplitude: 127 en 8bits*/
+ //   Serial.println(sample);
+ //  uint32_t s32;
+ //   s32 = (sample << 16) | (sample & 0xffff);
+
+     float    f = ((float)VOLUME_I2S / 100) * TabSinus[(int)(ecartPhase * phase)];
+     uint16_t sample = (int)round(f) - 127;
+
+
+#ifdef  DAC_16B
+      uint16_t buffer[2];
+      buffer[0] = 0;      // Left channel
+      buffer[1] = sample; // right channel
+#else 
+      uint8_t buffer[4];
+      buffer[0] = 0;       // unused 
+      buffer[1] = 0;       // left channel
+      buffer[2] = 0;       // high byte (unused)
+      buffer[3] = sample;  //right chanel
+#endif
+      compteur++;
+  
+    if (!i2s_write_bytes((i2s_port_t)I2S_NUM, buffer , sizeof(uint32_t), 0)) {
+//      Serial.print("FULL DMA : ");
+//      Serial.println(compteur);
+      compteur = 0;
+      return false;
+    }
+    else
+    {
+     phase++;
+     if (phase >= maxPhase) {
+       phase = 0;
+     }
+
+     currentSample++;
+     if (currentSample > maxSample) {  //SAMPLE_RATE) {
+       currentSample = 0;
+       actif = false;
+       i2s_zero_dma_buffer((i2s_port_t)I2S_NUM);
+       i2s_stop((i2s_port_t)I2S_NUM);
+//       Serial.println("Fin du Beep");
+     }    
+    }  
+  }
+}
+
+/***********************************/
+void ToneI2SEsp32::init(void) {
+/***********************************/
+#ifdef SOUND_DEBUG
+	SerialPort.println("Init ToneI2SEsp32");
+	TRACE();
+#endif //SOUND_DEBUG
+
+#if defined(DAC_INTERNE) && defined(HAVE_AUDIO_AMPLI)
+
+//init Pin commande ampli
+
+#ifdef SOUND_DEBUG
+    SerialPort.println("AUDIO_AMP_INIT");
+#endif //SOUND_DEBUG
+
+  if (PIN_AUDIO_AMP_ENA != -1) {
+    pinMode(PIN_AUDIO_AMP_ENA,OUTPUT);
+    
+#ifdef SOUND_DEBUG
+    SerialPort.print("pin : ");
+    SerialPort.println(PIN_AUDIO_AMP_ENA);
+#endif //SOUND_DEBUG
+    
+#ifdef AUDIO_AMP_MODE_LOW
+    digitalWrite(PIN_AUDIO_AMP_ENA,LOW);
+#else
+    digitalWrite(PIN_AUDIO_AMP_ENA,HIGH);
+#endif  
+  }
+#endif
+    
+  // Initialize I2S with configurations above
+  i2s_driver_install((i2s_port_t)I2S_NUM, &i2s_config, 0, NULL);
+
+#ifdef DAC_INTERNE
+//  DAC Interne
+//  i2s_set_pin((i2s_port_t)I2S_NUM,NULL);
+  i2s_set_dac_mode((i2s_dac_mode_t)I2S_DAC_CHANNEL_RIGHT_EN);   // Pin 25
+#else
+  i2s_set_pin((i2s_port_t)I2S_NUM, &pin_config);
+#endif
+
+  for(int i=0; i<360;i++) {
+
+//    # Chaque donnée représente 1/360ème du cycle, la valeur de crête est 127
+    float f = 255.0 * sin( 3.14 * i / 180.0 );
+
+//    # Conversion en entier et transposition de la courbe vers des valeurs positives
+    int v = int( round(f) );  
+
+//    # Empêche de sortir de l’intervalle valide au cas où
+    if (v > 255) v = 255;
+    if (v < 0)   v = 0;
+
+    int16_t sample = v;
+//    Serial.println(sample); 
+    TabSinus[i] = sample;
+  }
+
+
+  timerI2S = timerBegin(2, 80, true);   // timer 0, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
+  timerAttachInterrupt(timerI2S, &onTimer, true);
+  timerAlarmWrite(timerI2S, 50000, true);  // 250000 * 1 us = 250 ms, autoreload true
+  timerAlarmEnable(timerI2S);
+
+	VOLUME_I2S         = 100;
+}
+
+/***********************************/
+void ToneI2SEsp32::init(uint32_t pin) {
+/***********************************/
+  init();
+}
+
+/***********************************/
+void ToneI2SEsp32::begin(uint32_t srate) {
+/***********************************/
+
+}
+
+/***********************************/
+void ToneI2SEsp32::tone(unsigned long frequency
+/***********************************/
+#ifdef TONEI2S_VOLUME
+            , uint8_t volume
+#endif
+#ifdef TONEI2S_LENGTH
+            , unsigned long length, uint8_t background
+#endif
+	    ) {
+
+  /* check if no tone */ 
+  if (toneDACMuted || frequency == 0
+#ifdef TONEI2S_VOLUME     
+      || volume == 0
+#endif
+      ) { noTone(); return; } 
+
+#ifdef TONEDAC_DEBUG	
+	SerialPort.print("volume ToneXTDacEsp32 = ");
+	SerialPort.println(volume);
+#endif //TONEDAC_DEBUG
+			
+  /* check volume */
+#ifdef TONEI2S_VOLUME
+  if (volume > 100) volume = 100;
+	if (_tDAC_volume != volume) 
+	  {
+	    _tDAC_volume = volume;
+			VOLUME_I2S = _tDAC_volume;
+			uint8_t scaleVolume;
+		}
+#endif
+
+//	DacAudio.DacVolume=_tDAC_volume;
+
+  if (frequency > 10000) frequency = 10000;
+	_frequency = frequency;
+	
+#ifdef HAVE_AUDIO_AMPLI
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_ENABLE();
+#endif //HAVE_AUDIO_AMPLI
+
+
+  portENTER_CRITICAL(&timerMux);
+  phase    = 0;  //maxPhase * 0.75;
+  compteur = 0;
+  maxPhase = (int)(SAMPLE_RATE  /_frequency); //WAVE_FREQ_HZ);
+  ecartPhase = 360 / maxPhase;
+  maxSample = (uint32_t)((SAMPLE_RATE / 1000) * CYCLE);
+  portEXIT_CRITICAL(&timerMux);
+
+#ifdef TONEDAC_DEBUG	
+	SerialPort.print("Max Sample : ");
+  SerialPort.println(maxSample);
+#endif //TONEDAC_DEBUG
+  
+  i2s_start((i2s_port_t)I2S_NUM);
+  portENTER_CRITICAL(&timerMux);
+  actif = true;  
+  portEXIT_CRITICAL(&timerMux);
+  
+  consumeData();
+
+
+#ifdef TONEI2S_LENGTH
+  if (length > 0 && background) {  // Background tone playing, returns control to your sketch.
+
+    _tDAC_time = millis() + length; // Set when the note should end.
+    //TODO !!!                     // Activate the timer interrupt.
+  }
+
+  if (length > 0 && !background) { delay(length); noToneDAC(); } // Just a simple delay, doesn't return control untill finished.
+#endif
+}
+
+/***********************************/
+void ToneI2SEsp32::noTone() {
+/***********************************/
+	currentSample = 0;
+	actif = false;
+	i2s_zero_dma_buffer((i2s_port_t)I2S_NUM);
+	i2s_stop((i2s_port_t)I2S_NUM);
+			 
+#ifdef HAVE_AUDIO_AMPLI	
+  if (PIN_AUDIO_AMP_ENA != -1) AUDIO_AMP_DISABLE();
+#endif //HAVE_AUDIO_AMPLI
+}
+
+#ifdef TONEI2S_LENGTH
+// TODO !!! { // Timer interrupt vector.
+//  if (millis() >= _tAC_time) noToneAC(); // Check to see if it's time for the note to end.
+//}
+#endif
+
+/***********************************/
+void ToneI2SEsp32::toneMute(bool newMuteState) {
+/***********************************/
+  /* stop tone if needed */
+  if( newMuteState ) {
+    noTone();
+  }
+
+  /* save */
+  toneDACMuted = newMuteState;
+}
+
+
+#if defined(TONEI2S_EXTENDED)
+
+
+#endif //TONEDAC_EXTENDED
+
+/***********************************/
+uint8_t ToneI2SEsp32::getVolume()
+/***********************************/
+{
+  return _tDAC_volume;
+}
+
+/***********************************/
+void ToneI2SEsp32::AUDIO_AMP_DISABLE(void) {
+/***********************************/
+	digitalWrite(PIN_AUDIO_AMP_ENA,LOW);
+}
+
+/***********************************/
+void ToneI2SEsp32::AUDIO_AMP_ENABLE(void) {
+/***********************************/
+	digitalWrite(PIN_AUDIO_AMP_ENA,HIGH);
+}
+
+/***********************************/
+void ToneI2SEsp32::update(void) {
+/***********************************/
+}
+
+#endif //EPS32

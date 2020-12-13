@@ -1,0 +1,184 @@
+*****************
+MPU 9250 / MS5611
+*****************
+ 
+SDA_PIN 	21
+SCL_PIN 	22
+INT		13
+AD0		GND
+NCS <-> PS
+
+*******************
+Ecran EPaper 1.54''
+*******************
+
+CS/SS 		5
+DC 		17
+RST 		16
+BUSY 		4
+
+MOSI		15
+MISO		2
+SCK		14
+
+https://github.com/ZinggJM/GxEPD
+
+
+****
+LED
+**** 
+
+LED_BUILTIN 	22
+
+*******
+SDCard
+*******
+
+mySD.h
+
+M5Stack.h
+
+CS 		13
+MOSI		15
+MISO		2
+SCK		14
+
+*********
+Boutons
+*********
+
+M4Stack.h
+
+Bouton A	38
+Bouton B	37
+Bouton C	39
+
+************
+Speaker
+************
+
+PWM/DAC		25 
+PWM/DAC exter   26
+Shutdown	34
+
+ NS4148, http://www.chipsourcetek.com/Uploads/file/20151207193630_0605.pdf amplificateur audio mono 3W - Classe D connecté sur la pin GPIO 25
+
+(XT_DAC_Audio) for ESP32  http://www.xtronical.com/the-dacaudio-library-download-and-installation/ 
+
+
+******************
+GPS
+******************
+
+RX	IO19
+
+
+******************************
+Lecture de la charge batterie
+******************************
+
+tension  IO35	
+
+Les données sont imparfaites sur internet. Je suis reparti de la base: Le shéma du Adafuit ESP32 HUZZAH feather. 
+https://github.com/adafruit/Adafruit-HUZZAH32-ESP32-Feather-PCB
+
+On y voit que le "pont diviseur" entre VBAT et l'entrée analogique A13 "sacrifiée" à la tâche de mesure de la tension batterie 
+est constitué de deux résistances de 100K.
+
+            vbat
+             |
+            100k
+             |
+  A13 IO35 ---
+             |
+            100k
+             |
+            GND
+
+D'autre part dans le datasheet ESP32 on voit que l'ADC est sur 12 bits (0--4095) avec une "full range" à Vcc soit 
+environ 3.2V (3.29 dans mon cas)
+
+Donc :
+
+La tension mesurée est V bat / 2
+Le tout avec 0=0v et 4095=Vcc (3.2V)
+Donc de facon générique l'entrée analogique est convertie en Volts par
+
+U=analogRead/(4096/Vcc)
+Donc pour VBAT sur A13
+
+Vbat=2*analogRead/(4096/Vcc)
+
+
+/*********************************/
+Internal HALL Sensor
+/*********************************/
+
+/* 
+ *  Copyright (c) 2018, circuits4you.com
+ *  All rights reserved.
+ * 
+ * ESP32 Hall Sensor Example
+ */
+
+ #define LED 22
+ 
+//================================================
+//         Setup
+//================================================
+void setup() {
+  Serial.begin(115200);
+  pinMode(LED,OUTPUT);
+}
+
+//================================================
+//         Loop
+//================================================
+void loop() { 
+  int sensor = hallRead();  //Reads Hall sensor value
+  Serial.print("Sensor Reading:");
+  Serial.println(sensor);
+
+  digitalWrite(LED,(sensor < 0) ? HIGH : LOW); //On board LED detects presence of magnet
+  delay(500);
+}
+          
+		  
+/*************************************************
+Internal TEMPERATURE Sensor
+/*************************************************
+
+/* 
+ *  https://circuits4you.com
+ *  ESP32 Internal Temperature Sensor Example
+ */
+
+ #ifdef __cplusplus
+  extern "C" {
+ #endif
+
+  uint8_t temprature_sens_read();
+
+#ifdef __cplusplus
+}
+#endif
+
+uint8_t temprature_sens_read();
+//====================================================
+//         Setup
+//====================================================
+void setup() {
+  Serial.begin(115200);
+}
+
+//====================================================
+//         Loop
+//====================================================
+void loop() {
+  Serial.print("Temperature: ");
+  
+  // Convert raw temperature in F to Celsius degrees
+  Serial.print((temprature_sens_read() - 32) / 1.8);
+  Serial.println(" C");
+  delay(1000);
+}		  

@@ -1,0 +1,83 @@
+#ifndef toneI2S_ESP32_h
+#define toneI2S_ESP32_h
+
+/*****************************************************************************/
+/*                                                                           */
+/*                        Libraries ToneI2S ESP32                            */
+/*                                                                           */
+/*  version    Date        Description                                       */
+/*    1.0      26/08/20                                                      */
+/*                                                                           */
+/*****************************************************************************/
+
+#include <HardwareConfig.h>
+
+#if defined(ESP32) && defined(TONEI2S)
+
+#include <Arduino.h>
+
+#define TONEI2S_VOLUME  //set to have volume control
+//#define TONEI2S_LENGTH  //set to have length control
+//#define TONEI2S_EXTENDED
+	
+#if defined(TONEI2S_EXTENDED)
+#include <SPI.h>
+#include "SdFat.h"
+#endif //HAVE_SDCARD
+
+#include "driver/i2s.h"
+
+class ToneI2SEsp32 {
+
+	public: 
+    void init(void);
+		void init(uint32_t pin);
+	  void begin(uint32_t srate);
+		void end();
+    void tone(unsigned long frequency = 0
+#ifdef TONEI2S_VOLUME
+              , uint8_t volume = 100
+#endif
+#ifdef TONEI2S_LENGTH
+		          , unsigned long length = 0, uint8_t background = false
+#endif
+		);
+
+    void noTone();
+        /* mute/unmute setting */
+    void toneMute(bool newMuteState);
+		void update();
+		void Audio_Amp_Enable(void);
+
+#if defined(TONEI2S_EXTENDED)
+		
+#endif //TONEDAC_EXTENDED
+
+		uint8_t getVolume();
+		
+	private:
+
+		bool 			toneDACMuted = false;
+		uint32_t 	multiplicateur;
+		uint32_t 	_frequency;
+		
+		void AUDIO_AMP_DISABLE(void);
+		void AUDIO_AMP_ENABLE(void);			
+			
+#ifdef TONEI2S_LENGTH
+		unsigned long _tDAC_time; // Used to track end note with timer when playing note in the background.
+#endif
+
+		uint8_t _tDAC_volume = 100; 
+
+		uint16_t  CYCLE        =  500;  // msec
+		uint8_t   DUTY         =  100;  //%
+
+};
+
+#endif //ESP32
+#endif
+	
+	
+
+
