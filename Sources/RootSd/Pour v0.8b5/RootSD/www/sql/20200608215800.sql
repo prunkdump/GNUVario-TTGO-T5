@@ -1,0 +1,22 @@
+CREATE TABLE "flight" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"site_id"	INTEGER,
+	"filename"	TEXT,
+	"md5"	TEXT,
+	"pilot"	TEXT,
+	"wing"	TEXT,
+	"flight_date"	TEXT,
+	"start_flight_time"	TEXT,
+	"end_flight_time"	TEXT,
+	"start_height"	INTEGER,
+	"end_height"	INTEGER,
+	"min_height"	INTEGER,
+	"max_height"	INTEGER,
+	"start_lat"	NUMERIC,
+	"start_lon"	NUMERIC,
+	"end_lat"	NUMERIC,
+	"end_lon"	NUMERIC,
+	"comment"	TEXT,
+	"minimap"	TEXT,
+	FOREIGN KEY("site_id") REFERENCES "site"("id")
+)
