@@ -1154,7 +1154,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 #endif //SCREEN_DEBUG
 
 		varioData.flystat.GetDuration(tmpTime);	
-		sprintf(tmpbuffer,"duree : %02d:%02d",tmpTime[2],tmpTime[1]); 
+		sprintf(tmpbuffer,"%s : %02d:%02d",varioLanguage.getText(TITRE_STAT_DUREE), tmpTime[2],tmpTime[1]); 
 		display.setCursor(0, 90);
 		display.print(tmpbuffer);
 
@@ -1184,7 +1184,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 	 
    double tmpSpeed = varioData.flystat.GetSpeed();
 	 if (tmpSpeed > 1000) tmpSpeed = 999;
-	 sprintf(tmpbuffer,"Vitesse : %3.0f",tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
+	 sprintf(tmpbuffer,"%s : %3.0f",varioLanguage.getText(TITRE_STAT_SPEED), tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
 	 display.setCursor(0, 190);
 	 display.print(tmpbuffer);
 	 display.drawLine(0, 20, 128, 20, GxEPD_BLACK);
@@ -1229,7 +1229,7 @@ void VarioScreen::ScreenViewWifi(String SSID, String IP)
 		display.setCursor(0, 150);
 		display.print(SSID);
 
-		display.setCursor(10, 220);
+		display.setCursor(3, 220);
 		display.print(IP);
 		
 #ifdef SCREEN_DEBUG

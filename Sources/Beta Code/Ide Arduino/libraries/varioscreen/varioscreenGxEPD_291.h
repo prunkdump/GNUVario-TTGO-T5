@@ -93,13 +93,13 @@
 #define MAX_CAR_TITRE_STAT        	11
 #define MAX_CAR_TITRE_DATE 					4
 #define MAX_CAR_TITRE_HEURE					5
-#define MAX_CAR_TITRE_DUREE 				5
+#define MAX_CAR_TITRE_DUREE 				11
 #define MAX_CAR_TITRE_VITESSE 			7
 #define MAX_CAR_TITRE_CONNECT   		10
 #define MAX_CAR_TITRE_CONNECTA	  	13
 #define MAX_CAR_TITRE_DEMAR     		9
 #define MAX_CAR_TITRE_REDEMAR     	11
-#define MAX_CAR_TITRE_ENCOURS 			8				
+#define MAX_CAR_TITRE_ENCOURS 			11				
 #define MAX_CAR_TITRE_CALIBR   			12
 #define MAX_CAR_TITRE_VEILLE				14			
 #define MAX_CAR_TITRE_CHARGE 				9
