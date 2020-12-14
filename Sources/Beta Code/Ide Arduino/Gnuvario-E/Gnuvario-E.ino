@@ -301,7 +301,9 @@
 *                01/12/20            Correction bug IGC                                               *
 *                                    maj lib busyIo                                                   *
 *                                    Modif page web                                                   *
-*                                    Mise à jour carte ESP32 IDE Arduino                              *
+*                13/12/20            Mise à jour lib GxEpd2, ...                                      *
+*                                    Correction variolanguage                                         *
+*                                    Correction varioscreenepd291                                     *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -323,13 +325,9 @@
 * AJOUT - Deep-Sleep charge batterie                                                                  *
 * BUG   - % batterie au démmarage                                                                     *
 * BUG   - intergration - bip continu                                                                  *
-* BUG   - update manuelle - doit être lancée 2 fois                                                   *
 * MODIF - Altitude calibrée dans IGC                                                                  *                                                                                                    
 * BUG   - Modification des paramètres wifi                                                            *
 * BUG   - Saisie des sites de vol                                                                     * 
-* BUG   - Mise à jour n'affiche pas la version                                                        *
-* BUG   - carnet de vol - previsu carte est vide                                                      *
-* buG   - carnet de vol - info n'affiche rien                                                         *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
