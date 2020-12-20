@@ -24,7 +24,7 @@
 				"STAT": "Statistics",
 				"DATE": "Date",
 				"HEURE":"Time",
-				"DUREE": "Flight time",
+				"DUREE": "F. time",
 				"VITESSE": "Speed",
 				"CONNECT": "Connection",
 				"CONNECTA": "Connected to ",
