@@ -304,6 +304,7 @@
 *                13/12/20            Mise à jour lib GxEpd2, ...                                      *
 *                                    Correction variolanguage                                         *
 *                                    Correction varioscreenepd291                                     *
+*                20/12/20            Correction d'affichage                                           *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *

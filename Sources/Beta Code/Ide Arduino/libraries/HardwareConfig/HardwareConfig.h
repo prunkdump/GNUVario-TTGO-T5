@@ -382,4 +382,10 @@
 #define HAVE_BLUETOOTH
 #endif
 
+#if defined(HAVE_WIFI) && defined(HAVE_BLUETOOTH) && defined(HAVE_BLE)
+// 							OUTPUT SERIALNMEA
+//#define SERIAL_NMEA_SERIAL_OUTPUT
+#define SERIAL_NMEA_BLUETOOTH_OUTPUT
+#endif
+
 #endif

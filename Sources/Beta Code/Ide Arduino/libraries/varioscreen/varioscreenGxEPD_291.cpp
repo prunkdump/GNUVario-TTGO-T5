@@ -31,17 +31,17 @@
  *    1.0.2  06/10/19   Mise à jour ratamuse                                     *
  *    1.0.3  13/10/19   Integration au GnuVario                                  *
  *                      Ajout wind                                               *
- *    1.0.4  16/11/19   Modif updateScreen										 									 *    
- *	  1.0.5	 11/01/20		Modif ScreenViewPage						     	 									 *
+ *    1.0.4  16/11/19   Modif updateScreen										 *    
+ *	  1.0.5	 11/01/20		Modif ScreenViewPage						     	 *
  *                      VARIOSCREEN_SIZE == 290                                  *
- *    1.0.6  17/01/20   Desactivation effacement ligne 1534						 					 *
+ *    1.0.6  17/01/20   Desactivation effacement ligne 1534						 *
  *    1.0.7  18/01/20   Modif  ScreenViewMessage                                 *
  *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
  *    1.0.9  03/02/20   changement de nom passage de 29 à 290                    *
  *    1.0.10 09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
  *    1.0.11 17/02/20   Ajout 2.90 et 2.91                                       *
  *                      Ajout FONTLARGE / FONTNORMAL                             *
- *    1.0.11 25/02/20   Ajout ScreenBackground									                 *	
+ *    1.0.11 25/02/20   Ajout ScreenBackground									 *	
  *    1.0.12 04/03/20   Réorganisation de l'affichage des variable               *  
  *    1.0.13 04/03/20   Ajout affichage alti agl                                 *
  *    1.0.14 07/03/20   Correction xSemaphore                                    *
@@ -52,12 +52,13 @@
  *    1.1.2  11/05/20   Effacement zones multi                                   *
  *    1.1.3  14/05/20   Raffraichissement de l'écran toutes les 15min            *
  *    1.1.4  17/05/20   Ajout position titre avac setPositionTitle               *
- *		1.1.5  23/05/20   Passage vario en -XX.X								  								 *
+ *		1.1.5  23/05/20   Passage vario en -XX.X								 *
  *    1.1.6  27/07/20   Affichage de la batterie au démarrage                    *
  *    1.1.7  04/10/20   Modification position finesse                            *
  *                      Modification position titre finesse                      *
  *    1.1.8  19/10/20   Ajout ScreenViewBattery(boolean clear)                   *
- *    1.1.9  26/10/20   Correction Aleksandr Stroganov <a.stroganov@me.com>      *    
+ *    1.1.9  26/10/20   Correction Aleksandr Stroganov <a.stroganov@me.com>      *
+ *    1.1.10 19/12/20   Modification affichage des titres P. FRANCIA             *
  *                                                                               *
  *********************************************************************************/
  
@@ -1136,7 +1137,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
     SerialPort.println("");		
 #endif //SCREEN_DEBUG
 		
-		sprintf(tmpbuffer,"Date : %02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
+		sprintf(tmpbuffer,"Date: %02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
 		display.setCursor(0, 40);
 		display.print(tmpbuffer);
 
@@ -1154,7 +1155,7 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 #endif //SCREEN_DEBUG
 
 		varioData.flystat.GetDuration(tmpTime);	
-		sprintf(tmpbuffer,"%s : %02d:%02d",varioLanguage.getText(TITRE_STAT_DUREE), tmpTime[2],tmpTime[1]); 
+		sprintf(tmpbuffer,"%s: %02d:%02d",varioLanguage.getText(TITRE_DUREE), tmpTime[2],tmpTime[1]); 
 		display.setCursor(0, 90);
 		display.print(tmpbuffer);
 
@@ -1164,27 +1165,27 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 
     double tmpAlti = varioData.flystat.GetAlti();
 		if (tmpAlti > 9999) tmpAlti = 9999;
-		sprintf(tmpbuffer,"Alti Max : %3.0f",tmpAlti); 
+		sprintf(tmpbuffer,"Alti Max: %3.0f",tmpAlti); 
 		display.setCursor(0, 115);
 		display.print(tmpbuffer);
 	 
    double tmpVarioMin = varioData.flystat.GetVarioMin();
 	 if (tmpVarioMin > 10) tmpVarioMin = 9.9;
 	 if (tmpVarioMin < -10) tmpVarioMin = -9.9;
-	 sprintf(tmpbuffer,"Vario Min : %1.1f",tmpVarioMin); 
+	 sprintf(tmpbuffer,"Vario Min: %1.1f",tmpVarioMin); 
 	 display.setCursor(0, 140);
 	 display.print(tmpbuffer);
 
    double tmpVarioMax = varioData.flystat.GetVarioMax();
 	 if (tmpVarioMax > 10) tmpVarioMax = 9.9;
 	 if (tmpVarioMax < -10) tmpVarioMax = -9.9;
-	 sprintf(tmpbuffer,"Vario Max : %1.1f",tmpVarioMax); 
+	 sprintf(tmpbuffer,"Vario Max: %1.1f",tmpVarioMax); 
 	 display.setCursor(0, 165);
 	 display.print(tmpbuffer);
 	 
    double tmpSpeed = varioData.flystat.GetSpeed();
 	 if (tmpSpeed > 1000) tmpSpeed = 999;
-	 sprintf(tmpbuffer,"%s : %3.0f",varioLanguage.getText(TITRE_STAT_SPEED), tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
+	 sprintf(tmpbuffer,"%s: %3.0f",varioLanguage.getText(TITRE_SPEED), tmpSpeed); //%02d.%02d.%02d", tmpDate[0],tmpDate[1],tmpDate[2]);
 	 display.setCursor(0, 190);
 	 display.print(tmpbuffer);
 	 display.drawLine(0, 20, 128, 20, GxEPD_BLACK);

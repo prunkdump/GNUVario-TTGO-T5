@@ -28,12 +28,12 @@
  *    1.0    24/09/19                                                            *
  *    1.0.1  28/09/19   Modification des noms des librairies                     *
  *    1.0.2  09/10/19   Ajout showtitle                                          *
- *    1.0.3	 13/10/19		Ajout Wind																							 *	
- *    1.0.4  07/11/19   Modif updateScreen																			 *
- *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
+ *    1.0.3	 13/10/19		Ajout Wind											 *	
+ *    1.0.4  07/11/19   Modif updateScreen										 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage									 *
  *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
  *    1.0.6  17/01/20   Desactivation effacement ligne 1427                      *
- *    1.0.7  20/01/20   Modif ScreenViewReboot																	 *
+ *    1.0.7  20/01/20   Modif ScreenViewReboot									 *
  *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
  *    1.0.9  09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
  *    1.0.10 17/02/20   Ajout large (font) varioscreenDigit                      *
@@ -46,10 +46,11 @@
  *    1.1.1  10/05/20   Correction affichage screenTime (:/h)                    *
  *    1.1.2  11/05/20   Effacement zones multi                                   *
  *    1.1.3  17/05/20   Ajout position titre avac setPositionTitle               *
- *		1.1.4  23/05/20   Passage vario en -XX.X								  								 *
+ *	  1.1.4  23/05/20   Passage vario en -XX.X						     		 *
  *    1.1.5  27/07/20   Affichage de la batterie au démarrage                    *
  *    1.1.6  27/09/20   Ajout DISPLAY_LIGHT                                      *
  *    1.1.7  19/10/20   Ajout ScreenViewBattery(boolean clear)                   *
+ *    1.1.8  19/12/20   Modification affichage des titres P. FRANCIA             *
  *                                                                               *
  *********************************************************************************/
 
@@ -82,27 +83,27 @@
 #define MAX_CAR_TITRE_AGL 					8 
 #define MAX_CAR_TITRE_VARIO 				5
 #define MAX_CAR_TITRE_SPEED					7
-#define MAX_CAR_TITRE_FINESSE   		7
+#define MAX_CAR_TITRE_FINESSE   		    7
 #define MAX_CAR_TITRE_TCHUTE				7 
-#define MAX_CAR_TITRE_CAP						3
-#define MAX_CAR_TITRE_LAT						3
+#define MAX_CAR_TITRE_CAP					3
+#define MAX_CAR_TITRE_LAT					3
 #define MAX_CAR_TITRE_LONG 					4
 #define MAX_CAR_TITRE_COMPAS 				6
-#define MAX_CAR_TITRE_STAT        	11
+#define MAX_CAR_TITRE_STAT        	        12
 #define MAX_CAR_TITRE_DATE 					4
 #define MAX_CAR_TITRE_HEURE					5
-#define MAX_CAR_TITRE_DUREE 				5
-#define MAX_CAR_TITRE_VITESSE 			7
-#define MAX_CAR_TITRE_CONNECT   		10
-#define MAX_CAR_TITRE_CONNECTA	  	13
-#define MAX_CAR_TITRE_DEMAR     		9
-#define MAX_CAR_TITRE_REDEMAR     	11
-#define MAX_CAR_TITRE_ENCOURS 			8				
-#define MAX_CAR_TITRE_CALIBR   			12
+#define MAX_CAR_TITRE_DUREE 				11
+#define MAX_CAR_TITRE_VITESSE 			    7
+#define MAX_CAR_TITRE_CONNECT   	     	10
+#define MAX_CAR_TITRE_CONNECTA	  	        13
+#define MAX_CAR_TITRE_DEMAR     		    9
+#define MAX_CAR_TITRE_REDEMAR     	        11
+#define MAX_CAR_TITRE_ENCOURS 			    11				
+#define MAX_CAR_TITRE_CALIBR   			    12
 #define MAX_CAR_TITRE_VEILLE				14			
 #define MAX_CAR_TITRE_CHARGE 				9
-#define MAX_CAR_TITRE_CHARGER 			7
-#define MAX_CAR_TITRE_BATTERIE 			8
+#define MAX_CAR_TITRE_CHARGER 			    7
+#define MAX_CAR_TITRE_BATTERIE 		    	8
 
 /******************************/
 /* The screen zone multi      */ 

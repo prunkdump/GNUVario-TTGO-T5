@@ -62,12 +62,6 @@
 
 #if defined(ENABLE_DEBUG)
 
-
-// 							OUTPUT SERIALNMEA
-//#define SERIAL_NMEA_SERIAL_OUTPUT
-#define SERIAL_NMEA_BLUETOOTH_OUTPUT
-
-
 //              DEBUGING MODE
 #define PROG_DEBUG			  //debug principal program
 //#define HARDWARE_DEBUG
@@ -76,7 +70,7 @@
 //#define DEBUG_SERIAL_NMEA_1
 //#define SCREEN_DEBUG
 //#define SCREEN_DEBUG2
-//#define GPS_DEBUG
+#define GPS_DEBUG
 //#define BUTTON_DEBUG
 //#define TONEDAC_DEBUG
 //#define MS5611_DEBUG
@@ -97,5 +91,15 @@
 //#define TWOWIRESCH_DEBUG
 //#define POWER_DEBUG
 //#define MEMORY_DEBUG
+
+#ifdef GPS_DEBUG
+#define SERIAL_NMEA_SERIAL_OUTPUT
+#endif
+
 #endif //ENABLE_DEBUG
+
+// 							OUTPUT SERIALNMEA
+//#define SERIAL_NMEA_SERIAL_OUTPUT
+//#define SERIAL_NMEA_BLUETOOTH_OUTPUT
+
 #endif

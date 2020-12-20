@@ -30,11 +30,11 @@
  *    1.0.2  06/10/19   Mise à jour ratamuse                                     *
  *    1.0.3  13/10/19   Integration au GnuVario                                  *
  *                      Ajout Wind                                               *
- *    1.0.4  16/11/19   Modif updateScreen																			 *
- *    1.0.5  11/01/20   Modif ScreenViewPage																		 *
+ *    1.0.4  16/11/19   Modif updateScreen										 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage									 *
  *                      Modif VARIOSCREEN_SIZE == 290                            *
  *    1.0.6  17/01/20   Desactivation effacement ligne 1427                      *
- *    1.0.7  20/01/20   Modif ScreenViewReboot																	 *
+ *    1.0.7  20/01/20   Modif ScreenViewReboot									 *
  *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
  *    1.0.9  03/02/20   changement de nom passage de 29 à 290                    *
  *    1.0.10 09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
@@ -47,10 +47,11 @@
  *    1.0.16 08/04/20   Modification affichage des titres                        *
  *    1.1.0  29/04/20   Changement de font - repositionnement                    *
  *    1.1.3  17/05/20   Ajout position titre avac setPositionTitle               *
- *		1.1.4  23/05/20   Passage vario en -XX.X								  								 *
- *		1.1.5  23/05/20   Passage vario en -XX.X								  								 *
- *    1.1.6  27/07/20   Affichage de la batterie au démarrage                    *
- *    1.1.7  19/10/20   Ajout ScreenViewBattery(boolean clear)                   *
+ *	  1.1.4  23/05/20   Passage vario en -XX.X								     *
+ *	  1.1.5  23/05/20   Passage vario en -XX.X								     *
+ *    1.1.6  27/07/20    Affichage de la batterie au démarrage                   *
+ *    1.1.7  19/10/20    Ajout ScreenViewBattery(boolean clear)                  *
+ *    1.1.8  19/12/20    Modification affichage des titres P. FRANCIA            *
  *                                                                               *
  *********************************************************************************/
 
@@ -80,27 +81,27 @@
 #define MAX_CAR_TITRE_AGL 					8 
 #define MAX_CAR_TITRE_VARIO 				5
 #define MAX_CAR_TITRE_SPEED					7
-#define MAX_CAR_TITRE_FINESSE   		7
+#define MAX_CAR_TITRE_FINESSE   		    7
 #define MAX_CAR_TITRE_TCHUTE				7 
-#define MAX_CAR_TITRE_CAP						3
-#define MAX_CAR_TITRE_LAT						3
+#define MAX_CAR_TITRE_CAP					3
+#define MAX_CAR_TITRE_LAT					3
 #define MAX_CAR_TITRE_LONG 					4
 #define MAX_CAR_TITRE_COMPAS 				6
-#define MAX_CAR_TITRE_STAT        	11
+#define MAX_CAR_TITRE_STAT        	        12
 #define MAX_CAR_TITRE_DATE 					4
 #define MAX_CAR_TITRE_HEURE					5
-#define MAX_CAR_TITRE_DUREE 				5
-#define MAX_CAR_TITRE_VITESSE 			7
-#define MAX_CAR_TITRE_CONNECT   		10
-#define MAX_CAR_TITRE_CONNECTA	  	13
-#define MAX_CAR_TITRE_DEMAR     		9
-#define MAX_CAR_TITRE_REDEMAR     	11
-#define MAX_CAR_TITRE_ENCOURS 			8				
-#define MAX_CAR_TITRE_CALIBR   			12
+#define MAX_CAR_TITRE_DUREE 				11
+#define MAX_CAR_TITRE_VITESSE 			    7
+#define MAX_CAR_TITRE_CONNECT   		    10
+#define MAX_CAR_TITRE_CONNECTA	  	        13
+#define MAX_CAR_TITRE_DEMAR     		    9
+#define MAX_CAR_TITRE_REDEMAR     	        11
+#define MAX_CAR_TITRE_ENCOURS 			    11				
+#define MAX_CAR_TITRE_CALIBR   			    12
 #define MAX_CAR_TITRE_VEILLE				14			
 #define MAX_CAR_TITRE_CHARGE 				9
-#define MAX_CAR_TITRE_CHARGER 			7
-#define MAX_CAR_TITRE_BATTERIE 			8
+#define MAX_CAR_TITRE_CHARGER 		     	7
+#define MAX_CAR_TITRE_BATTERIE 			    8
 
 /******************************/
 /* The screen zone multi      */ 
