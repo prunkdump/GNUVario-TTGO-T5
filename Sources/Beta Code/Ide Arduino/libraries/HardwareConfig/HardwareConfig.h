@@ -220,8 +220,8 @@
 /* What type of barometric altitude is sent :           */
 /* -> Based on international standard atmosphere        */
 /* -> Calibrated with GPS altitude                      */
-//#define VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
-//#define VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
+#define VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
+#define VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
 
 /* What type of vario NMEA sentence is sent by bluetooth. */
 /* Possible values are :                                  */

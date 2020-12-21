@@ -385,6 +385,12 @@ void VarioWifi::startWebServer()
         },
         varioWebHandler.handleFileUpload);
 
+    // sauvegarde du contenu du fichier wifi
+    server.on("/wifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+            // le reponse est envoyé par le handler sur le body
+        },
+        NULL, varioWebHandler.handleSaveWifi);
+
     //creation d'un fichier ou d'un repertoire
     server.on(
         "/create", HTTP_PUT, [](AsyncWebServerRequest *request) {
@@ -396,13 +402,6 @@ void VarioWifi::startWebServer()
     server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(varioWebHandler.handleWifi(request));
     });
-
-    // sauvegarde du contenu du fichier wifi
-    server.on(
-        "/wifi", HTTP_POST, [](AsyncWebServerRequest *request) {
-            // le reponse est envoyé par le handler sur le body
-        },
-        NULL, varioWebHandler.handleSaveWifi);
 
     //récupération du contenu du fichier preference
     server.on("/webconfig", HTTP_GET, [](AsyncWebServerRequest *request) {

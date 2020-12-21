@@ -16,6 +16,8 @@
 #include <sdcardHAL.h>
 #endif
 
+#include "VarioSettings.h"
+
 #include "VarioSqlFlight.h"
 #include <ArduinoJson.h>
 
@@ -598,8 +600,9 @@ bool VarioSqlFlight::insertSite(String data)
     SerialPort.println(data);
 #endif //SQL_DEBUG
 
-    DynamicJsonDocument doc(4096);
-    DeserializationError err = deserializeJson(doc, data);
+		GnuSettings.doc.clear();
+//    DynamicJsonDocument doc(4096);
+    DeserializationError err = deserializeJson(GnuSettings.doc, data);
     if (err)
     {
 #ifdef SQL_DEBUG
@@ -642,10 +645,10 @@ bool VarioSqlFlight::insertSite(String data)
     SerialPort.println("Début binding");
 #endif //SQL_DEBUG
 
-    sqlite3_bind_text(res, 1, doc["lib"], strlen(doc["lib"]), SQLITE_STATIC);
-    sqlite3_bind_text(res, 2, doc["comment"], strlen(doc["comment"]), SQLITE_STATIC);
-    sqlite3_bind_double(res, 3, doc["lat"]);
-    sqlite3_bind_double(res, 4, doc["lon"]);
+    sqlite3_bind_text(res, 1, GnuSettings.doc["lib"], strlen(GnuSettings.doc["lib"]), SQLITE_STATIC);
+    sqlite3_bind_text(res, 2, GnuSettings.doc["comment"], strlen(GnuSettings.doc["comment"]), SQLITE_STATIC);
+    sqlite3_bind_double(res, 3, GnuSettings.doc["lat"]);
+    sqlite3_bind_double(res, 4, GnuSettings.doc["lon"]);
 
 #ifdef SQL_DEBUG
     Serial.printf("Début step");
@@ -687,8 +690,10 @@ bool VarioSqlFlight::updateSite(uint8_t id, String data)
     SerialPort.println(data);
 #endif //SQL_DEBUG
 
-    DynamicJsonDocument doc(4096);
-    DeserializationError err = deserializeJson(doc, data);
+		GnuSettings.doc.clear();
+
+//    DynamicJsonDocument doc(4096);
+    DeserializationError err = deserializeJson(GnuSettings.doc, data);
     if (err)
     {
 #ifdef SQL_DEBUG
@@ -731,10 +736,10 @@ bool VarioSqlFlight::updateSite(uint8_t id, String data)
     SerialPort.println("Début binding");
 #endif //SQL_DEBUG
 
-    sqlite3_bind_text(res, 1, doc["lib"], strlen(doc["lib"]), SQLITE_STATIC);
-    sqlite3_bind_text(res, 2, doc["comment"], strlen(doc["comment"]), SQLITE_STATIC);
-    sqlite3_bind_double(res, 3, doc["lat"]);
-    sqlite3_bind_double(res, 4, doc["lon"]);
+    sqlite3_bind_text(res, 1, GnuSettings.doc["lib"], strlen(GnuSettings.doc["lib"]), SQLITE_STATIC);
+    sqlite3_bind_text(res, 2, GnuSettings.doc["comment"], strlen(GnuSettings.doc["comment"]), SQLITE_STATIC);
+    sqlite3_bind_double(res, 3, GnuSettings.doc["lat"]);
+    sqlite3_bind_double(res, 4, GnuSettings.doc["lon"]);
     sqlite3_bind_int(res, 5, id);
 
 #ifdef SQL_DEBUG

@@ -305,6 +305,10 @@
 *                                    Correction variolanguage                                         *
 *                                    Correction varioscreenepd291                                     *
 *                20/12/20            Correction d'affichage                                           *
+*                                    Correstion ajout site (page wifi)                                *
+*                                    Correction enregistrement ICG Altitude calibrée                  *         
+*                                    Correction bug son en continu - vario integré                    *
+*                                    Correction gestion memoire json                                  *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -318,17 +322,13 @@
 *                                                                                                     *        
 * v0.8                                                                                                *       
 * BUG   - Grésillement Buzzer                                                                         * 
-* BUG   - altitude enregistré non compensé                                                            *
 * AJOUT - alti GPS                                                                                    *
 * BUG   - derive alti                                                                                 *
 * BUG   - sensibilité vario                                                                           *
 * BUG   - compas GPS à verifier / problème compas magnétique                                          *
 * AJOUT - Deep-Sleep charge batterie                                                                  *
-* BUG   - % batterie au démmarage                                                                     *
-* BUG   - intergration - bip continu                                                                  *
-* MODIF - Altitude calibrée dans IGC                                                                  *                                                                                                    
+* BUG   - intergration - bip continu  - A tester                                                      *
 * BUG   - Modification des paramètres wifi                                                            *
-* BUG   - Saisie des sites de vol                                                                     * 
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *

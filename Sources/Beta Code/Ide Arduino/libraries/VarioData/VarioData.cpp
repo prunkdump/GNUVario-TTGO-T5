@@ -34,6 +34,7 @@
  *    1.0.5  27/06/20   Ajout varioxbeeper                                       *
  *    1.0.6  30/07/20   Ajout gestion valeur maximum des données                 *
  *    1.0.7  27/09/20   Ajout test sur lecture des fichiers de config            *
+ *    1.0.8  21/12/20   Mofig updateBeeper                                       *
  *                                                                               *
  *********************************************************************************
  */
@@ -867,6 +868,7 @@ void VarioData::updateBeeper(void)
 	if (GnuSettings.VARIOMETER_INTEGRATED_CLIMB_RATE)
 	{
 		if (haveNewClimbRateDataBuzzer) beeper.setVelocity(climbRateBuzzer);
+		else														beeper.setVelocity(0);
 	}
 	else
 	{
@@ -1625,23 +1627,31 @@ float constrainAngle360(float dta) {
 */		
 		
 		if (twScheduler.haveMag() ) {
-/*			double northVector[2];
+			double northVector[2];
+			double northVectorNorm[2];
 			twScheduler.getNorthVector(vertVector,  northVector);
 			 
 			double norm = sqrt(northVector[0]*northVector[0]+northVector[1]*northVector[1]);
-			northVector[0] = northVector[0]/norm;
-			northVector[1] = northVector[1]/norm;
+			northVectorNorm[0] = northVector[0]/norm;
+			northVectorNorm[1] = northVector[1]/norm;
 			
 			DUMP(northVector[0]);
 			DUMP(northVector[1]);
+
+			DUMP(northVectorNorm[0]);
+			DUMP(northVectorNorm[1]);
 			
-			int tmpcap = 180 - atan2(northVector[1],northVector[0]) * 180/M_PI;
+			bearing = (atan2(northVectorNorm[1],northVectorNorm[0]) * 180/M_PI) + 180;
+			
+			DUMP(bearing);
+			
+/*			int tmpcap = 180 - atan2(northVector[1],northVector[0]) * 180/M_PI;
 			
 //			tmpcap = 360 - tmpcap;
 			
 			DUMP(tmpcap);*/
 			
-			int16_t magVector[3];
+/*			int16_t magVector[3];
 			int tmpcap;
 			twScheduler.getRawMag(magVector);
 
@@ -1707,11 +1717,11 @@ float constrainAngle360(float dta) {
 				moyCap = 0;
 				nbMesureCap = 0;				
 			}*/
-			
+/*			
 			bearing = tmpcap;
 			 
 			DUMP(bearing); 
-//			return bearing;
+//			return bearing;*/
 		}
 		else {
 			bearing = -1;
@@ -1727,8 +1737,8 @@ float constrainAngle360(float dta) {
 		return 0;
 	}
 	
-	if (bearing > 360) bearing = bearing - 360;
-	if (bearing < 0)   bearing = 360 + bearing;
+/*	if (bearing > 360) bearing = bearing - 360;
+	if (bearing < 0)   bearing = 360 + bearing;*/
 	return bearing;
 }
 

@@ -70,7 +70,7 @@
 //#define DEBUG_SERIAL_NMEA_1
 //#define SCREEN_DEBUG
 //#define SCREEN_DEBUG2
-#define GPS_DEBUG
+//#define GPS_DEBUG
 //#define BUTTON_DEBUG
 //#define TONEDAC_DEBUG
 //#define MS5611_DEBUG
@@ -81,9 +81,9 @@
 //#define VOLTAGE_DIVISOR_DEBUG
 //#define SDCARD_DEBUG
 //#define IGC_DEBUG
-//#define DATA_DEBUG
+#define DATA_DEBUG
 //#define BT_DEBUG
-#define WIFI_DEBUG
+//#define WIFI_DEBUG
 //#define SOUND_DEBUG
 //#define AGL_DEBUG
 //#define SQL_DEBUG
