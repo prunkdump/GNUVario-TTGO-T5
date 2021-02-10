@@ -1,6 +1,12 @@
 ArduinoTrace: changelog
 =======================
 
+1.2.0 (2021/02/07)
+------------------
+
+* Added `BREAK()` macro (issue #8)
+* Fixed `ARDUINOTRACE_ENABLE_FULLPATH` being overwritten
+
 1.1.2 (2020/03/20)
 ------------------
 

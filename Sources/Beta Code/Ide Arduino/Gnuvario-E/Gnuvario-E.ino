@@ -309,6 +309,7 @@
 *                                    Correction enregistrement ICG Altitude calibrée                  *         
 *                                    Correction bug son en continu - vario integré                    *
 *                                    Correction gestion memoire json                                  *
+*                09/02/21            Ajout gestion écran 2.9'' V2 - 292                               *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -1425,7 +1426,7 @@ void loop()
 
       screen.gpsBearing->setValue(tmpcap);
       screen.gpsBearingText->setValue(bearingStr);
-#if (VARIOSCREEN_SIZE == 291)
+#if ((VARIOSCREEN_SIZE == 291) && (VARIOSCREEN_SIZE == 292))
       screen.bearing->setValue(tmpcap);
       screen.bearingText->setValue(bearingStr);
 #endif

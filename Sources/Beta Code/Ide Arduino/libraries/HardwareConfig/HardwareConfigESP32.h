@@ -134,13 +134,13 @@ Fly stat        0xD0		26+2
 
 /* Version PCB 															 */
 /* 0 pas de PCB definit										 	 */
-/* 1 PCB V1 pour TTGO-T5 version 1.64''   	 */
-/* 2 PCB V2 pour TTGO-T5 version 1.64 et 2.9 */
+/* 1 PCB V1 pour TTGO-T5 version 1.54''   	 */
+/* 2 PCB V2 pour TTGO-T5 version 1.54 et 2.9 */
 /* 3 PCB V3 pour TTGO-T5 version 2.9''       */
 
 #if (VARIOVERSION == 154) 
 #define PCB_VERSION 1
-#elif ((VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 254)) 
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 254) || (VARIOVERSION == 292) || (VARIOVERSION == 293)) 
 #define PCB_VERSION 2
 #elif ((VARIOVERSION == 390) || (VARIOVERSION == 391)) 
 #define PCB_VERSION 3

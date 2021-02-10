@@ -38,6 +38,8 @@
 /*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
 /*    1.0.10 27/09/20   Ajout DISPLAY_LIGHT                                      */
 /*    1.0.11 05/10/20   Ajout gestion PCB3																			 */
+/*    1.0.12 07/12/20   Ajout PCB V3.5                                           */
+/*    1.0.13 10/12/20   Ajout display orientation                                */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -45,9 +47,14 @@
 //#define VARIOVERSION 154     //Version 1 avec ecran 1.54
 //#define VARIOVERSION 254     //Version 2 avec ecran 1.54
 //#define VARIOVERSION 290     //Version 2 avec ecran 2.90 paysage
-#define VARIOVERSION 291     //Version 2 avec ecran 2.90 portrait
+//#define VARIOVERSION 291       //Version 2 avec ecran 2.90 portrait
+//#define VARIOVERSION 292     //Version 2 avec ecran 2.90 V2 paysage     
+#define VARIOVERSION 293     //Version 2 avec ecran 2.90 V2 portrait
+//#define VARIOVERSION 354     //Version 3.1 avec ecran 1.54
 //#define VARIOVERSION 390     //Version 3 avec ecran 2.90 paysage
 //#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
+//#define VARIOVERSION 395     //Version 3.5 avec ecran 2.90 paysage
+//#define VARIOVERSION 396     //Version 3.5 avec ecran 2.90 portrait
 
 #include <HardwareConfigPRO.h>
 #include <HardwareConfigESP32.h>
@@ -57,26 +64,36 @@
 /*            SCREEN          */
 /******************************/
 
-#if ((VARIOVERSION == 154) || (VARIOVERSION == 254)) 
+#if ((VARIOVERSION == 154) || (VARIOVERSION == 254) || (VARIOVERSION == 354)) 
 #define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
-#elif ((VARIOVERSION == 290) || (VARIOVERSION == 390)) 
+#define DISPLAY_PORTRAIT
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 390) || (VARIOVERSION == 395)) 
 #define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
-#elif ((VARIOVERSION == 291) || (VARIOVERSION == 391)) 
+#define DISPLAY_LANDSCAPE
+#elif ((VARIOVERSION == 291) || (VARIOVERSION == 391) || (VARIOVERSION == 396)) 
 #define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#define DISPLAY_PORTRAIT
+#elif ((VARIOVERSION == 292)) 
+#define VARIOSCREEN_SIZE 	292 	//Ecran 2.90'' V2 Portrait
+#define DISPLAY_LANDSCAPE
+#elif ((VARIOVERSION == 293)) 
+#define VARIOSCREEN_SIZE 	293 	//Ecran 2.90'' V2 Portrait
+#define DISPLAY_PORTRAIT
 #else
 #define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
+#define DISPLAY_PORTRAIT
 #endif
 
 #if (VARIOSCREEN_SIZE == 154)
 #define DISPLAY_LOW_UPDATE 50
 #define DISPLAY_UPDATE    10
 //#define DISPLAY_LIGHT
-#elif (VARIOSCREEN_SIZE == 290)
+#elif ((VARIOSCREEN_SIZE == 290) || (VARIOVERSION == 390) || (VARIOVERSION == 395) || (VARIOVERSION == 292))
 #define DISPLAY_LOW_UPDATE 40
 #define DISPLAY_UPDATE    10
-#elif (VARIOSCREEN_SIZE == 291)
-#define DISPLAY_LOW_UPDATE 300 //40
-#define DISPLAY_UPDATE    300 //10
+#elif ((VARIOSCREEN_SIZE == 291) || (VARIOVERSION == 391) || (VARIOVERSION == 396) || (VARIOVERSION == 293))
+#define DISPLAY_LOW_UPDATE 40 //40
+#define DISPLAY_UPDATE    10 //10
 #endif
 
 /***********************/
@@ -160,6 +177,34 @@
 /*****************************************************/
 /*    choix de la librairie MPU/MS5611               */
 /*****************************************************/
+
+#if ((VARIOVERSION == 395) || (VARIOVERSION == 396)) 
+#define BNO085
+#define MPU_STATIC_ADDRESS 0x4A
+
+/* calibration method */
+// by EEPROM
+//#define IMU_CALIBRATION_IN_EEPROM
+// or by static value
+
+/* Parametre par defaut */
+#define VERTACCEL_GYRO_CAL_BIAS {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+#define VERTACCEL_ACCEL_CAL_BIAS {0, 0, 0}
+#define VERTACCEL_ACCEL_CAL_SCALE 0
+#define VERTACCEL_MAG_CAL_BIAS {0, 0, 0}
+#define VERTACCEL_MAG_CAL_PROJ_SCALE -16689
+#define VERTACCEL_ACCEL_CAL_BIAS_MULTIPLIER 7
+#define VERTACCEL_MAG_CAL_BIAS_MULTIPLIER 5
+
+#define MPU_ENABLE_INT_PIN
+
+//TEMPORAIRE POUR COMPILATION
+#define MPU9250
+#define MPU_STATIC_ADDRESS 0x68
+#define MPU_COMP_TEMP -6
+
+#else
+
 #define TWOWIRESCHEDULER
 
 /* If you embed an accelerometer set the model here. */
@@ -212,6 +257,7 @@
 
 /* enable if you want to use the MPU INT pin */
 #define MPU_ENABLE_INT_PIN
+#endif
 
 /*****************************/
 /* SDCard/Bluetooth behavior */

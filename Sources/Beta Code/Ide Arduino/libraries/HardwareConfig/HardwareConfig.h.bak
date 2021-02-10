@@ -1,10 +1,6 @@
 #ifndef _HARDWARECONFIG_H_
 #define _HARDWARECONFIG_H_
 
-#include <HardwareConfigPRO.h>
-#include <HardwareConfigESP32.h>
-#include <HardwareConfigMK0.h>
-
 /* HardwareConfig -- 
  *
  * Copyright 2019 Jean-philippe GOI
@@ -41,21 +37,40 @@
 /*    1.0.8  22/10/19   Ajout �cran 2.13''                                       */
 /*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
 /*    1.0.10 27/09/20   Ajout DISPLAY_LIGHT                                      */
+/*    1.0.11 05/10/20   Ajout gestion PCB3																			 */
 /*                                                                               */
 /*********************************************************************************/
+
+//VERSION
+//#define VARIOVERSION 154     //Version 1 avec ecran 1.54
+//#define VARIOVERSION 254     //Version 2 avec ecran 1.54
+//#define VARIOVERSION 290     //Version 2 avec ecran 2.90 paysage
+//#define VARIOVERSION 291     //Version 2 avec ecran 2.90 portrait
+//#define VARIOVERSION 390     //Version 3 avec ecran 2.90 paysage
+#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
+
+#include <HardwareConfigPRO.h>
+#include <HardwareConfigESP32.h>
+#include <HardwareConfigMK0.h>
 
 /******************************/
 /*            SCREEN          */
 /******************************/
 
-//#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
-//#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
+#if ((VARIOVERSION == 154) || (VARIOVERSION == 254)) 
+#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 390)) 
+#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
+#elif ((VARIOVERSION == 291) || (VARIOVERSION == 391)) 
 #define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#else
+#define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
+#endif
 
 #if (VARIOSCREEN_SIZE == 154)
 #define DISPLAY_LOW_UPDATE 50
 #define DISPLAY_UPDATE    10
-#define DISPLAY_LIGHT
+//#define DISPLAY_LIGHT
 #elif (VARIOSCREEN_SIZE == 290)
 #define DISPLAY_LOW_UPDATE 40
 #define DISPLAY_UPDATE    10
@@ -205,8 +220,8 @@
 /* What type of barometric altitude is sent :           */
 /* -> Based on international standard atmosphere        */
 /* -> Calibrated with GPS altitude                      */
-//#define VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
-//#define VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
+#define VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
+#define VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
 
 /* What type of vario NMEA sentence is sent by bluetooth. */
 /* Possible values are :                                  */
@@ -247,9 +262,14 @@
 #define NB_ACQUISITION_FIX_GPS 20
 
 // GPS MODEL
+#if (PCB_VERSION == 3)
+	// PCB 3
+#define L86
+#else
 #define ATGM336H
 //#define NEO_6M
 //#define L86
+#endif
 
 #if defined(ATGM336H)
 #undef NEO_6M
@@ -360,6 +380,12 @@
 
 #if defined(HAVE_BLE) && !defined(HAVE_BLUETOOTH)
 #define HAVE_BLUETOOTH
+#endif
+
+#if defined(HAVE_WIFI) && defined(HAVE_BLUETOOTH) && defined(HAVE_BLE)
+// 							OUTPUT SERIALNMEA
+//#define SERIAL_NMEA_SERIAL_OUTPUT
+#define SERIAL_NMEA_BLUETOOTH_OUTPUT
 #endif
 
 #endif

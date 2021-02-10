@@ -1,4 +1,4 @@
-/* varioscreenGxEPD_154 -- 
+/* varioscreenGxEPD -- 
  *
  * Copyright 2019 Jean-philippe GOI
  * 
@@ -28,7 +28,9 @@
  *    1.0    24/09/19                                                            *
  *    1.0.1  28/09/19   Changement de nom des librairies                         *
  *    1.0.2  22/10/19   Ajout écran 2.13''                                       *
- *    1.0.3  03/02/20   Changement nom passage à 290 au lieu de 29
+ *    1.0.3  03/02/20   Changement nom passage à 290 au lieu de 29               *
+ *    1.0.4  10/02/20   Compatibilité écran 291 et 293                           *
+ *                      Compatibilité écran 290 et 292                           *
  *                                                                               *
  *********************************************************************************/
  
@@ -53,15 +55,28 @@
 
 // Ecran 2.90'' paysage
 #if (VARIOSCREEN_SIZE == 290)
-#include <varioscreenGxEPD_290.h>
-#include <varioscreenObjects_290.h>
+#include <varioscreenGxEPD_290b.h>
+#include <varioscreenObjects_290b.h>
+#endif
+
+// Ecran 2.90'' V2 paysage
+#if (VARIOSCREEN_SIZE == 292)
+#include <varioscreenGxEPD_290b.h>
+#include <varioscreenObjects_290b.h>
 #endif
 
 // Ecran 2.90'' portrait
 #if (VARIOSCREEN_SIZE ==291)
-#include <varioscreenGxEPD_291.h>
-#include <varioscreenObjects_291.h>
+#include <varioscreenGxEPD_291b.h>
+#include <varioscreenObjects_291b.h>
 #endif
+
+// Ecran 2.90''V2 portrait
+#if (VARIOSCREEN_SIZE ==293)
+#include <varioscreenGxEPD_291b.h>
+#include <varioscreenObjects_291b.h>
+#endif
+
 
 // Ecran 2.13''
 //#include <varioscreenGxEPD_213.h>

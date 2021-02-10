@@ -301,7 +301,8 @@ void VarioScreen::init(void)
   display.setFullWindow();
 
   display.fillScreen(GxEPD_WHITE);
-	
+  
+  	
 #ifdef SCREEN_DEBUG
 	SerialPort.println("setTextColor");	
 #endif //SCREEN_DEBUG
@@ -1172,7 +1173,6 @@ void VarioScreen::ScreenViewStatPage(int PageStat)
 	display.setFont(&FreeSansBold12pt7b);
 	display.setTextColor(ColorText);
 	display.setTextSize(1);
-
 	display.setCursor(10, 30);
 	display.print(varioLanguage.getText(TITRE_STAT));   //"STATISTIQUES");
 
@@ -1926,8 +1926,10 @@ boolean ScreenScheduler::displayStep(void) {
 		// refresh toutes les 15min
 			oldtimeAllDisplay  = millis();	
 			ShowDisplayAll = true;
-//		display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
+			display.init();
+			display.setFullWindow();
 			display.clearScreen();
+			//display.fillRect(0, 0, display.width(), display.height(), GxEPD_WHITE);
 //			display.writeScreenBuffer();
 		
 #ifdef SCREEN_DEBUG2
