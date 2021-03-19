@@ -189,31 +189,48 @@ static void tinf_build_tree(TINF_TREE *t, const unsigned char *lengths, unsigned
  * -- decode functions -- *
  * ---------------------- */
 
+
 unsigned char uzlib_get_byte(TINF_DATA *d)
 {
-    /* If end of source buffer is not reached, return next byte from source
-       buffer. */
-    if (d->source < d->source_limit) {
-        return *d->source++;
+    if (d->source) {
+      //d->log("Using source\n");
+      return *d->source++;
+    } else {
+      unsigned char out;
+      //d->log("Using readsource\n");
+      int ret = d->readSourceByte(d, &out);
+      if(! ret ) {
+        // TODO: handle read errors !
+      }
+      return out;
     }
-
-    /* Otherwise if there's callback and we haven't seen EOF yet, try to
-       read next byte using it. (Note: the callback can also update ->source
-       and ->source_limit). */
-    if (d->readSource && !d->eof) {
-        int val = d->readSource(d);
-        if (val >= 0) {
-            return (unsigned char)val;
-        }
-    }
-
-    /* Otherwise, we hit EOF (either from ->readSource() or from exhaustion
-       of the buffer), and it will be "sticky", i.e. further calls to this
-       function will end up here too. */
-    d->eof = true;
-
-    return 0;
 }
+
+// unsigned char uzlib_get_byte(TINF_DATA *d)
+// {
+//     /* If end of source buffer is not reached, return next byte from source
+//        buffer. */
+//     if (d->source < d->source_limit) {
+//         return *d->source++;
+//     }
+//
+//     /* Otherwise if there's callback and we haven't seen EOF yet, try to
+//        read next byte using it. (Note: the callback can also update ->source
+//        and ->source_limit). */
+//     if (d->readSource && !d->eof) {
+//         int val = d->readSource(d);
+//         if (val >= 0) {
+//             return (unsigned char)val;
+//         }
+//     }
+//
+//     /* Otherwise, we hit EOF (either from ->readSource() or from exhaustion
+//        of the buffer), and it will be "sticky", i.e. further calls to this
+//        function will end up here too. */
+//     d->eof = true;
+//
+//     return 0;
+// }
 
 uint32_t tinf_get_le_uint32(TINF_DATA *d)
 {
@@ -342,13 +359,23 @@ static int tinf_decode_trees(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
       int lbits, lbase = 3;
 
       /* error decoding */
-      if (sym < 0) return sym;
+      if (sym < 0) {
+        #if UZLIB_CONF_DEBUG_LOG >= 2
+          printf("tinf_decode_trees: error decoding #%d out of %d bytes\n", num, hlimit );
+        #endif
+        return sym;
+      }
 
       switch (sym)
       {
       case 16:
          /* copy previous code length 3-6 times (read 2 bits) */
-         if (num == 0) return TINF_DATA_ERROR;
+         if (num == 0) {
+           #if UZLIB_CONF_DEBUG_LOG >= 2
+             printf("tinf_decode_trees: error decoding sym 16 (#%d out of %d) bytes\n", num, hlimit );
+           #endif
+           return TINF_DATA_ERROR;
+         }
          fill_value = lengths[num - 1];
          lbits = 2;
          break;
@@ -370,7 +397,12 @@ static int tinf_decode_trees(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
 
       /* special code length 16-18 are handled here */
       length = tinf_read_bits(d, lbits, lbase);
-      if (num + length > hlimit) return TINF_DATA_ERROR;
+      if (num + length > hlimit) {
+        #if UZLIB_CONF_DEBUG_LOG >= 2
+          printf("tinf_decode_trees: length is over limit #%d (%d > %d limit)\n", length, num+length, hlimit );
+        #endif
+        return TINF_DATA_ERROR;
+      }
       for (; length; --length)
       {
          lengths[num++] = fill_value;
@@ -412,6 +444,9 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
         //printf("huff sym: %02x\n", sym);
 
         if (d->eof) {
+            #if UZLIB_CONF_DEBUG_LOG >= 2
+              printf("tinf_inflate_block_data: unexpected EOF\n" );
+            #endif
             return TINF_DATA_ERROR;
         }
 
@@ -429,6 +464,9 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
         /* substring from sliding dictionary */
         sym -= 257;
         if (sym >= 29) {
+            #if UZLIB_CONF_DEBUG_LOG >= 2
+              printf("tinf_inflate_block_data: bad dictionnary symbol(%d)\n", sym );
+            #endif
             return TINF_DATA_ERROR;
         }
 
@@ -437,6 +475,9 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
 
         dist = tinf_decode_symbol(d, dt);
         if (dist >= 30) {
+            #if UZLIB_CONF_DEBUG_LOG >= 2
+              printf("tinf_inflate_block_data: bad decoded symbol(%d -> %d)\n", sym, dist );
+            #endif
             return TINF_DATA_ERROR;
         }
 
@@ -465,6 +506,9 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
         } else {
             /* catch trying to point before the start of dest buffer */
             if (offs > d->dest - d->destStart) {
+                #if UZLIB_CONF_DEBUG_LOG >= 2
+                  printf("tinf_inflate_block_data: bad dictionnary offset, %d oustide max range %d])\n", offs, d->dest - d->destStart );
+                #endif
                 return TINF_DATA_ERROR;
             }
             d->lzOff = -offs;
@@ -478,7 +522,24 @@ static int tinf_inflate_block_data(TINF_DATA *d, TINF_TREE *lt, TINF_TREE *dt)
             d->lzOff = 0;
         }
     } else {
-        d->dest[0] = d->dest[d->lzOff];
+        //d->dest[0] = d->dest[d->lzOff];
+        //d->dest++;
+        if (d->readDestByte) {
+          //read from destination stream via callback
+          unsigned char out;
+          //printf("%d\r\n", d->lzOff);
+          int ret = d->readDestByte(d->lzOff, &out);
+          if (ret != 0) {
+            #if UZLIB_CONF_DEBUG_LOG >= 2
+              printf("tinf_inflate_block_data: readDestByte failed (returned %d instead of 0)\n", ret );
+            #endif
+            return TINF_DATA_ERROR;
+          }
+          d->dest[0] = out;
+        } else {
+          //read from destination stream from memory
+          d->dest[0] = d->dest[d->lzOff];
+        }
         d->dest++;
     }
     d->curlen--;
@@ -498,7 +559,12 @@ static int tinf_inflate_uncompressed_block(TINF_DATA *d)
         invlength = uzlib_get_byte(d);
         invlength += 256 * uzlib_get_byte(d);
         /* check length */
-        if (length != (~invlength & 0x0000ffff)) return TINF_DATA_ERROR;
+        if (length != (~invlength & 0x0000ffff)) {
+          #if UZLIB_CONF_DEBUG_LOG >= 2
+            printf("tinf_inflate_uncompressed_block: bad block length : %d (invlength=%d)\n", length, invlength );
+          #endif
+          return TINF_DATA_ERROR;
+        }
 
         /* increment length to properly return TINF_DONE below, without
            producing data at the same time */
@@ -563,7 +629,7 @@ next_blk:
             d->btype = tinf_read_bits(d, 2, 0);
 
             #if UZLIB_CONF_DEBUG_LOG >= 1
-            printf("Started new block: type=%d final=%d\n", d->btype, d->bfinal);
+            printf("uzlib_uncompress: Started new block: type=%d final=%d\n", d->btype, d->bfinal);
             #endif
 
             if (d->btype == 1) {
@@ -592,6 +658,9 @@ next_blk:
             res = tinf_inflate_block_data(d, &d->ltree, &d->dtree);
             break;
         default:
+            #if UZLIB_CONF_DEBUG_LOG >= 1
+              printf("[uzlib_uncompress ERROR] Unknown type: %d\n", d->btype );
+            #endif
             return TINF_DATA_ERROR;
         }
 
@@ -605,7 +674,7 @@ next_blk:
             return res;
         }
 
-    } while (d->dest < d->dest_limit);
+    }  while (--d->destRemaining);
 
     return TINF_OK;
 }
@@ -616,6 +685,7 @@ int uzlib_uncompress_chksum(TINF_DATA *d)
 {
     int res;
     unsigned char *data = d->dest;
+    d->destRemaining = d->destSize;
 
     res = uzlib_uncompress(d);
 

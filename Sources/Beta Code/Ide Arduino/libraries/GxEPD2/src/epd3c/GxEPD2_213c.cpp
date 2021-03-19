@@ -250,7 +250,7 @@ void GxEPD2_213c::drawImage(const uint8_t bitmap[], int16_t x, int16_t y, int16_
 }
 
 void GxEPD2_213c::drawImagePart(const uint8_t bitmap[], int16_t x_part, int16_t y_part, int16_t w_bitmap, int16_t h_bitmap,
-                               int16_t x, int16_t y, int16_t w, int16_t h, bool invert, bool mirror_y, bool pgm)
+                                int16_t x, int16_t y, int16_t w, int16_t h, bool invert, bool mirror_y, bool pgm)
 {
   writeImagePart(bitmap, x_part, y_part, w_bitmap, h_bitmap, x, y, w, h, invert, mirror_y, pgm);
   refresh(x, y, w, h);
@@ -263,7 +263,7 @@ void GxEPD2_213c::drawImage(const uint8_t* black, const uint8_t* color, int16_t 
 }
 
 void GxEPD2_213c::drawImagePart(const uint8_t* black, const uint8_t* color, int16_t x_part, int16_t y_part, int16_t w_bitmap, int16_t h_bitmap,
-                               int16_t x, int16_t y, int16_t w, int16_t h, bool invert, bool mirror_y, bool pgm)
+                                int16_t x, int16_t y, int16_t w, int16_t h, bool invert, bool mirror_y, bool pgm)
 {
   writeImagePart(black, color, x_part, y_part, w_bitmap, h_bitmap, x, y, w, h, invert, mirror_y, pgm);
   refresh(x, y, w, h);
@@ -360,8 +360,8 @@ void GxEPD2_213c::_InitDisplay()
   //_waitWhileBusy("_wakeUp Power On");
   _writeCommand(0X00);
   _writeData(0x8f);
-  _writeCommand(0X50);
-  _writeData(0x37); //VCOM AND DATA INTERVAL SETTING
+  _writeCommand(0x50); //VCOM AND DATA INTERVAL SETTING
+  _writeData(0x77);    //WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
   _writeCommand(0x61); //resolution setting
   _writeData (0x68);   //source 104
   _writeData (0x00);
@@ -377,8 +377,9 @@ void GxEPD2_213c::_Init_Full()
 void GxEPD2_213c::_Init_Part()
 {
   _InitDisplay();
-  _writeCommand(0X50);
-  _writeData(0xF7);    //WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
+  _writeCommand(0x50); //VCOM AND DATA INTERVAL SETTING
+  _writeData(0x77);    //WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
+  //_writeData(0xF7);    //WBmode:VBDF 17|D7 VBDW 97 VBDB 57   WBRmode:VBDF F7 VBDW 77 VBDB 37  VBDR B7
   _PowerOn();
 }
 

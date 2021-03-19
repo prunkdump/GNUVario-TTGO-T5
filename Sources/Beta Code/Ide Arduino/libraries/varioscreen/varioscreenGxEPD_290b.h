@@ -326,7 +326,13 @@ class VarioScreen {
 
 extern VarioScreen screen;
 extern volatile uint8_t stateDisplay;
+//extern GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display;
+
+#if (VARIOSCREEN_SIZE == 290)
 extern GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display;
+#else
+extern GxEPD2_BW<GxEPD2_290_T94, GxEPD2_290_T94::HEIGHT> display;
+#endif 
 
 
 #endif

@@ -306,7 +306,8 @@ void VarioScreen::init(void)
 	SerialPort.println("fillScreen");	
 #endif //SCREEN_DEBUG
 
-  display.setFullWindow();
+//  display.setFullWindow();	//Modif Pascal
+  display.clearScreen();    	//Modif Pascal
 
   display.fillScreen(GxEPD_WHITE);
 	

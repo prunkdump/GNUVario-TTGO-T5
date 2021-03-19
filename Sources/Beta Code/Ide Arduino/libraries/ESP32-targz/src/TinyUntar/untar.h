@@ -5,16 +5,9 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
-//#include <FS.h>
 
 #define IS_BASE256_ENCODED(buffer) (((unsigned char)buffer[0] & 0x80) > 0)
 #define GET_NUM_BLOCKS(filesize) (int)ceil((double)filesize / (double)TAR_BLOCK_SIZE)
-
-
-void (*tinyUntarWriteCallback)( unsigned char* buff, size_t buffsize );
-int (*tinyUntarReadCallback)( unsigned char* buff, size_t buffsize );
-
-//fread(buffer, 1, TAR_BLOCK_SIZE, fp);
 
 inline int get_last_block_portion_size(int filesize);
 
@@ -35,6 +28,7 @@ inline int get_last_block_portion_size(int filesize);
 #define TAR_T_GLOBALEXTENDED 'g'
 #define TAR_T_EXTENDED 'x'
 
+#define TAR_EXPANDING_DONE        2
 #define TAR_CONTINUE              1
 #define TAR_OK                    0
 #define TAR_ERROR                -1
@@ -45,6 +39,7 @@ inline int get_last_block_portion_size(int filesize);
 #define TAR_ERR_READBLOCK_FAIL   -5
 #define TAR_ERR_HEADERTRANS_FAIL -6
 #define TAR_ERR_HEADERPARSE_FAIL -7
+#define TAR_ERROR_HEAP           -8
 
 #define TAR_BLOCK_SIZE 512
 
@@ -104,7 +99,10 @@ typedef int (*entry_header_callback_t)(header_translated_t *header,
 										int entry_index,
 										void *context_data);
 
-typedef int (*entry_data_callback_t)(header_translated_t *header,
+typedef int(*entry_read_callback_t)(unsigned char* buff,
+                                     size_t buffsize );
+
+typedef int (*entry_write_callback_t)(header_translated_t *header,
 										int entry_index,
 										void *context_data,
 										unsigned char *block,
@@ -114,21 +112,25 @@ typedef int (*entry_end_callback_t)(header_translated_t *header,
 									int entry_index,
 									void *context_data);
 
+
+
 struct entry_callbacks_s
 {
 	entry_header_callback_t header_cb;
-	entry_data_callback_t data_cb;
+    entry_read_callback_t read_cb;
+	entry_write_callback_t write_cb;
 	entry_end_callback_t end_cb;
 };
 
 typedef struct entry_callbacks_s entry_callbacks_t;
 
 
-void (*tar_error_logger)(const char* subject, ...);
-void (*tar_debug_logger)(const char* subject, ...);
-void tar_setup(  entry_callbacks_t *callbacks, void *context_data );
+__attribute__((unused))static void (*tar_error_logger)(const char* subject, ...);
+__attribute__((unused))static void (*tar_debug_logger)(const char* subject, ...);
+
+int tar_setup(  entry_callbacks_t *callbacks, void *context_data );
 void tar_abort( const char* msgstr, int iserror);
-int read_tar_data_block();
+//int read_tar_data_block();
 int read_tar( entry_callbacks_t *callbacks, void *context_data);
 int read_tar_step();
 void dump_header(header_translated_t *header);

@@ -27,17 +27,17 @@
 /*                                                                               */
 /*  version    Date     Description                                              */
 /*    1.0    03/06/19                                                            */
-/*    1.0.1  24/06/19   Ajout profil GPS - choix entre 2 versions 							 */
+/*    1.0.1  24/06/19   Ajout profil GPS - choix entre 2 versions 				 */
 /*    1.0.2  23/07/19   suppression des parametres CLIMB_RATE                    */
 /*    1.0.3  04/08/19   Ajout config Wifi                                        */
 /*    1.0.4  16/08/19   Ajout HAVE_WIFI                                          */
-/*		1.0.5	 05/09/19		Ajout MPU_COMP_TEMP																			 */
-/*    1.0.6  19/09/19   Ajout NB_ACQUISITION_FIX_GPS														 */
+/*		1.0.5	 05/09/19		Ajout MPU_COMP_TEMP								 */
+/*    1.0.6  19/09/19   Ajout NB_ACQUISITION_FIX_GPS							 */
 /*    1.0.7  06/10/19   Ajout R�solution de l'ecran                              */
 /*    1.0.8  22/10/19   Ajout �cran 2.13''                                       */
 /*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
 /*    1.0.10 27/09/20   Ajout DISPLAY_LIGHT                                      */
-/*    1.0.11 05/10/20   Ajout gestion PCB3																			 */
+/*    1.0.11 05/10/20   Ajout gestion PCB3										 */
 /*    1.0.12 07/12/20   Ajout PCB V3.5                                           */
 /*    1.0.13 10/12/20   Ajout display orientation                                */
 /*                                                                               */
@@ -49,10 +49,10 @@
 //#define VARIOVERSION 290     //Version 2 avec ecran 2.90 paysage
 //#define VARIOVERSION 291       //Version 2 avec ecran 2.90 portrait
 //#define VARIOVERSION 292     //Version 2 avec ecran 2.90 V2 paysage     
-#define VARIOVERSION 293     //Version 2 avec ecran 2.90 V2 portrait
+//#define VARIOVERSION 293     //Version 2 avec ecran 2.90 V2 portrait
 //#define VARIOVERSION 354     //Version 3.1 avec ecran 1.54
 //#define VARIOVERSION 390     //Version 3 avec ecran 2.90 paysage
-//#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
+#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
 //#define VARIOVERSION 395     //Version 3.5 avec ecran 2.90 paysage
 //#define VARIOVERSION 396     //Version 3.5 avec ecran 2.90 portrait
 

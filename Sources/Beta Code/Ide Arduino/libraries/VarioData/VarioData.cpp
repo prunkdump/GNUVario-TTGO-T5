@@ -1625,6 +1625,25 @@ float constrainAngle360(float dta) {
   return dta;
 }
 */		
+
+/*
+  // For more see http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles which has additional links.
+    yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
+    pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+    roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+    pitch *= 180.0f / PI;
+    yaw   *= 180.0f / PI; 
+    yaw   -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+    roll  *= 180.0f / PI;
+     
+    if(SerialDebug) {
+    Serial.print("Yaw, Pitch, Roll: ");
+    Serial.print(yaw, 2);
+    Serial.print(", ");
+    Serial.print(pitch, 2);
+    Serial.print(", ");
+    Serial.println(roll, 2);
+*/
 		
 		if (twScheduler.haveMag() ) {
 			double northVector[2];
@@ -1641,8 +1660,14 @@ float constrainAngle360(float dta) {
 			DUMP(northVectorNorm[0]);
 			DUMP(northVectorNorm[1]);
 			
-			bearing = (atan2(northVectorNorm[1],northVectorNorm[0]) * 180/M_PI) + 180;
+//			bearing = (atan2(northVectorNorm[1],northVectorNorm[0]) * 180/M_PI) + 180;
+	
+			int tmpcap = 180 - atan2(northVector[1],northVector[0]) * 180/M_PI;
 			
+			bearing = tmpcap;
+			
+//			tmpcap = 360 - tmpcap;
+	
 			DUMP(bearing);
 			
 /*			int tmpcap = 180 - atan2(northVector[1],northVector[0]) * 180/M_PI;

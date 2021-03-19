@@ -310,6 +310,9 @@
 *                                    Correction bug son en continu - vario integré                    *
 *                                    Correction gestion memoire json                                  *
 *                09/02/21            Ajout gestion écran 2.9'' V2 - 292                               *
+*                02/03/21            Correction ecran V2                                              *
+*                14/03/21            Maj librairie gxepd2, esp32-targz, esp32fota2                    *
+*                                    Maj ESP32 v1.05                                                  *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -755,7 +758,7 @@ void setup()
 
 #if (VARIOVERSION == 154) 
   SerialPort.println("VERSION : 1");
-#elif ((VARIOVERSION == 254) || (VARIOVERSION == 290) || (VARIOVERSION == 291)) 
+#elif ((VARIOVERSION == 254) || (VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 292) || (VARIOVERSION == 293)) 
   SerialPort.println("VERSION : 2");
 #elif ((VARIOVERSION == 390) || (VARIOVERSION == 391)) 
   SerialPort.println("VERSION : 3");
@@ -1426,7 +1429,7 @@ void loop()
 
       screen.gpsBearing->setValue(tmpcap);
       screen.gpsBearingText->setValue(bearingStr);
-#if ((VARIOSCREEN_SIZE == 291) && (VARIOSCREEN_SIZE == 292))
+#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 292) || (VARIOSCREEN_SIZE == 293))
       screen.bearing->setValue(tmpcap);
       screen.bearingText->setValue(bearingStr);
 #endif
