@@ -31,30 +31,36 @@
 /*    1.0.2  23/07/19   suppression des parametres CLIMB_RATE                    */
 /*    1.0.3  04/08/19   Ajout config Wifi                                        */
 /*    1.0.4  16/08/19   Ajout HAVE_WIFI                                          */
-/*		1.0.5	 05/09/19		Ajout MPU_COMP_TEMP								 */
+/*	  1.0.5	 05/09/19	Ajout MPU_COMP_TEMP      								 */
 /*    1.0.6  19/09/19   Ajout NB_ACQUISITION_FIX_GPS							 */
-/*    1.0.7  06/10/19   Ajout R�solution de l'ecran                              */
-/*    1.0.8  22/10/19   Ajout �cran 2.13''                                       */
+/*    1.0.7  06/10/19   Ajout Résolution de l'ecran                              */
+/*    1.0.8  22/10/19   Ajout Ecran 2.13''                                       */
 /*    1.0.9  11/01/20   Ajout DISPLAY_LOW_UPDATE et DISPLAY_UPDATE               */
 /*    1.0.10 27/09/20   Ajout DISPLAY_LIGHT                                      */
 /*    1.0.11 05/10/20   Ajout gestion PCB3										 */
 /*    1.0.12 07/12/20   Ajout PCB V3.5                                           */
 /*    1.0.13 10/12/20   Ajout display orientation                                */
+/*    1.0.14 22/05/21   Ajout écran 294 (DKEG0290BNS800F6 /QYEG0290BNS800F6C02)  */
+/*                      Pour test                                                */
+/*                      & Ajout écran 2.9" Good Display GDEW029M06               */
 /*                                                                               */
 /*********************************************************************************/
 
 //VERSION
-//#define VARIOVERSION 154     //Version 1 avec ecran 1.54
-//#define VARIOVERSION 254     //Version 2 avec ecran 1.54
-//#define VARIOVERSION 290     //Version 2 avec ecran 2.90 paysage
-//#define VARIOVERSION 291       //Version 2 avec ecran 2.90 portrait
-//#define VARIOVERSION 292     //Version 2 avec ecran 2.90 V2 paysage     
-//#define VARIOVERSION 293     //Version 2 avec ecran 2.90 V2 portrait
-//#define VARIOVERSION 354     //Version 3.1 avec ecran 1.54
-//#define VARIOVERSION 390     //Version 3 avec ecran 2.90 paysage
-#define VARIOVERSION 391     //Version 3 avec ecran 2.90 portrait
-//#define VARIOVERSION 395     //Version 3.5 avec ecran 2.90 paysage
-//#define VARIOVERSION 396     //Version 3.5 avec ecran 2.90 portrait
+//#define VARIOVERSION 154     //PCB Version 1 avec ecran 1.54 / PCB version 1 with 1.54" screen
+//#define VARIOVERSION 254     //PCB Version 2 avec ecran 1.54 / PCB Version 2 with 1.54" screen
+//#define VARIOVERSION 290     //PCB Version 2 avec ecran 2.9" paysage / PCB version 2 with 2.9" screen landscape (TTGO-T5-V2.4 before 12/2020)
+#define VARIOVERSION 291     //PCB Version 2 avec ecran 2.9" portrait / PCB version 2 with 2.9" screen portrait (TTGO-T5-V2.4 before 12/2020)
+//#define VARIOVERSION 292     //PCB Version 2 avec ecran 2.9" paysage /PCB version 2 with 2.9" screen landscape  (Ecran/Screen Good Display GDEW029M06)      
+//#define VARIOVERSION 293     //PCB Version 2 avec ecran 2.9" portrait / PCB version 2 with 2.9" screen portrait (Ecran/Screen Good Display GDEW029M06)
+//#define VARIOVERSION 294     //PCB Version 2 avec ecran 2.9" portrait / PCB version 2 with 2.9" screen portrait (TTGO-T5-V2.4 after 12/2020 Screen number DKEG0290BNS800F6 /QYEG0290BNS800F6C02 ) For test purpose only
+//#define VARIOVERSION 354     //PCB Version 3.1 avec ecran 1.54 / PCB Version 3.1 with 1.54" screen
+//#define VARIOVERSION 390     //PCB Version 3.1 avec ecran 2.9" paysage / PCB version 3.1 with 2.9" screen landscape (TTGO-T5-V2.4 before 12/2021)
+//#define VARIOVERSION 391     //PCB Version 3.1 avec ecran 2.9" portrait / PCB version 3.1 with 2.9" screen portrait (TTGO-T5-V2.4 before 12/2021)
+//#define VARIOVERSION 392     //PCB Version 3.1 avec ecran 2.9" Good Display GDEW029M06 paysage / PCB version 3.1 with 2.9" screen landscape  (Ecran/Screen Good Display GDEW029M06) 
+//#define VARIOVERSION 393	   //PCB Version 3.1 avec ecran 2.9" Good Display GDEW029M06 portrait / PCB version 3.1 with 2.9" screen portrait (Ecran/Screen Good Display GDEW029M06) 
+//#define VARIOVERSION 395     //PCB Version 3.5 avec ecran 2.9" paysage (futur BNO085/86)
+//#define VARIOVERSION 396     //PCB Version 3.5 avec ecran 2.9" portrait (futurBNO085/86)
 
 #include <HardwareConfigPRO.h>
 #include <HardwareConfigESP32.h>
@@ -68,16 +74,19 @@
 #define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
 #define DISPLAY_PORTRAIT
 #elif ((VARIOVERSION == 290) || (VARIOVERSION == 390) || (VARIOVERSION == 395)) 
-#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage
+#define VARIOSCREEN_SIZE	290 	//Ecran 2.90'' Paysage / 2.9 screen landscape (TTGO-T5-V2.4 before 12/2020)
 #define DISPLAY_LANDSCAPE
 #elif ((VARIOVERSION == 291) || (VARIOVERSION == 391) || (VARIOVERSION == 396)) 
-#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait
+#define VARIOSCREEN_SIZE 	291 	//Ecran 2.90'' Portrait / 2.9 screen portrait (TTGO-T5-V2.4 before 12/2020)
 #define DISPLAY_PORTRAIT
-#elif ((VARIOVERSION == 292)) 
-#define VARIOSCREEN_SIZE 	292 	//Ecran 2.90'' V2 Portrait
+#elif ((VARIOVERSION == 292)|| (VARIOVERSION == 392)) 
+#define VARIOSCREEN_SIZE 	292 	//Ecran Good Display GDEW029M06 paysage/landscape
 #define DISPLAY_LANDSCAPE
-#elif ((VARIOVERSION == 293)) 
-#define VARIOSCREEN_SIZE 	293 	//Ecran 2.90'' V2 Portrait
+#elif ((VARIOVERSION == 293)|| (VARIOVERSION == 393)) 
+#define VARIOSCREEN_SIZE 	293 	//Ecran Good Display GDEW029M06 portrait
+#define DISPLAY_PORTRAIT
+#elif ((VARIOVERSION == 294)) 
+#define VARIOSCREEN_SIZE 	294 	//2.9 screen portrait (TTGO-T5-V2.4 after 12/2020 Screen number DKEG0290BNS800F6 / QYEG0290BNS800F6C02)
 #define DISPLAY_PORTRAIT
 #else
 #define VARIOSCREEN_SIZE 	154		//Ecran 1.54''
@@ -88,10 +97,13 @@
 #define DISPLAY_LOW_UPDATE 50
 #define DISPLAY_UPDATE    10
 //#define DISPLAY_LIGHT
-#elif ((VARIOSCREEN_SIZE == 290) || (VARIOVERSION == 390) || (VARIOVERSION == 395) || (VARIOVERSION == 292))
+#elif ((VARIOSCREEN_SIZE == 290) || (VARIOSCREEN_SIZE == 292))
 #define DISPLAY_LOW_UPDATE 40
 #define DISPLAY_UPDATE    10
-#elif ((VARIOSCREEN_SIZE == 291) || (VARIOVERSION == 391) || (VARIOVERSION == 396) || (VARIOVERSION == 293))
+#elif ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293) || (VARIOSCREEN_SIZE == 294))
+#define DISPLAY_LOW_UPDATE 40 //40
+#define DISPLAY_UPDATE    10 //10
+#else
 #define DISPLAY_LOW_UPDATE 40 //40
 #define DISPLAY_UPDATE    10 //10
 #endif

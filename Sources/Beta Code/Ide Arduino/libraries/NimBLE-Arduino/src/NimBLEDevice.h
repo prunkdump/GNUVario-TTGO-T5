@@ -81,17 +81,17 @@
 #define NIMBLE_MAX_CONNECTIONS          CONFIG_NIMBLE_MAX_CONNECTIONS
 #endif
 
-/**
- * @brief BLE functions.
- */
- typedef int (*gap_event_handler)(ble_gap_event *event, void *arg);
+typedef int (*gap_event_handler)(ble_gap_event *event, void *arg);
 
 extern "C" void ble_store_config_init(void);
 
+/**
+ * @brief A model of a %BLE Device from which all the BLE roles are created.
+ */
 class NimBLEDevice {
 public:
     static void             init(const std::string &deviceName);
-    static void             deinit();
+    static void             deinit(bool clearAll = false);
     static bool             getInitialized();
     static NimBLEAddress    getAddress();
     static std::string      toString();
@@ -116,11 +116,15 @@ public:
     static void             setSecurityPasskey(uint32_t pin);
     static uint32_t         getSecurityPasskey();
     static void             setSecurityCallbacks(NimBLESecurityCallbacks* pCallbacks);
+    static void             setOwnAddrType(uint8_t own_addr_type, bool useNRPA=false);
+    static int              startSecurity(uint16_t conn_id);
     static int              setMTU(uint16_t mtu);
     static uint16_t         getMTU();
     static bool             isIgnored(const NimBLEAddress &address);
     static void             addIgnored(const NimBLEAddress &address);
     static void             removeIgnored(const NimBLEAddress &address);
+    static void             setScanDuplicateCacheSize(uint16_t cacheSize);
+    static void             setScanFilterMode(uint8_t type);
 
 #if defined(CONFIG_BT_NIMBLE_ROLE_BROADCASTER)
     static NimBLEAdvertising* getAdvertising();
@@ -129,7 +133,7 @@ public:
 #endif
 
 #if defined( CONFIG_BT_NIMBLE_ROLE_CENTRAL)
-    static NimBLEClient*    createClient();
+    static NimBLEClient*    createClient(NimBLEAddress peerAddress = NimBLEAddress(""));
     static bool             deleteClient(NimBLEClient* pClient);
     static NimBLEClient*    getClientByID(uint16_t conn_id);
     static NimBLEClient*    getClientByPeerAddress(const NimBLEAddress &peer_addr);
@@ -159,7 +163,6 @@ private:
     static void        onReset(int reason);
     static void        onSync(void);
     static void        host_task(void *param);
-    static int         startSecurity(uint16_t conn_id);
     static bool        m_synced;
 
 #if defined(CONFIG_BT_NIMBLE_ROLE_OBSERVER)
@@ -181,9 +184,10 @@ private:
     static NimBLESecurityCallbacks*   m_securityCallbacks;
     static uint32_t                   m_passkey;
     static ble_gap_event_listener     m_listener;
-
-public:
     static gap_event_handler          m_customGapHandler;
+    static uint8_t                    m_own_addr_type;
+    static uint16_t                   m_scanDuplicateSize;
+    static uint8_t                    m_scanFilterMode;
 };
 
 

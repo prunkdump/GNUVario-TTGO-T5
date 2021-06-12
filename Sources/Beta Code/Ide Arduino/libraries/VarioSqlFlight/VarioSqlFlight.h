@@ -39,9 +39,11 @@ public:
     bool updateSite(uint8_t id, String data);
     bool deleteSite(uint8_t id);
     bool initGetFlightsQuery(uint16_t limit, uint16_t offset);
+    bool initGetFlightsQuery(String parcel);
     //String getNextFlight();
     bool getNextFlight(bool &firstline, RingBuf<char, 1024> &buffer);
     void executeMigration(String version, String sql);
     String escapeJson(const String &s);
+    String getFlightsShort(String mode, String parcel);
 };
 #endif

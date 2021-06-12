@@ -68,7 +68,8 @@
  *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
  *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
  *    1.2.4  15/10/20   Correction bug affichage heure / duree                   *
- *    1.2.5  10/02/20   Compatibilité écran 291 et 293                           *
+ *    1.2.5  10/02/21   Compatibilité écran 291 et 294                           *
+ *    1.2.6  22/05/21   Compatibilité écran 293 (GDEW029M06)                     *      
  *                                                                               *
  *********************************************************************************/
 #ifndef VARIOSCREENOBJECTS_291B_H
@@ -78,7 +79,7 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
-#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293))
+#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293) || (VARIOSCREEN_SIZE == 294))
 
 #include <digit.h>
 #include <variostat.h>

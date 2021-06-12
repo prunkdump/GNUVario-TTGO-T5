@@ -100,6 +100,9 @@ public:
     // suppression d'un site
     AsyncWebServerResponse *handleDelSite(AsyncWebServerRequest *request);
 
+    // récupération du resumé des vols
+    AsyncWebServerResponse *getFlightsShort(AsyncWebServerRequest *request);
+
 private:
     static void _doParseIgcAndInsert(void *parameter);
     String getFileSizeStringFromBytes(int bytes);

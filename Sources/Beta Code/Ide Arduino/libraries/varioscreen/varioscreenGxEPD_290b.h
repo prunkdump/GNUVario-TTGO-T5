@@ -30,11 +30,11 @@
  *    1.0.2  06/10/19   Mise à jour ratamuse                                     *
  *    1.0.3  13/10/19   Integration au GnuVario                                  *
  *                      Ajout Wind                                               *
- *    1.0.4  16/11/19   Modif updateScreen										 									 *
- *    1.0.5  11/01/20   Modif ScreenViewPage									 									 *
+ *    1.0.4  16/11/19   Modif updateScreen										 *
+ *    1.0.5  11/01/20   Modif ScreenViewPage									 *
  *                      Modif VARIOSCREEN_SIZE == 290                            *
  *    1.0.6  17/01/20   Desactivation effacement ligne 1427                      *
- *    1.0.7  20/01/20   Modif ScreenViewReboot									 								 *
+ *    1.0.7  20/01/20   Modif ScreenViewReboot									 *
  *    1.0.8  28/01/20   Modification écran 1 - ajout info gps                    *
  *    1.0.9  03/02/20   changement de nom passage de 29 à 290                    *
  *    1.0.10 09/02/20   Modif écran 1 - font normal / coordonné GPS en degrés    *
@@ -47,13 +47,13 @@
  *    1.0.16 08/04/20   Modification affichage des titres                        *
  *    1.1.0  29/04/20   Changement de font - repositionnement                    *
  *    1.1.3  17/05/20   Ajout position titre avac setPositionTitle               *
- *	  1.1.4  23/05/20   Passage vario en -XX.X								     							 *
- *	  1.1.5  23/05/20   Passage vario en -XX.X								     							 *
- *    1.1.6  27/07/20    Affichage de la batterie au démarrage                   *
- *    1.1.7  19/10/20    Ajout ScreenViewBattery(boolean clear)                  *
- *    1.1.8  19/12/20    Modification affichage des titres P. FRANCIA            *
- *    1.1.9  10/02/20   Compatibilité écran 291 et 293                           *
- *                      Compatibilité écran 290 et 292                           *
+ *	  1.1.4  23/05/20   Passage vario en -XX.X								     *
+ *	  1.1.5  23/05/20   Passage vario en -XX.X								     *
+ *    1.1.6  27/07/20   Affichage de la batterie au démarrage                    *
+ *    1.1.7  19/10/20   Ajout ScreenViewBattery(boolean clear)                   *
+ *    1.1.8  19/12/20   Modification affichage des titres P. FRANCIA             *
+ *    1.1.9  10/02/21   Compatibilité écran 290 et 292                           *
+ *    1.1.10 13/05/21   Compatibilité écran 292 (GDEW029M06)                     * 
  *                                                                               *
  *********************************************************************************/
 
@@ -331,7 +331,7 @@ extern volatile uint8_t stateDisplay;
 #if (VARIOSCREEN_SIZE == 290)
 extern GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display;
 #else
-extern GxEPD2_BW<GxEPD2_290_T94, GxEPD2_290_T94::HEIGHT> display;
+extern GxEPD2_BW<GxEPD2_290_M06, GxEPD2_290_M06::HEIGHT> display;
 #endif 
 
 

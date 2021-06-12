@@ -26,6 +26,8 @@
  *  version    Date     Description                                              *
  *    1.0    22/03/20                                                            *
  *    1.0.1  09/06/20   Ajout GnuSettings.BLUETOOTH_SEND_CALIBRATED_ALTITUDE     *
+ *    1.0.2  25/12/20   Modif getCap                                             *
+ *    1.0.3  11/04/21   Mofig getAlti                                            *
  *                                                                               *
  *********************************************************************************
  */
@@ -73,8 +75,18 @@ VarioHardwareManager::VarioHardwareManager()
 #endif // !HAVE_GPS
 }
 
+//**********************************
 void VarioHardwareManager::init()
+//**********************************
 {
+#ifndef TWOWIRESCHEDULER
+	// Init BUS I2C  
+  delay(100);
+  Wire.flush();
+  Wire.begin (VARIO_SDA_PIN, VARIO_SCL_PIN);
+	Wire.setClock(400000); //Increase I2C data rate to 400kHz
+  delay (250);
+#endif
 }
 
 //**********************************

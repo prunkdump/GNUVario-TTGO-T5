@@ -1,0 +1,44 @@
+{
+    "gnuvarioe": {
+        "version": "1.0"
+    },
+		"language": {
+				"id": 0,
+				"text": "Français"
+		},
+    "titre": {
+				"TIME":  "Heure",
+				"TDV":   "Temps de vol",
+				"ALTI":  "Alti",
+				"AGL":   "Alti Sol",
+				"VARIO": "Vario",
+				"SPEED": "Vitesse",
+				"FINESSE": "Finesse",
+				"TCHUTE": "T Chute",
+				"CAP": "Cap",
+				"LAT": "Lat",
+				"LONG": "Long",
+				"COMPAS": "Compas"
+    },
+    "message": {
+				"STAT": "Statistiques",
+				"DATE": "Date",
+				"HEURE":"Heure",
+				"DUREE": "Duree",
+				"VITESSE": "Vitesse",
+				"CONNECT": "Connexion",
+				"CONNECTA": "Connexion a ",
+				"DEMAR": "Demarrage",
+				"REDEMAR": "Redemarrage",
+				"ENCOURS": "En cours",				
+				"CALIBR": "Calibration",
+				"VEILLE": "En veille",
+				"CHARGE": "en charge",
+				"CHARGER": "chargee",
+				"BATTERIE": "Batterie"
+		},
+		"stat": {
+					"DUREE": "Duree",
+					"SPEED": "Vitesse"
+		}
+}

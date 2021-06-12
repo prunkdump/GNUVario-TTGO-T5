@@ -234,6 +234,9 @@ boolean VarioIgcParser::parseFile()
                         myIgcData.startLon = lon.substring(0, 3).toDouble() + lon.substring(3, 8).toDouble() / 60000;
                     }
                 }
+                // correction de l'heure en fonction du param de timezone
+                // potentiellement faux si mal réglé
+                correctTimeZone(hms);
                 if (!startFlightTimeSet)
                 {
                     startFlightTimeSet = true;
@@ -277,4 +280,23 @@ boolean VarioIgcParser::parseFile()
 igcdata VarioIgcParser::getIgcdata()
 {
     return myIgcData;
+}
+
+void VarioIgcParser::correctTimeZone(String &hms)
+{
+    //hms = "18:57:12"
+    uint8_t UTCDrift = GnuSettings.VARIOMETER_TIME_ZONE;
+    uint8_t hour = atoi((char *)hms.substring(0, 2).c_str());
+    hour += UTCDrift;
+    if (hour < 0)
+    {
+        hour += 24;
+    }
+    if (hour >= 24)
+    {
+        hour -= 24;
+    }
+    char newHMS[9];
+    sprintf(newHMS, "%02d%s", hour, hms.substring(2, 8));
+    hms = String(newHMS);
 }

@@ -191,8 +191,10 @@ void VARIOButtonScheduleur::update()
 				beeper.generateTone(784, 250);
 				beeper.generateTone(1046, 250);
 			}
+			
 		}
 #endif
+		treatmentBtnA2S(false);			
 		_stateBA = false;
 	}
 
@@ -359,15 +361,6 @@ void VARIOButtonScheduleur::treatmentBtnA(bool Debounce)
 		//    TRACELOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG);
 		MESSLOG(LOG_TYPE_DEBUG, DEEPSLEEP_DEBUG_LOG, "Deep sleep - Bouton");
 		deep_sleep(varioLanguage.getText(TITRE_VEILLE)); //"En veille");
-	}
-	else if (StatePage == STATE_PAGE_CALIBRATE)
-	{
-		//sortie calibration
-		SerialPort.println("RESTART ESP32");
-		SerialPort.flush();
-		ESP_LOGI("GnuVario-E", "RESTART ESP32");
-		screen.ScreenViewReboot();
-		ESP.restart();
 	}
 }
 
@@ -618,7 +611,24 @@ void VARIOButtonScheduleur::treatmentBtnB3S(bool Debounce)
 	}
 }
 
+/**********************************************************/
+void VARIOButtonScheduleur::treatmentBtnA2S(bool Debounce)
+{
+	/**********************************************************/
+	if (StatePage == STATE_PAGE_CALIBRATE)
+	{
+		//sortie calibration
+		SerialPort.println("RESTART ESP32");
+		SerialPort.flush();
+		ESP_LOGI("GnuVario-E", "RESTART ESP32");
+		screen.ScreenViewReboot();
+		ESP.restart();
+	}
+}
+
+/**********************************************************/
 void VARIOButtonScheduleur::startWifi(void *pvParameters)
+/**********************************************************/
 {
 	Serial.println("Free heap BEFORE wifi start");
 	Serial.println(ESP.getFreeHeap());

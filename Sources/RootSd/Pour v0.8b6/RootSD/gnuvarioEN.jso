@@ -1,0 +1,44 @@
+{
+    "gnuvarioe": {
+        "version": "1.0"
+    },
+		"language": {
+				"id": 1,
+				"text": "English"
+		},
+    "titre": {
+				"TIME":  "Time",
+				"TDV":   "Flight time",
+				"ALTI":  "Alti",
+				"AGL":   "AGL",
+				"VARIO": "Vario",
+				"SPEED": "Speed",
+				"FINESSE": "Glide R",
+				"TCHUTE": "Sink R",
+				"CAP": "Cap",
+				"LAT": "Lat",
+				"LONG": "Long",
+				"COMPAS": "Compass"
+    },
+    "message": {
+				"STAT": "Statistics",
+				"DATE": "Date",
+				"HEURE":"Time",
+				"DUREE": "Flight time",
+				"VITESSE": "Speed",
+				"CONNECT": "Connection",
+				"CONNECTA": "Connected to ",
+				"DEMAR": "Start",
+				"REDEMAR": "Reboot",
+				"ENCOURS": "in progress",		
+				"CALIBR": "Calibration",
+				"VEILLE": "Standby",
+				"CHARGE": "in charge",
+				"CHARGER": "loaded",
+				"BATTERIE": "Battery"
+		},
+		"stat": {
+					"DUREE": "Flight T",
+					"SPEED": "Speed"
+		}
+}

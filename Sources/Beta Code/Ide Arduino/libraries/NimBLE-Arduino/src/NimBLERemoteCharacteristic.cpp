@@ -38,7 +38,7 @@ static const char* LOG_TAG = "NimBLERemoteCharacteristic";
  NimBLERemoteCharacteristic::NimBLERemoteCharacteristic(NimBLERemoteService *pRemoteService,
                                                         const struct ble_gatt_chr *chr)
 {
-
+    NIMBLE_LOGD(LOG_TAG, ">> NimBLERemoteCharacteristic()");
      switch (chr->uuid.u.type) {
         case BLE_UUID_TYPE_16:
             m_uuid = NimBLEUUID(chr->uuid.u16.value);
@@ -50,7 +50,6 @@ static const char* LOG_TAG = "NimBLERemoteCharacteristic";
             m_uuid = NimBLEUUID(const_cast<ble_uuid128_t*>(&chr->uuid.u128));
             break;
         default:
-            m_uuid = nullptr;
             break;
     }
 
@@ -61,6 +60,8 @@ static const char* LOG_TAG = "NimBLERemoteCharacteristic";
     m_notifyCallback     = nullptr;
     m_timestamp          = 0;
     m_valMux             = portMUX_INITIALIZER_UNLOCKED;
+
+    NIMBLE_LOGD(LOG_TAG, "<< NimBLERemoteCharacteristic(): %s", m_uuid.toString().c_str());
  } // NimBLERemoteCharacteristic
 
 
@@ -208,15 +209,21 @@ int NimBLERemoteCharacteristic::descriptorDiscCB(uint16_t conn_handle,
 bool NimBLERemoteCharacteristic::retrieveDescriptors(const NimBLEUUID *uuid_filter) {
     NIMBLE_LOGD(LOG_TAG, ">> retrieveDescriptors() for characteristic: %s", getUUID().toString().c_str());
 
+    uint16_t endHandle = getRemoteService()->getEndHandle(this);
+    if(m_handle >= endHandle) {
+        return false;
+    }
+
     int rc = 0;
     ble_task_data_t taskData = {this, xTaskGetCurrentTaskHandle(), 0, nullptr};
     desc_filter_t filter = {uuid_filter, &taskData};
 
     rc = ble_gattc_disc_all_dscs(getRemoteService()->getClient()->getConnId(),
                                  m_handle,
-                                 getRemoteService()->getEndHandle(),
+                                 endHandle,
                                  NimBLERemoteCharacteristic::descriptorDiscCB,
                                  &filter);
+
     if (rc != 0) {
         NIMBLE_LOGE(LOG_TAG, "ble_gattc_disc_all_chrs: rc=%d %s", rc, NimBLEUtils::returnCodeToString(rc));
         return false;
@@ -225,12 +232,13 @@ bool NimBLERemoteCharacteristic::retrieveDescriptors(const NimBLEUUID *uuid_filt
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     if(taskData.rc != 0) {
+        NIMBLE_LOGE(LOG_TAG, "ble_gattc_disc_all_chrs: startHandle:%d endHandle:%d taskData.rc=%d %s", m_handle, endHandle, taskData.rc, NimBLEUtils::returnCodeToString(0x0100+taskData.rc));
         return false;
     }
 
     return true;
     NIMBLE_LOGD(LOG_TAG, "<< retrieveDescriptors(): Found %d descriptors.", m_descriptorVector.size());
-} // getDescriptors
+} // retrieveDescriptors
 
 
 /**
@@ -243,7 +251,7 @@ NimBLERemoteDescriptor* NimBLERemoteCharacteristic::getDescriptor(const NimBLEUU
 
     for(auto &it: m_descriptorVector) {
         if(it->getUUID() == uuid) {
-            NIMBLE_LOGD(LOG_TAG, "<< getDescriptor: found");
+            NIMBLE_LOGD(LOG_TAG, "<< getDescriptor: found the descriptor with uuid: %s", uuid.toString().c_str());
             return it;
         }
     }
@@ -253,27 +261,35 @@ NimBLERemoteDescriptor* NimBLERemoteCharacteristic::getDescriptor(const NimBLEUU
         if(m_descriptorVector.size() > prev_size) {
             return m_descriptorVector.back();
         }
+
+        // If the request was successful but 16/32 bit descriptor not found
+        // try again with the 128 bit uuid.
+        if(uuid.bitSize() == BLE_UUID_TYPE_16 ||
+           uuid.bitSize() == BLE_UUID_TYPE_32)
+        {
+            NimBLEUUID uuid128(uuid);
+            uuid128.to128();
+            return getDescriptor(uuid128);
+        }
     }
+
     NIMBLE_LOGD(LOG_TAG, "<< getDescriptor: Not found");
     return nullptr;
 } // getDescriptor
 
 
 /**
- * @Get a pointer to the vector of found descriptors.
- * @param [in] bool value to indicate if the current vector should be cleared and
- * subsequently all descriptors for this characteristic retrieved from the peripheral.
- * If false the vector will be returned with the currently stored descriptors,
- * if the vector is empty it will retrieve all descriptors for this characteristic
- * from the peripheral.
- * @return a pointer to the vector of descriptors for this characteristic.
+ * @brief Get a pointer to the vector of found descriptors.
+ * @param [in] refresh If true the current descriptor vector will be cleared and\n
+ * all descriptors for this characteristic retrieved from the peripheral.\n
+ * If false the vector will be returned with the currently stored descriptors
+ * of this characteristic.
+ * @return A pointer to the vector of descriptors for this characteristic.
  */
 std::vector<NimBLERemoteDescriptor*>* NimBLERemoteCharacteristic::getDescriptors(bool refresh) {
     if(refresh) {
         deleteDescriptors();
-    }
 
-    if(m_descriptorVector.empty()) {
         if (!retrieveDescriptors()) {
             NIMBLE_LOGE(LOG_TAG, "Error: Failed to get descriptors");
         }
@@ -340,6 +356,7 @@ NimBLEUUID NimBLERemoteCharacteristic::getUUID() {
 
 /**
  * @brief Get the value of the remote characteristic.
+ * @param [in] timestamp A pointer to a time_t struct to store the time the value was read.
  * @return The value of the remote characteristic.
  */
 std::string NimBLERemoteCharacteristic::getValue(time_t *timestamp) {
@@ -357,44 +374,45 @@ std::string NimBLERemoteCharacteristic::getValue(time_t *timestamp) {
 /**
  * @brief Read an unsigned 16 bit value
  * @return The unsigned 16 bit value.
+ * @deprecated Use readValue<uint16_t>().
  */
 uint16_t NimBLERemoteCharacteristic::readUInt16() {
-    std::string value = readValue();
-    if (value.length() >= 2) {
-        return *(uint16_t*)(value.data());
-    }
-    return 0;
+    return readValue<uint16_t>();
 } // readUInt16
 
 
 /**
  * @brief Read an unsigned 32 bit value.
  * @return the unsigned 32 bit value.
+ * @deprecated Use readValue<uint32_t>().
  */
 uint32_t NimBLERemoteCharacteristic::readUInt32() {
-    std::string value = readValue();
-    if (value.length() >= 4) {
-        return *(uint32_t*)(value.data());
-    }
-    return 0;
+    return readValue<uint32_t>();
 } // readUInt32
 
 
 /**
  * @brief Read a byte value
  * @return The value as a byte
+ * @deprecated Use readValue<uint8_t>().
  */
 uint8_t NimBLERemoteCharacteristic::readUInt8() {
-    std::string value = readValue();
-    if (value.length() >= 1) {
-        return (uint8_t)value[0];
-    }
-    return 0;
+    return readValue<uint8_t>();
 } // readUInt8
 
 
 /**
+ * @brief Read a float value.
+ * @return the float value.
+ */
+float NimBLERemoteCharacteristic::readFloat() {
+	return readValue<float>();
+} // readFloat
+
+
+/**
  * @brief Read the value of the remote characteristic.
+ * @param [in] timestamp A pointer to a time_t struct to store the time the value was read.
  * @return The value of the remote characteristic.
  */
 std::string NimBLERemoteCharacteristic::readValue(time_t *timestamp) {
@@ -448,9 +466,10 @@ std::string NimBLERemoteCharacteristic::readValue(time_t *timestamp) {
         }
     } while(rc != 0 && retryCount--);
 
+    time_t t = time(nullptr);
     portENTER_CRITICAL(&m_valMux);
     m_value = value;
-    m_timestamp = time(nullptr);
+    m_timestamp = t;
     if(timestamp != nullptr) {
         *timestamp = m_timestamp;
     }
@@ -463,7 +482,7 @@ std::string NimBLERemoteCharacteristic::readValue(time_t *timestamp) {
 
 /**
  * @brief Callback for characteristic read operation.
- * @return 0 or error code.
+ * @return success == 0 or error code.
  */
 int NimBLERemoteCharacteristic::onReadCB(uint16_t conn_handle,
                 const struct ble_gatt_error *error,
@@ -503,21 +522,22 @@ int NimBLERemoteCharacteristic::onReadCB(uint16_t conn_handle,
 
 /**
  * @brief Subscribe or unsubscribe for notifications or indications.
- * @param [in] uint16_t val 0x00 to unsubscribe, 0x01 for notifications, 0x02 for indications.
- * @param [in] notifyCallback A callback to be invoked for a notification.  If NULL is provided then no callback
- * is performed for notifications.
- * @return true if successful.
+ * @param [in] val 0x00 to unsubscribe, 0x01 for notifications, 0x02 for indications.
+ * @param [in] notifyCallback A callback to be invoked for a notification.
+ * @param [in] response If write response required set this to true.
+ * If NULL is provided then no callback is performed.
+ * @return false if writing to the descriptor failed.
  */
-bool NimBLERemoteCharacteristic::setNotify(uint16_t val, bool response, notify_callback notifyCallback) {
+bool NimBLERemoteCharacteristic::setNotify(uint16_t val, notify_callback notifyCallback, bool response) {
     NIMBLE_LOGD(LOG_TAG, ">> setNotify(): %s, %02x", toString().c_str(), val);
+
+    m_notifyCallback = notifyCallback;
 
     NimBLERemoteDescriptor* desc = getDescriptor(NimBLEUUID((uint16_t)0x2902));
     if(desc == nullptr) {
-        NIMBLE_LOGE(LOG_TAG, "<< setNotify(): Could not get descriptor");
-        return false;
+        NIMBLE_LOGW(LOG_TAG, "<< setNotify(): Callback set, CCCD not found");
+        return true;
     }
-
-    m_notifyCallback = notifyCallback;
 
     NIMBLE_LOGD(LOG_TAG, "<< setNotify()");
 
@@ -527,43 +547,44 @@ bool NimBLERemoteCharacteristic::setNotify(uint16_t val, bool response, notify_c
 
 /**
  * @brief Subscribe for notifications or indications.
- * @param [in] bool if true, subscribe for notifications, false subscribe for indications.
- * @param [in] bool if true, require a write response from the descriptor write operation.
- * @param [in] notifyCallback A callback to be invoked for a notification.  If NULL is provided then no callback
- * is performed for notifications.
- * @return true if successful.
+ * @param [in] notifications If true, subscribe for notifications, false subscribe for indications.
+ * @param [in] notifyCallback A callback to be invoked for a notification.
+ * @param [in] response If true, require a write response from the descriptor write operation.
+ * If NULL is provided then no callback is performed.
+ * @return false if writing to the descriptor failed.
  */
-bool NimBLERemoteCharacteristic::subscribe(bool notifications, bool response, notify_callback notifyCallback) {
+bool NimBLERemoteCharacteristic::subscribe(bool notifications, notify_callback notifyCallback, bool response) {
     if(notifications) {
-        return setNotify(0x01, response, notifyCallback);
+        return setNotify(0x01, notifyCallback, response);
     } else {
-        return setNotify(0x02, response, notifyCallback);
+        return setNotify(0x02, notifyCallback, response);
     }
 } // subscribe
 
 
 /**
  * @brief Unsubscribe for notifications or indications.
- * @param [in] bool if true, require a write response from the descriptor write operation.
- * @return true if successful.
+ * @param [in] response bool if true, require a write response from the descriptor write operation.
+ * @return false if writing to the descriptor failed.
  */
 bool NimBLERemoteCharacteristic::unsubscribe(bool response) {
-    return setNotify(0x00, response);
+    return setNotify(0x00, nullptr, response);
 } // unsubscribe
 
 
  /**
  * @brief backward-compatibility method for subscribe/unsubscribe notifications/indications
- * @param [in] notifyCallback A callback to be invoked for a notification.  If NULL is provided then we are
- * unregistering for notifications.
- * @param [in] bool if true, register for notifications, false register for indications.
- * @param [in] bool if true, require a write response from the descriptor write operation.
+ * @param [in] notifyCallback A callback to be invoked for a notification. If NULL is provided then we
+ * will unregister for notifications.
+ * @param [in] notifications If true, register for notifications, false register for indications.
+ * @param [in] response If true, require a write response from the descriptor write operation.
  * @return true if successful.
+ * @deprecated Use subscribe() / unsubscribe() instead.
  */
 bool NimBLERemoteCharacteristic::registerForNotify(notify_callback notifyCallback, bool notifications, bool response) {
     bool success;
     if(notifyCallback != nullptr) {
-        success = subscribe(notifications, response, notifyCallback);
+        success = subscribe(notifications, notifyCallback, response);
     } else {
         success = unsubscribe(response);
     }
@@ -573,10 +594,9 @@ bool NimBLERemoteCharacteristic::registerForNotify(notify_callback notifyCallbac
 
 /**
  * @brief Delete the descriptors in the descriptor vector.
- * We maintain a vector called m_descriptorVector that contains pointers to BLERemoteDescriptors
+ * @details We maintain a vector called m_descriptorVector that contains pointers to NimBLERemoteDescriptors
  * object references. Since we allocated these in this class, we are also responsible for deleting
  * them. This method does just that.
- * @return N/A.
  */
 void NimBLERemoteCharacteristic::deleteDescriptors() {
     NIMBLE_LOGD(LOG_TAG, ">> deleteDescriptors");
@@ -592,7 +612,7 @@ void NimBLERemoteCharacteristic::deleteDescriptors() {
 /**
  * @brief Delete descriptor by UUID
  * @param [in] uuid The UUID of the descriptor to be deleted.
- * @return Number of services left.
+ * @return Number of descriptors left in the vector.
  */
 size_t NimBLERemoteCharacteristic::deleteDescriptor(const NimBLEUUID &uuid) {
     NIMBLE_LOGD(LOG_TAG, ">> deleteDescriptor");
@@ -612,7 +632,7 @@ size_t NimBLERemoteCharacteristic::deleteDescriptor(const NimBLEUUID &uuid) {
 
 
 /**
- * @brief Convert a BLERemoteCharacteristic to a string representation;
+ * @brief Convert a NimBLERemoteCharacteristic to a string representation;
  * @return a String representation.
  */
 std::string NimBLERemoteCharacteristic::toString() {
@@ -645,19 +665,6 @@ std::string NimBLERemoteCharacteristic::toString() {
  */
 bool NimBLERemoteCharacteristic::writeValue(const std::string &newValue, bool response) {
     return writeValue((uint8_t*)newValue.c_str(), strlen(newValue.c_str()), response);
-} // writeValue
-
-
-/**
- * @brief Write the new value for the characteristic.
- *
- * This is a convenience function.  Many BLE characteristics are a single byte of data.
- * @param [in] newValue The new byte value to write.
- * @param [in] response Whether we require a response from the write.
- * @return false if not connected or cant perform write for some reason.
- */
-bool NimBLERemoteCharacteristic::writeValue(uint8_t newValue, bool response) {
-    return writeValue(&newValue, 1, response);
 } // writeValue
 
 
@@ -743,7 +750,7 @@ bool NimBLERemoteCharacteristic::writeValue(const uint8_t* data, size_t length, 
 
 /**
  * @brief Callback for characteristic write operation.
- * @return 0 or error code.
+ * @return success == 0 or error code.
  */
 int NimBLERemoteCharacteristic::onWriteCB(uint16_t conn_handle,
                 const struct ble_gatt_error *error,

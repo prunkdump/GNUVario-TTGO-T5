@@ -192,6 +192,7 @@ class ToneHal  {
 
 		    /* mute/unmute setting */
     void mute(bool newMuteState);
+    void Mute(bool newMuteState);
 		bool isMute(void); 
 		void enableAmpli(void);
 		void disableAmpli(void);

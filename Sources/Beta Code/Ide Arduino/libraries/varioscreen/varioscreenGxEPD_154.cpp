@@ -29,7 +29,7 @@
  *    1.0    24/09/19                                                            *
  *    1.0.1  28/09/19   Modification des noms des librairies                     *
  *    1.0.2  09/10/19   Ajout showtitle                                          *
- *    1.0.3	 13/10/19		Ajout Wind											 *	
+ *    1.0.3	 13/10/19	Ajout Wind   											 *	
  *    1.0.4  07/11/19   Modif updateScreen										 *
  *    1.0.5  11/01/20   Modif ScreenViewPage									 *
  *                      Modif effacement de zone +1 à gauche et +3 pour vitesse  *
@@ -1411,7 +1411,7 @@ void VarioScreen::ScreenViewMessage(String message, int delai)
 			TmplastDisplayTimestamp = millis();
 			compteur++;
 		
-		  display.fillRect(19, 170, 180, -30, GxEPD_WHITE);
+		  display.fillRect(19, 150, 180, -30, GxEPD_WHITE);
 
 		  if ((compteur % 2) == 0) {
 				display.setCursor(x, VARIOSCREEN_TENSION_ANCHOR_Y);

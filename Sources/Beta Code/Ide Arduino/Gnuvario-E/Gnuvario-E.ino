@@ -7,7 +7,7 @@
 
 #define VERSION 0
 #define SUB_VERSION 8
-#define BETA_CODE 5
+#define BETA_CODE 6
 #define DEVNAME "JPG63/MICELPA/RATAMUSE"
 #define AUTHOR "J" //J=JPG63  P=PUNKDUMP  M=MICHELPA    R=RATAMUSE
 
@@ -311,8 +311,15 @@
 *                                    Correction gestion memoire json                                  *
 *                09/02/21            Ajout gestion écran 2.9'' V2 - 292                               *
 *                02/03/21            Correction ecran V2                                              *
-*                14/03/21            Maj librairie gxepd2, esp32-targz, esp32fota2                    *
+*                14/03/21            Maj librairie gxepd2, esp32-targz, esp32fota2                    *  
 *                                    Maj ESP32 v1.05                                                  *
+* 0.8 beta 6     30/03/21            Modification lib varioData                                       *                                                                                     
+*                05/04/21            Modification altitude négative                                   *                                   
+*                11/04/21            Correction probleme de démmarage avec alti négative              *
+*                12/04/21            Ajout Mute jusqu'au décollage                                    *
+*                22/05/21            Ajout écran 294 (DKEG0290BNS800F6 /QYEG0290BNS800F6C02) pour test*
+*                                    & Ajout écran 2.9" Good Display GDEW029M06                       *
+*                03/06/21            Correction bug maj web - ajout d'un reboot                       *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *
@@ -333,6 +340,8 @@
 * AJOUT - Deep-Sleep charge batterie                                                                  *
 * BUG   - intergration - bip continu  - A tester                                                      *
 * BUG   - Modification des paramètres wifi                                                            *
+* BUG   - trame IGC incomplete                                                                        *
+* BUG   - Affichage ecran V2                                                                          *
 *                                                                                                     *
 * VX.X                                                                                                *
 * Paramètrage des écrans                                                                              *
@@ -421,6 +430,8 @@
  *  - Ajout écran de charge                                             *
  *  - Transfert des vol sur paraglidinglogbook                          *
  *  - Nouvelles Pages Wifi avec gestion d'un carnet de vol              *
+ *  - Gestion nouvel écran pour TTGO                                    *
+ *  - Ajout Mute jusqu'au décollage                                     *
  *                                                                      *
  ************************************************************************/
 
@@ -735,6 +746,12 @@ void setup()
   TestSDCARD(true);
 #endif
 
+  /*********************************/
+  /*  Init VarioHardwareManager    */
+  /*********************************/
+
+  varioHardwareManager.init();
+
   /*****************************/
   /*  Init Alimentation        */
   /*****************************/
@@ -758,9 +775,9 @@ void setup()
 
 #if (VARIOVERSION == 154) 
   SerialPort.println("VERSION : 1");
-#elif ((VARIOVERSION == 254) || (VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 292) || (VARIOVERSION == 293)) 
+#elif ((VARIOVERSION == 254) || (VARIOVERSION == 290) || (VARIOVERSION == 291) || (VARIOVERSION == 292) || (VARIOVERSION == 293) || (VARIOVERSION == 294)) 
   SerialPort.println("VERSION : 2");
-#elif ((VARIOVERSION == 390) || (VARIOVERSION == 391)) 
+#elif ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 392) || (VARIOVERSION == 393)) 
   SerialPort.println("VERSION : 3");
 #else
   SerialPort.println("VERSION : XXX");
@@ -769,11 +786,11 @@ void setup()
   SerialPort.print("PCB VERSION : ");
   SerialPort.println(PCB_VERSION);
 
-#if (VARIOSCREEN_SIZE == 154)
+#if ((VARIOSCREEN_SIZE == 154) || (VARIOSCREEN_SIZE == 254) || (VARIOSCREEN_SIZE == 354))
   SerialPort.println("ECRAN : 1.54");
-#elif (VARIOSCREEN_SIZE == 290)
+#elif ((VARIOSCREEN_SIZE == 290) || (VARIOSCREEN_SIZE == 292) || (VARIOVERSION == 390))
   SerialPort.println("ECRAN : 2.90 PAYSAGE");
-#elif (VARIOSCREEN_SIZE == 291)
+#elif ((VARIOSCREEN_SIZE == 291)  || (VARIOSCREEN_SIZE == 293) || (VARIOSCREEN_SIZE == 294))
   SerialPort.println("ECRAN : 2.90 PORTRAIT");
 #endif
 
@@ -914,6 +931,11 @@ void setup()
     beeper.generateTone(659, 150);
     beeper.generateTone(1318, 150);
     beeper.generateTone(2636, 150);
+
+    SerialPort.println("RESTART ESP32");
+    SerialPort.flush();
+    ESP_LOGI("GnuVario-E", "RESTART ESP32");
+    ESP.restart();    
   } 
   
 #endif //HAVE_SDCARD
@@ -1002,7 +1024,7 @@ void setup()
       compteur++;
 
       //    Messure d'altitude
-      firstAlti = varioHardwareManager.getAlti();
+      firstAlti = varioHardwareManager.firstAlti();  //getAlti();
     }
   }
 
@@ -1417,7 +1439,7 @@ void loop()
     int tmpcap = varioData.getCap();
     if (tmpcap > 0)
     {
-      String bearingStr = nmeaParser.Bearing_to_Ordinal(tmpcap);
+      String bearingStr = nmeaParser.Bearing_to_Ordinal2c(tmpcap);
 #ifdef DATA_DEBUG
       SerialPort.print("Compas : ");
       SerialPort.print(tmpcap);
@@ -1429,7 +1451,7 @@ void loop()
 
       screen.gpsBearing->setValue(tmpcap);
       screen.gpsBearingText->setValue(bearingStr);
-#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 292) || (VARIOSCREEN_SIZE == 293))
+#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293) || (VARIOSCREEN_SIZE == 294))
       screen.bearing->setValue(tmpcap);
       screen.bearingText->setValue(bearingStr);
 #endif

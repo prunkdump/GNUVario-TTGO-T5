@@ -78,7 +78,6 @@
 //#define ACCEL_DEBUG
 //#define EEPROM_DEBUG
 //#define NMEAPARSER_DEBUG
-//#define VOLTAGE_DIVISOR_DEBUG
 //#define SDCARD_DEBUG
 //#define IGC_DEBUG
 #define DATA_DEBUG

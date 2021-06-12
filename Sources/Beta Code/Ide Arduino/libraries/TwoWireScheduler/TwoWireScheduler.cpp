@@ -31,6 +31,9 @@
 /*  1.4.2   06/10/20     Ajout void TWScheduler::disableAcquisition()                              */
 /*  1.4.3   09/10/20     Correction disableAcquisition                                             */
 /*  1.4.4   22/10/20     alti < 0 --> alti = 0                                                     */
+/*  1.4.5   06/04/21     Ajout computeAltitude2                                                    */
+/*                       Modification getalti                                                      */
+/*  1.4.6   11/04/21     correction SetBaseSeaPressure                                             */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -87,16 +90,17 @@ TWScheduler twScheduler;
 /*********************/
 /* static class data */
 /*********************/
-uint16_t volatile TWScheduler::status = 0;   //no problem to not release at start as there is no values
-#ifdef HAVE_BMP280 
-uint8_t volatile TWScheduler::bmp280Output[2*3];  //two bmp280 output measures
+uint16_t volatile TWScheduler::status = 0; //no problem to not release at start as there is no values
+#ifdef HAVE_BMP280
+uint8_t volatile TWScheduler::bmp280Output[2 * 3]; //two bmp280 output measures
 uint8_t volatile TWScheduler::bmp280Count = TWO_WIRE_SCHEDULER_BMP280_SHIFT;
 SemaphoreHandle_t TWScheduler::bmp280Mutex;
 #else
-int8_t volatile TWScheduler::ms5611Step = 0; 
-uint8_t volatile TWScheduler::ms5611Output[3*3];  //three ms5611 output measures
+int8_t volatile TWScheduler::ms5611Step = 0;
+uint8_t volatile TWScheduler::ms5611Output[3 * 3]; //three ms5611 output measures
 uint8_t volatile TWScheduler::ms5611Count = TWO_WIRE_SCHEDULER_MS5611_SHIFT;
 SemaphoreHandle_t TWScheduler::ms5611Mutex;
+double TWScheduler::ms5611SavePressure;
 #endif
 #ifdef HAVE_ACCELEROMETER
 uint8_t volatile TWScheduler::checkOutput[2];
@@ -108,13 +112,13 @@ SemaphoreHandle_t TWScheduler::imuIntCountMutex;
 uint8_t volatile TWScheduler::imuCount = TWO_WIRE_SCHEDULER_IMU_SHIFT;
 SemaphoreHandle_t TWScheduler::imuMutex;
 #ifdef AK89xx_SECONDARY
-uint8_t volatile TWScheduler::magOutput[8];    //magnetometer output
+uint8_t volatile TWScheduler::magOutput[8]; //magnetometer output
 uint8_t volatile TWScheduler::magCount = TWO_WIRE_SCHEDULER_MAG_SHIFT;
 SemaphoreHandle_t TWScheduler::magMutex;
 #endif //AK89xx_SECONDARY
 #endif //HAVE_ACCELEROMETER
 TaskHandle_t TWScheduler::schedulerTaskHandler;
-hw_timer_t* TWScheduler::timer;
+hw_timer_t *TWScheduler::timer;
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 bool IntEnable = true;
@@ -124,51 +128,54 @@ bool IntEnable = true;
 /* bmp280 part */
 /***************/
 
-const uint8_t bmp280Step[] PROGMEM = { INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_WRITE),
-				       INTTW_DEST(1, INTTW_IN_CMD),
-				       BMP280_PRESS_REG,
-				       INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_READ),
-				       INTTW_DEST(6, INTTW_AT_POINTER),
-				       INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_WRITE),
-				       INTTW_DEST(2, INTTW_IN_CMD),
-				       BMP280_CTRL_MEAS_REG,
-				       BMP280_MEASURE_CONFIG };
+const uint8_t bmp280Step[] PROGMEM = {INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_WRITE),
+                                      INTTW_DEST(1, INTTW_IN_CMD),
+                                      BMP280_PRESS_REG,
+                                      INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_READ),
+                                      INTTW_DEST(6, INTTW_AT_POINTER),
+                                      INTTW_ACTION(BMP280_STATIC_ADDRESS, INTTW_WRITE),
+                                      INTTW_DEST(2, INTTW_IN_CMD),
+                                      BMP280_CTRL_MEAS_REG,
+                                      BMP280_MEASURE_CONFIG};
 
-void TWScheduler::bmp280Interrupt(void) {
+void TWScheduler::bmp280Interrupt(void)
+{
 
   /* read previous measure and launch next */
   /* we need to lock */
-  intTW.setRxBuffer((uint8_t*)bmp280Output);
+  intTW.setRxBuffer((uint8_t *)bmp280Output);
   xSemaphoreTake(bmp280Mutex, portMAX_DELAY);
-  
+
   /* read */
-  intTW.start((uint8_t*)bmp280Step, sizeof(bmp280Step), INTTW_USE_PROGMEM, bmp280OutputCallback);
-  
+  intTW.start((uint8_t *)bmp280Step, sizeof(bmp280Step), INTTW_USE_PROGMEM, bmp280OutputCallback);
+
   /* release */
   xSemaphoreGive(bmp280Mutex);
 }
 
-
-void TWScheduler::bmp280OutputCallback(void) {
+void TWScheduler::bmp280OutputCallback(void)
+{
 
   /* done ! */
   status |= (1 << HAVE_PRESSURE);
 }
 
-bool TWScheduler::havePressure(void) {
+bool TWScheduler::havePressure(void)
+{
 
   return bisset(HAVE_PRESSURE);
 }
 
-
-double TWScheduler::getAlti(void) {
+double TWScheduler::getAlti(void)
+{
 
   /* copy needed values */
   uint8_t bmp280Values[6];
-  
+
   xSemaphoreTake(bmp280Mutex, portMAX_DELAY);
-  for(int i = 0; i<6; i++) {
-    bmp280Values[i] =  bmp280Output[i];
+  for (int i = 0; i < 6; i++)
+  {
+    bmp280Values[i] = bmp280Output[i];
   }
   bunset(HAVE_PRESSURE);
   xSemaphoreGive(bmp280Mutex);
@@ -183,15 +190,16 @@ double TWScheduler::getAlti(void) {
   return alti;
 }
 
-
-void TWScheduler::getTempAlti(double& temp, double& alti) {
+void TWScheduler::getTempAlti(double &temp, double &alti)
+{
 
   /* copy needed values */
   uint8_t bmp280Values[6];
-  
+
   xSemaphoreTake(bmp280Mutex, portMAX_DELAY);
-  for(int i = 0; i<6; i++) {
-    bmp280Values[i] =  bmp280Output[i];
+  for (int i = 0; i < 6; i++)
+  {
+    bmp280Values[i] = bmp280Output[i];
   }
   bunset(HAVE_PRESSURE);
   xSemaphoreGive(bmp280Mutex);
@@ -205,51 +213,55 @@ void TWScheduler::getTempAlti(double& temp, double& alti) {
   temp = temperature;
 }
 
-
 #else //! HAVE_BMP280
 /***************/
 /* ms5611 part */
 /***************/
 
-const uint8_t ms5611Step1[] PROGMEM = { INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					MS5611_CMD_ADC_READ,
-					INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_READ),
-					INTTW_DEST(3, INTTW_AT_POINTER),
-					INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					MS5611_CMD_CONV_D2 };
+const uint8_t ms5611Step1[] PROGMEM = {INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       MS5611_CMD_ADC_READ,
+                                       INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_READ),
+                                       INTTW_DEST(3, INTTW_AT_POINTER),
+                                       INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       MS5611_CMD_CONV_D2};
 
-const uint8_t ms5611Step2[] PROGMEM = { INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					MS5611_CMD_ADC_READ,
-					INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_READ),
-					INTTW_DEST(3, INTTW_AT_POINTER),
-					INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					MS5611_CMD_CONV_D1 };
+const uint8_t ms5611Step2[] PROGMEM = {INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       MS5611_CMD_ADC_READ,
+                                       INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_READ),
+                                       INTTW_DEST(3, INTTW_AT_POINTER),
+                                       INTTW_ACTION(MS5611_STATIC_ADDRESS, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       MS5611_CMD_CONV_D1};
 
-void TWScheduler::ms5611Interrupt(void) {
+void TWScheduler::ms5611Interrupt(void)
+{
 
-  if( ms5611Step == 0 ) {
+  if (ms5611Step == 0)
+  {
 
     /* if PRESS_READ is not set the last I2C operation failed */
     /* so the CONV_D1 operation was not launched, relaunch */
-    if( ! bisset(PRESS_READ) ) {
+    if (!bisset(PRESS_READ))
+    {
       errorRelaunch();
       return;
     }
 
     bunset(TEMP_READ);
     intTW.setRxBuffer((uint8_t *)ms5611Output);
-    intTW.start((uint8_t*)ms5611Step1, sizeof(ms5611Step1), INTTW_USE_PROGMEM, ms5611TempCallback);
+    intTW.start((uint8_t *)ms5611Step1, sizeof(ms5611Step1), INTTW_USE_PROGMEM, ms5611TempCallback);
     ms5611Step = 1;
   }
 
-  else {
+  else
+  {
 
     /* if can't get temp, don't go further */
-    if( ! bisset(TEMP_READ) ) {
+    if (!bisset(TEMP_READ))
+    {
       errorRelaunch();
       return;
     }
@@ -257,58 +269,65 @@ void TWScheduler::ms5611Interrupt(void) {
     /* copy the first value to get it at any time from main loop */
     /* we need to lock */
     xSemaphoreTake(ms5611Mutex, portMAX_DELAY);
-    for(int i = 0; i<3; i++) {
-      ms5611Output[i+3] = ms5611Output[i];
+    for (int i = 0; i < 3; i++)
+    {
+      ms5611Output[i + 3] = ms5611Output[i];
     }
 
     /* get the next value */
-    intTW.setRxBuffer((uint8_t*)(&ms5611Output[6]));
-    intTW.start((uint8_t*)ms5611Step2, sizeof(ms5611Step2), INTTW_USE_PROGMEM, ms5611OutputCallback);
+    intTW.setRxBuffer((uint8_t *)(&ms5611Output[6]));
+    intTW.start((uint8_t *)ms5611Step2, sizeof(ms5611Step2), INTTW_USE_PROGMEM, ms5611OutputCallback);
     xSemaphoreGive(ms5611Mutex);
     ms5611Step = 0;
   }
 }
 
-
-void TWScheduler::ms5611TempCallback(void) {
+void TWScheduler::ms5611TempCallback(void)
+{
 
   bset(TEMP_READ);
 }
 
-void TWScheduler::errorRelaunch(void) {
-  
+void TWScheduler::errorRelaunch(void)
+{
+
   /* relaunch conv D1 */
-  /* use PRESS_READ as success flag */ 
+  /* use PRESS_READ as success flag */
   bunset(PRESS_READ);
-  intTW.start((uint8_t*)(&(ms5611Step2[5])), 3, INTTW_USE_PROGMEM, errorRelaunchCallback);
+  intTW.start((uint8_t *)(&(ms5611Step2[5])), 3, INTTW_USE_PROGMEM, errorRelaunchCallback);
   ms5611Step = 0;
 }
 
-void TWScheduler::errorRelaunchCallback(void) {
+void TWScheduler::errorRelaunchCallback(void)
+{
 
   /* conv D1 success */
   bset(PRESS_READ);
 }
 
-void TWScheduler::ms5611OutputCallback(void) {
+void TWScheduler::ms5611OutputCallback(void)
+{
 
   /* done ! */
   status |= (1 << PRESS_READ) | (1 << HAVE_PRESSURE);
 }
 
-bool TWScheduler::havePressure(void) {
+bool TWScheduler::havePressure(void)
+{
 
   return bisset(HAVE_PRESSURE);
 }
 
-double TWScheduler::getAlti(void) {
+double TWScheduler::getAlti(void)
+{
 
   /* copy needed values */
   uint8_t ms5611Values[6];
-  
+
   xSemaphoreTake(ms5611Mutex, portMAX_DELAY);
-  for(int i = 0; i<6; i++) {
-    ms5611Values[i] =  ms5611Output[i+3];
+  for (int i = 0; i < 6; i++)
+  {
+    ms5611Values[i] = ms5611Output[i + 3];
   }
   bunset(HAVE_PRESSURE);
   xSemaphoreGive(ms5611Mutex);
@@ -316,22 +335,33 @@ double TWScheduler::getAlti(void) {
   /* compute pressure and temp */
   double temperature, pressure;
   ms5611.computeMeasures(&ms5611Values[0], &ms5611Values[3], temperature, pressure);
+
+  ms5611SavePressure = pressure;
 
   /* get corresponding alti */
   double alti = ms5611.computeAltitude(pressure);
 
-	if (alti < 0) alti = 0;
+  //	if (alti < 0) alti = ms5611.computeAltitude2(pressure);
+
+  if (alti < 0)
+  {
+    ms5611.SetBaseSeaPressure(1030);
+    alti = 0;
+  }
+
   return alti;
 }
 
-void TWScheduler::getTempAlti(double& temp, double& alti) {
+void TWScheduler::getTempAlti(double &temp, double &alti)
+{
 
   /* copy needed values */
   uint8_t ms5611Values[6];
-  
+
   xSemaphoreTake(ms5611Mutex, portMAX_DELAY);
-  for(int i = 0; i<6; i++) {
-    ms5611Values[i] =  ms5611Output[i+3];
+  for (int i = 0; i < 6; i++)
+  {
+    ms5611Values[i] = ms5611Output[i + 3];
   }
   bunset(HAVE_PRESSURE);
   xSemaphoreGive(ms5611Mutex);
@@ -340,9 +370,14 @@ void TWScheduler::getTempAlti(double& temp, double& alti) {
   double temperature, pressure;
   ms5611.computeMeasures(&ms5611Values[0], &ms5611Values[3], temperature, pressure);
 
+  ms5611SavePressure = pressure;
+
   /* get corresponding alti */
   alti = ms5611.computeAltitude(pressure);
-	if (alti < 0) alti = 0;
+
+  /*	if (alti < 0) alti = ms5611.computeAltitude2(pressure);
+
+	if (alti < 0) alti = 0;*/
   temp = temperature;
 }
 #endif
@@ -352,44 +387,47 @@ void TWScheduler::getTempAlti(double& temp, double& alti) {
 /* IMU part */
 /************/
 
-const uint8_t imuReadFifoCount[] PROGMEM = { INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
-					     INTTW_DEST(1, INTTW_IN_CMD),
-					     INV_REG_FIFO_COUNT_H,
-					     INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
-					     INTTW_DEST(2, INTTW_AT_POINTER) };
+const uint8_t imuReadFifoCount[] PROGMEM = {INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
+                                            INTTW_DEST(1, INTTW_IN_CMD),
+                                            INV_REG_FIFO_COUNT_H,
+                                            INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
+                                            INTTW_DEST(2, INTTW_AT_POINTER)};
 
+const uint8_t imuReadFifo[] PROGMEM = {INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       INV_REG_FIFO_R_W,
+                                       INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
+                                       INTTW_DEST(LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH, INTTW_AT_POINTER)};
 
-const uint8_t imuReadFifo[] PROGMEM = { INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					INV_REG_FIFO_R_W,
-					INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
-					INTTW_DEST(LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH, INTTW_AT_POINTER) };
-
-
-void TWScheduler::imuInterrupt(void) {
+void TWScheduler::imuInterrupt(void)
+{
 
 #ifdef MPU_ENABLE_INT_PIN
   /* once the FiFo is emptied, we use interrupts */
-  if( bisset(MPU_FIFO_EMPTIED) ) {
-    if( imuIntCount > 0 ) {
+  if (bisset(MPU_FIFO_EMPTIED))
+  {
+    if (imuIntCount > 0)
+    {
       /* we can read the fifo directly */
       imuReadFifoData();
     }
-  } else {
+  }
+  else
+  {
     /* FiFo still not emptied */
     /* check for measures     */
-    intTW.setRxBuffer((uint8_t*)checkOutput);
-    intTW.start((uint8_t*)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
+    intTW.setRxBuffer((uint8_t *)checkOutput);
+    intTW.start((uint8_t *)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
   }
 #else
   /* check FiFo for available measures */
-  intTW.setRxBuffer((uint8_t*)checkOutput);
-  intTW.start((uint8_t*)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
+  intTW.setRxBuffer((uint8_t *)checkOutput);
+  intTW.start((uint8_t *)imuReadFifoCount, sizeof(imuReadFifoCount), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, imuCheckFifoCountCallBack);
 #endif //MPU_ENABLE_INT_PIN
 }
 
-
-void TWScheduler::imuCheckFifoCountCallBack(void) {
+void TWScheduler::imuCheckFifoCountCallBack(void)
+{
 
   /* we have FiFo count */
   uint16_t fifoCount = (((uint16_t)checkOutput[0]) << 8) | checkOutput[1];
@@ -398,33 +436,39 @@ void TWScheduler::imuCheckFifoCountCallBack(void) {
   int8_t fifoState = fastMPUHaveFIFOPaquet(fifoCount);
 #ifdef MPU_ENABLE_INT_PIN
   /* check for empty fifo */
-  if( fifoState == 0 ) {
+  if (fifoState == 0)
+  {
     xSemaphoreTake(imuIntCountMutex, portMAX_DELAY);
     bset(MPU_FIFO_EMPTIED);
     imuIntCount = 0; //start using the interrupt
     xSemaphoreGive(imuIntCountMutex);
   }
 #endif //MPU_ENABLE_INT_PIN
-  if( fifoState > 0 ) {
+  if (fifoState > 0)
+  {
     imuReadFifoData();
-  } else {
+  }
+  else
+  {
 
     /* else stop TW communication */
     intTW.stop();
   }
 }
 
-void TWScheduler::imuReadFifoData(void) {
+void TWScheduler::imuReadFifoData(void)
+{
 
   /* we need to lock */
-  intTW.setRxBuffer((uint8_t*)imuOutput);
+  intTW.setRxBuffer((uint8_t *)imuOutput);
 
   xSemaphoreTake(imuMutex, portMAX_DELAY);
-  intTW.start((uint8_t*)imuReadFifo, sizeof(imuReadFifo), INTTW_USE_PROGMEM, imuHaveFifoDataCallback);
+  intTW.start((uint8_t *)imuReadFifo, sizeof(imuReadFifo), INTTW_USE_PROGMEM, imuHaveFifoDataCallback);
   xSemaphoreGive(imuMutex);
 }
 
-void TWScheduler::imuHaveFifoDataCallback(void) {
+void TWScheduler::imuHaveFifoDataCallback(void)
+{
 
   /* done ! */
   status |= (1 << HAVE_ACCEL);
@@ -432,7 +476,7 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
 
   status |= (1 << HAVE_GYRO);
   status |= (1 << HAVE_NEWGYRO);
-  
+
 #ifdef MPU_ENABLE_INT_PIN
   /* decrease FiFo counter */
   xSemaphoreTake(imuIntCountMutex, portMAX_DELAY);
@@ -442,39 +486,43 @@ void TWScheduler::imuHaveFifoDataCallback(void) {
 }
 
 #ifdef MPU_ENABLE_INT_PIN
-void IRAM_ATTR TWScheduler::imuIntPinInterrupt(void) {
+void IRAM_ATTR TWScheduler::imuIntPinInterrupt(void)
+{
 
   BaseType_t xHigherPriorityTaskWokenT = 0;
   xSemaphoreTakeFromISR(imuIntCountMutex, &xHigherPriorityTaskWokenT);
-  
+
   imuIntCount++;
 
   BaseType_t xHigherPriorityTaskWokenG = 0;
   xSemaphoreGiveFromISR(imuIntCountMutex, &xHigherPriorityTaskWokenG);
 
-  if( xHigherPriorityTaskWokenT == pdTRUE || xHigherPriorityTaskWokenG == pdTRUE )
+  if (xHigherPriorityTaskWokenT == pdTRUE || xHigherPriorityTaskWokenG == pdTRUE)
     portYIELD_FROM_ISR();
 }
-#endif  
+#endif
 
-
-bool TWScheduler::haveAccel(void) {
+bool TWScheduler::haveAccel(void)
+{
 
   return bisset(HAVE_ACCEL);
 }
 
-bool TWScheduler::haveNewAccel(void) {
+bool TWScheduler::haveNewAccel(void)
+{
 
   return bisset(HAVE_NEWACCEL);
 }
 
-bool TWScheduler::resetNewAccel(void) {
+bool TWScheduler::resetNewAccel(void)
+{
 
   return bunset(HAVE_NEWACCEL);
 }
 
-void TWScheduler::getRawAccel(int16_t* rawAccel, int32_t* quat) {
-  
+void TWScheduler::getRawAccel(int16_t *rawAccel, int32_t *quat)
+{
+
   /***************/
   /* check accel */
   /***************/
@@ -482,12 +530,12 @@ void TWScheduler::getRawAccel(int16_t* rawAccel, int32_t* quat) {
   /* first copy fifo packet */
   uint8_t fifoPacket[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH];
   xSemaphoreTake(imuMutex, portMAX_DELAY);
-  for(int i = 0; i<LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++) {
-    fifoPacket[i] =  imuOutput[i];
+  for (int i = 0; i < LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++)
+  {
+    fifoPacket[i] = imuOutput[i];
   }
   bunset(HAVE_ACCEL);
   xSemaphoreGive(imuMutex);
-  
 
   /* parse FiFo packet to get raw measures */
   uint8_t tap;
@@ -495,24 +543,51 @@ void TWScheduler::getRawAccel(int16_t* rawAccel, int32_t* quat) {
 
   /* check tap : use callback if needed */
   fastMPUCheckTap(tap);
-}
-  
 
-double TWScheduler::getAccel(double* vertVector) {
+  /* change of basis */
+#if ((VARIOVERSION == 254) || (VARIOVERSION == 291) || (VARIOVERSION == 293) || (VARIOVERSION == 294))
+  //portrait
+  rawAccel[0] = -rawAccel[0];
+  rawAccel[1] = -rawAccel[1];
+  quat[1] = -quat[1];
+  quat[2] = -quat[2];
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 292))
+  //paysage
+  int16_t tmpValAccel = rawAccel[0];
+  int32_t tmpValQuat = quat[1];
+  rawAccel[0] = rawAccel[1];
+  rawAccel[1] = -tmpValAccel;
+  quat[1] = quat[2];
+  quat[2] = -tmpValQuat;
+#elif ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
+  rawAccel[0] = -rawAccel[0];
+  rawAccel[1] = rawAccel[1];
+  rawAccel[2] = -rawAccel[2];
+  quat[1] = -quat[1];
+  quat[2] = quat[2];
+  quat[3] = -quat[3];
+#endif
+}
+
+double TWScheduler::getAccel(double *vertVector)
+{
 
   /*****************/
   /* get raw accel */
   /*****************/
   int16_t rawAccel[3];
   int32_t quat[4];
-  
+
   getRawAccel(rawAccel, quat);
-  
+
   /* compute vertVector and vertAccel */
   double vertAccel;
-  if( vertVector ) {
+  if (vertVector)
+  {
     vertaccel.compute(rawAccel, quat, vertVector, vertAccel);
-  } else {
+  }
+  else
+  {
     double tmpVertVector[3];
     vertaccel.compute(rawAccel, quat, tmpVertVector, vertAccel);
   }
@@ -521,23 +596,27 @@ double TWScheduler::getAccel(double* vertVector) {
   return vertAccel;
 }
 
-bool TWScheduler::haveGyro(void) {
+bool TWScheduler::haveGyro(void)
+{
 
   return bisset(HAVE_GYRO);
 }
 
-bool TWScheduler::haveNewGyro(void) {
+bool TWScheduler::haveNewGyro(void)
+{
 
   return bisset(HAVE_NEWGYRO);
 }
 
-bool TWScheduler::resetNewGyro(void) {
+bool TWScheduler::resetNewGyro(void)
+{
 
   return bunset(HAVE_NEWGYRO);
 }
 
-void TWScheduler::getRawGyro(int16_t* rawGyro, int32_t* quat) {
-  
+void TWScheduler::getRawGyro(int16_t *rawGyro, int32_t *quat)
+{
+
   /***************/
   /* check gyro */
   /***************/
@@ -545,12 +624,12 @@ void TWScheduler::getRawGyro(int16_t* rawGyro, int32_t* quat) {
   /* first copy fifo packet */
   uint8_t fifoPacket[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH];
   xSemaphoreTake(imuMutex, portMAX_DELAY);
-  for(int i = 0; i<LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++) {
-    fifoPacket[i] =  imuOutput[i];
+  for (int i = 0; i < LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++)
+  {
+    fifoPacket[i] = imuOutput[i];
   }
   bunset(HAVE_GYRO);
   xSemaphoreGive(imuMutex);
-  
 
   /* parse FiFo packet to get raw measures */
   uint8_t tap;
@@ -560,8 +639,9 @@ void TWScheduler::getRawGyro(int16_t* rawGyro, int32_t* quat) {
   fastMPUCheckTap(tap);
 }
 
-void TWScheduler::getRawAccelGyro(int16_t* rawAccel, int16_t* rawGyro, int32_t* quat) {
-  
+void TWScheduler::getRawAccelGyro(int16_t *rawAccel, int16_t *rawGyro, int32_t *quat)
+{
+
   /***************/
   /* check accel */
   /***************/
@@ -569,12 +649,12 @@ void TWScheduler::getRawAccelGyro(int16_t* rawAccel, int16_t* rawGyro, int32_t* 
   /* first copy fifo packet */
   uint8_t fifoPacket[LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH];
   xSemaphoreTake(imuMutex, portMAX_DELAY);
-  for(int i = 0; i<LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++) {
-    fifoPacket[i] =  imuOutput[i];
+  for (int i = 0; i < LIGHT_INVENSENSE_COMPRESSED_DMP_PAQUET_LENGTH; i++)
+  {
+    fifoPacket[i] = imuOutput[i];
   }
   bunset(HAVE_ACCEL);
   xSemaphoreGive(imuMutex);
-  
 
   /* parse FiFo packet to get raw measures */
   uint8_t tap;
@@ -583,27 +663,26 @@ void TWScheduler::getRawAccelGyro(int16_t* rawAccel, int16_t* rawGyro, int32_t* 
   /* check tap : use callback if needed */
   fastMPUCheckTap(tap);
 }
-  
 
-void TWScheduler::getAccelGyro(double* vertVector, double* gyroVector) {
+void TWScheduler::getAccelGyro(double *vertVector, double *gyroVector)
+{
 
   /*****************/
   /* get raw accel */
   /*****************/
   int16_t rawAccel[3];
   int32_t quat[4];
-  
+
   getRawAccel(rawAccel, quat);
-	
-	DUMP(rawAccel[0]);
-	DUMP(rawAccel[1]);
-	DUMP(rawAccel[2]);
-  
+
   /* compute vertVector and vertAccel */
   double vertAccel;
-  if( vertVector ) {
+  if (vertVector)
+  {
     vertaccel.compute(rawAccel, quat, vertVector, vertAccel);
-  } else {
+  }
+  else
+  {
     double tmpVertVector[3];
     vertaccel.compute(rawAccel, quat, tmpVertVector, vertAccel);
   }
@@ -611,21 +690,17 @@ void TWScheduler::getAccelGyro(double* vertVector, double* gyroVector) {
   int16_t rawGyro[3];
   getRawGyro(rawGyro, quat);
 
-	DUMP(rawGyro[0]);
-	DUMP(rawGyro[1]);
-	DUMP(rawGyro[2]);
-  
   /* compute vertVector and vertAccel */
   double vertGyro;
-  if( gyroVector ) {
+  if (gyroVector)
+  {
     vertaccel.computeGyro(rawGyro, quat, gyroVector, vertGyro);
-  } else {
+  }
+  else
+  {
     double tmpGyroVector[3];
     vertaccel.computeGyro(rawGyro, quat, tmpGyroVector, vertGyro);
   }
-
-  /* done */
-//  return vertAccel;
 }
 
 #ifdef AK89xx_SECONDARY
@@ -633,82 +708,110 @@ void TWScheduler::getAccelGyro(double* vertVector, double* gyroVector) {
 /* Mag part */
 /************/
 
-const uint8_t magReadStatus[] PROGMEM = { INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
-					  INTTW_DEST(1, INTTW_IN_CMD),
-					  INV_REG_I2C_MST_STATUS,
-					  INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
-					  INTTW_DEST(1, INTTW_AT_POINTER) };
+const uint8_t magReadStatus[] PROGMEM = {INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
+                                         INTTW_DEST(1, INTTW_IN_CMD),
+                                         INV_REG_I2C_MST_STATUS,
+                                         INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
+                                         INTTW_DEST(1, INTTW_AT_POINTER)};
 
-const uint8_t magReadData[] PROGMEM = { INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
-					INTTW_DEST(1, INTTW_IN_CMD),
-					INV_REG_RAW_COMPASS,
-					INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
-					INTTW_DEST(8, INTTW_AT_POINTER) };
+const uint8_t magReadData[] PROGMEM = {INTTW_ACTION(INV_HW_ADDR, INTTW_WRITE),
+                                       INTTW_DEST(1, INTTW_IN_CMD),
+                                       INV_REG_RAW_COMPASS,
+                                       INTTW_ACTION(INV_HW_ADDR, INTTW_READ),
+                                       INTTW_DEST(8, INTTW_AT_POINTER)};
 
-void TWScheduler::magInterrupt(void) {
+void TWScheduler::magInterrupt(void)
+{
 
   /* check for available measures */
-  intTW.setRxBuffer((uint8_t*)checkOutput);
-  intTW.start((uint8_t*)magReadStatus, sizeof(magReadStatus), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, magCheckStatusCallback);
-
+  intTW.setRxBuffer((uint8_t *)checkOutput);
+  intTW.start((uint8_t *)magReadStatus, sizeof(magReadStatus), INTTW_USE_PROGMEM | INTTW_KEEP_BUS, magCheckStatusCallback);
 }
 
-void TWScheduler::magCheckStatusCallback(void) {
+void TWScheduler::magCheckStatusCallback(void)
+{
 
   /* check if new measure */
-  if( checkOutput[0] & 0x40 ) {
+  if (checkOutput[0] & 0x40)
+  {
 
     /* read measure */
     /* we need to lock */
-    intTW.setRxBuffer((uint8_t*)magOutput);
+    intTW.setRxBuffer((uint8_t *)magOutput);
     xSemaphoreTake(magMutex, portMAX_DELAY);
-    intTW.start((uint8_t*)magReadData, sizeof(magReadData), INTTW_USE_PROGMEM, magHaveDataCallback);
+    intTW.start((uint8_t *)magReadData, sizeof(magReadData), INTTW_USE_PROGMEM, magHaveDataCallback);
     xSemaphoreGive(magMutex);
-  } else {
+  }
+  else
+  {
 
     /* stop TW communication */
     intTW.stop();
   }
 }
 
-void TWScheduler::magHaveDataCallback(void) {
+void TWScheduler::magHaveDataCallback(void)
+{
 
   /* done ! */
   status |= (1 << HAVE_MAG);
 }
 
-bool TWScheduler::haveMag(void) {
+bool TWScheduler::haveMag(void)
+{
 
   return bisset(HAVE_MAG);
 }
 
-void TWScheduler::getRawMag(int16_t* rawMag) {
-  
+void TWScheduler::getRawMag(int16_t *rawMag)
+{
+
   /*************/
   /* check mag */
   /*************/
-  if( bisset(HAVE_MAG) ) {
+  if (bisset(HAVE_MAG))
+  {
 
     /* copy mag data */
     uint8_t magData[8];
     xSemaphoreTake(magMutex, portMAX_DELAY);
-    for(int i = 0; i<8; i++) {
-      magData[i] =  magOutput[i];
+    for (int i = 0; i < 8; i++)
+    {
+      magData[i] = magOutput[i];
     }
     bunset(HAVE_MAG);
     xSemaphoreGive(magMutex);
 
     /* parse mag data */
-#ifdef VERTACCEL_USE_MAG_SENS_ADJ    
-    if( fastMPUParseMag(magData, rawMag) >= 0 ) {
+#ifdef VERTACCEL_USE_MAG_SENS_ADJ
+    if (fastMPUParseMag(magData, rawMag) >= 0)
+    {
 #else
-    if( fastMPUParseRawMag(magData, rawMag) >= 0 ) {
+    if (fastMPUParseRawMag(magData, rawMag) >= 0)
+    {
 #endif
     }
   }
+
+/* change of basis */
+#if ((VARIOVERSION == 254) || (VARIOVERSION == 291) || (VARIOVERSION == 293) || (VARIOVERSION == 294))
+  //portrait
+  rawMag[0] = -rawMag[0];
+  rawMag[1] = -rawMag[1];
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 292))
+  //paysage
+  int16_t tmpValMag = rawMag[0];
+  rawMag[0] = rawMag[1];
+  rawMag[1] = -tmpValMag;
+#elif ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
+rawMag[0] = -rawMag[0];
+rawMag[1] = rawMag[1];
+rawMag[2] = -rawMag[2];
+#endif
 }
 
-void TWScheduler::getNorthVector(double* vertVector, double* northVector) {
+void TWScheduler::getNorthVector(double *vertVector, double *northVector)
+{
 
   /* get raw mag */
   int16_t rawMag[3];
@@ -718,15 +821,12 @@ void TWScheduler::getNorthVector(double* vertVector, double* northVector) {
   vertaccel.computeNorthVector(vertVector, rawMag, northVector);
 }
 
-void TWScheduler::getNorthVector2(double* vertVector, double* gyroVector, double* northVector) {
+void TWScheduler::getNorthVector2(double *vertVector, double *gyroVector, double *northVector)
+{
 
   /* get raw mag */
   int16_t rawMag[3];
   getRawMag(rawMag);
-
-	DUMP(rawMag[0]);
-	DUMP(rawMag[1]);
-	DUMP(rawMag[2]);
 
   /* compute north vector */
   vertaccel.computeNorthVector2(vertVector, gyroVector, rawMag, northVector);
@@ -740,7 +840,8 @@ void TWScheduler::getNorthVector2(double* vertVector, double* gyroVector, double
 /*      Scheduler      */
 /*                     */
 /*---------------------*/
-void TWScheduler::init(void) {
+void TWScheduler::init(void)
+{
 
   /* init the devices */
   /* and mutexes      */
@@ -768,115 +869,100 @@ void TWScheduler::init(void) {
   imuIntCountMutex = xSemaphoreCreateBinary();
   xSemaphoreGive(imuIntCountMutex);
   pinMode(VARIO_MPU_INT_PIN, INPUT);
-  attachInterrupt(VARIO_MPU_INT_PIN, imuIntPinInterrupt,  FALLING);
+  attachInterrupt(VARIO_MPU_INT_PIN, imuIntPinInterrupt, FALLING);
 #endif
- 
+
   /* create scheduler task */
-  xTaskCreatePinnedToCore(interruptScheduler, "TWS", TWO_WIRE_SCHEDULER_STACK_SIZE, NULL, TWO_WIRE_SCHEDULER_PRIORITY, &schedulerTaskHandler,TWO_WIRE_SCHEDULER_CORE);
+  xTaskCreatePinnedToCore(interruptScheduler, "TWS", TWO_WIRE_SCHEDULER_STACK_SIZE, NULL, TWO_WIRE_SCHEDULER_PRIORITY, &schedulerTaskHandler, TWO_WIRE_SCHEDULER_CORE);
 
   /* create and launch timer */
   timer = timerBegin(TWO_WIRE_SCHEDULER_TIMER_NUM, TWO_WIRE_SCHEDULER_INTERRUPT_PRESCALE, true);
   timerAttachInterrupt(timer, timerCallback, true);
   timerAlarmWrite(timer, TWO_WIRE_SCHEDULER_INTERRUPT_COMPARE, true);
   timerAlarmEnable(timer);
-  
 }
 
-void TWScheduler::disableAcquisition() {
-	IntEnable = false;
-	SDUMP("DISABLE INTERRUPT ***************");
-	SDUMP("DISABLE INTERRUPT ***************");
-	DUMP(IntEnable);
-	
-	vTaskSuspend( schedulerTaskHandler );
-	timerAlarmDisable(timer);
-	
+void TWScheduler::disableAcquisition()
+{
+  IntEnable = false;
+  SDUMP("DISABLE INTERRUPT ***************");
+  SDUMP("DISABLE INTERRUPT ***************");
+  DUMP(IntEnable);
+
+  vTaskSuspend(schedulerTaskHandler);
+  timerAlarmDisable(timer);
+
 #ifdef MPU_ENABLE_INT_PIN
   detachInterrupt(VARIO_MPU_INT_PIN);
 #endif
-	
-	intTW.release();
-	
+
+  intTW.release();
+
 #ifdef VARIO_TW_SDA_PIN
-	detachInterrupt(VARIO_TW_SDA_PIN);
+  detachInterrupt(VARIO_TW_SDA_PIN);
 #endif
 
 #ifdef VARIO_TW_SCL_PIN
-	detachInterrupt(VARIO_TW_SCL_PIN);
+  detachInterrupt(VARIO_TW_SCL_PIN);
 #endif
-	
-	TRACE();
-/*
-Decoding stack results
-0x40155b47: i2cRelease at C:\Users\jean-phi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.4\cores\esp32\esp32-hal-i2c.c line 1561
-0x400e210e: IntTW::start(unsigned char*, unsigned char, unsigned char, void (*)()) at C:\Users\jean-phi\Documents\Arduino\libraries\IntTW\IntTW.cpp line 168
-0x400e2ef3: TWScheduler::ms5611Interrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 240
-0x400e33f2: TWScheduler::mainInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 815
-0x400e3464: TWScheduler::interruptScheduler(void*) at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 791
-0x4008ee65: vPortTaskWrapper at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/port.c line 143
-
-0x40155c23: i2cRelease at C:\Users\jean-phi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.4\cores\esp32\esp32-hal-i2c.c line 1561
-0x400e2136: IntTW::start(unsigned char*, unsigned char, unsigned char, void (*)()) at C:\Users\jean-phi\Documents\Arduino\libraries\IntTW\IntTW.cpp line 168
-0x400e30c2: TWScheduler::imuReadFifoData() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 417
-0x400e30eb: TWScheduler::imuInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 370
-0x400e3469: TWScheduler::mainInterrupt() at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 848
-0x400e34d0: TWScheduler::interruptScheduler(void*) at C:\Users\jean-phi\Documents\Arduino\libraries\TwoWireScheduler\TwoWireScheduler.cpp line 818
-0x4008ee65: vPortTaskWrapper at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/port.c line 143
-
-*/	
-	
 }
 
-void TWScheduler::interruptScheduler(void* param) {
+void TWScheduler::interruptScheduler(void *param)
+{
 
-  while( true ) {
+  while (true)
+  {
 
     /* wait */
     xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
-  
+
     /* launch interrupt */
     mainInterrupt();
   }
 }
 
-void IRAM_ATTR TWScheduler::timerCallback(void) {
+void IRAM_ATTR TWScheduler::timerCallback(void)
+{
 
   /* just wake scheduler */
   BaseType_t xHigherPriorityTaskWoken = 0;
   xTaskNotifyFromISR(schedulerTaskHandler, 0, eNoAction, &xHigherPriorityTaskWoken);
-  if( xHigherPriorityTaskWoken == pdTRUE )
+  if (xHigherPriorityTaskWoken == pdTRUE)
     portYIELD_FROM_ISR();
 }
 
- 
-void TWScheduler::mainInterrupt(void) {
+void TWScheduler::mainInterrupt(void)
+{
 
   /* launch interrupts */
 #ifdef HAVE_BMP280
-  if( bmp280Count == 0 ) {
+  if (bmp280Count == 0)
+  {
     bmp280Interrupt();
     bmp280Count = TWO_WIRE_SCHEDULER_BMP280_PERIOD;
   }
 #else
-  if( ms5611Count == 0 ) {
+  if (ms5611Count == 0)
+  {
     ms5611Interrupt();
     ms5611Count = TWO_WIRE_SCHEDULER_MS5611_PERIOD;
   }
 #endif
 #ifdef HAVE_ACCELEROMETER
-  if( imuCount == 0 ) {
+  if (imuCount == 0)
+  {
     imuInterrupt();
     imuCount = TWO_WIRE_SCHEDULER_IMU_PERIOD;
   }
 #ifdef AK89xx_SECONDARY
-  if( magCount == 0 ) {
+  if (magCount == 0)
+  {
     magInterrupt();
     magCount = TWO_WIRE_SCHEDULER_MAG_PERIOD;
   }
 #endif //AK89xx_SECONDARY
 #endif //HAVE_ACCELEROMETER
 
-  
   /* decrease counters */
 #ifdef HAVE_BMP280
   bmp280Count--;
@@ -889,5 +975,4 @@ void TWScheduler::mainInterrupt(void) {
   magCount--;
 #endif //AK89xx_SECONDARY
 #endif //HAVE_ACCELEROMETER
-  
 }

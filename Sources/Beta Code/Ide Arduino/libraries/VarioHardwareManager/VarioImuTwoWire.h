@@ -26,6 +26,7 @@
  *  version    Date     Description                                              *
  *    1.0    22/03/20                                                            *
  *    1.0.1  25/03/20   Ajout haveMeasure(void)																	 *
+ *    1.0.2  25/12/20   Modif getCap                                             *
  *                                                                               *
  *********************************************************************************
  */
@@ -60,7 +61,7 @@ private:
   double Alti;
   double Temp;
   double Accel;
-	int	CompteurAccel = 0;
+	int	   CompteurAccel = 0;
 };
 
 #endif //TWOWIRESCHEDULER

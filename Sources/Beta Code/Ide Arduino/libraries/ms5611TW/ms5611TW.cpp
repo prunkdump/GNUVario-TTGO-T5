@@ -25,6 +25,8 @@
 /*  version    Date       Description                                            */
 /*    1.0                                                                        */
 /*    1.0.1    04/09/19   Modification du nom de la bibliothèque              	 */
+/*    1.0.2    06/04/21   Ajout computeAltitude2                                 */
+/*    1.0.3    11/04/21   Modification gestion pression de la mer                */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -32,6 +34,8 @@
 
 #include <Arduino.h>
 #include <IntTW.h>
+
+double Ms5611::Ms5611_Base_Sea_Pressure;
 
 void Ms5611::readHardwareCalibration(uint16_t* cal) {
 
@@ -49,6 +53,8 @@ void Ms5611::readHardwareCalibration(uint16_t* cal) {
 }
 
 void Ms5611::init(void) {
+	
+	Ms5611_Base_Sea_Pressure = MS5611_BASE_SEA_PRESSURE;
 
   /* reset */
   intTW.writeBytes(address, MS5611_CMD_RESET, 0, NULL);
@@ -159,7 +165,12 @@ void Ms5611::computeMeasures(uint8_t* d1Buff, uint8_t* d2Buff, double& temperatu
 double Ms5611::computeAltitude(double pressure) {
   
   double alti;
-  alti = pow((pressure/(MS5611_BASE_SEA_PRESSURE)), 0.1902949572); //0.1902949572 = 1/5.255
+  alti = pow((pressure/(Ms5611_Base_Sea_Pressure)), 0.1902949572); //0.1902949572 = 1/5.255
   alti = (1-alti)*(288.15/0.0065);
   return alti;
+}
+
+void Ms5611::SetBaseSeaPressure(double pressure) {
+  
+  Ms5611_Base_Sea_Pressure = pressure;
 }

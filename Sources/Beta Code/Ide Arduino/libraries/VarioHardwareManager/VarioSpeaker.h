@@ -15,6 +15,8 @@ public:
     VarioSpeaker();
     void init();
 		void initSound();
+		void UnMute(void);
+		void Mute(void);
 };
 
 #endif //VARIO_SPEAKER_H

@@ -59,7 +59,7 @@ void VarioBle::init(const std::string name)
 
   /* create the BLE Characteristic */
   characteristic = service->createCharacteristic(VARIO_BLE_CHARACTERISTIC_UUID_TX, NIMBLE_PROPERTY::NOTIFY);
-  characteristic->createDescriptor("2902");
+  //characteristic->createDescriptor("2902");
 
   /* start the service */
   service->start();

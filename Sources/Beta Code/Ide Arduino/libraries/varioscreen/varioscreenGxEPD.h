@@ -29,8 +29,9 @@
  *    1.0.1  28/09/19   Changement de nom des librairies                         *
  *    1.0.2  22/10/19   Ajout écran 2.13''                                       *
  *    1.0.3  03/02/20   Changement nom passage à 290 au lieu de 29               *
- *    1.0.4  10/02/20   Compatibilité écran 291 et 293                           *
+ *    1.0.4  10/02/21   Compatibilité écran 291 et 293                           *
  *                      Compatibilité écran 290 et 292                           *
+ *    1.0.4  22/05/21   Compatibilité écran 293 (GDEW029M06)                     *
  *                                                                               *
  *********************************************************************************/
  
@@ -53,26 +54,32 @@
 #include <varioscreenGxEPD_154.h>
 #endif
 
-// Ecran 2.90'' paysage
+// Ecran 2.90'' paysage / 2.9 screen landscape (TTGO-T5-V2.4 before 12/2020)
 #if (VARIOSCREEN_SIZE == 290)
 #include <varioscreenGxEPD_290b.h>
 #include <varioscreenObjects_290b.h>
 #endif
 
-// Ecran 2.90'' V2 paysage
+// Ecran 2.90''  paysage / 2.9 screen landscape  (Ecran/Screen Good Display GDEW029M06)
 #if (VARIOSCREEN_SIZE == 292)
 #include <varioscreenGxEPD_290b.h>
 #include <varioscreenObjects_290b.h>
 #endif
 
-// Ecran 2.90'' portrait
-#if (VARIOSCREEN_SIZE ==291)
+// Ecran 2.90'' portrait / 2.9 screen portrait (TTGO-T5-V2.4 before 12/2020)
+#if (VARIOSCREEN_SIZE == 291)
 #include <varioscreenGxEPD_291b.h>
 #include <varioscreenObjects_291b.h>
 #endif
 
-// Ecran 2.90''V2 portrait
-#if (VARIOSCREEN_SIZE ==293)
+// Ecran 2.90'' portrait / 2.9 screen portrait (Ecran/Screen Good Display GDEW029M06)
+#if (VARIOSCREEN_SIZE == 293)
+#include <varioscreenGxEPD_291b.h>
+#include <varioscreenObjects_291b.h>
+#endif
+
+// Ecran 2.90'' portrait / 2.9 screen portrait (TTGO-T5-V2.4 after 12/2020 Screen number DKEG0290BNS800F6 / QYEG0290BNS800F6C02)
+#if (VARIOSCREEN_SIZE == 294)
 #include <varioscreenGxEPD_291b.h>
 #include <varioscreenObjects_291b.h>
 #endif

@@ -18,7 +18,9 @@ File wifiParamFile;
 File webParamFile;
 VarioSqlFlightHelper varioSqlFlightHelper;
 
+//************************************************************
 AsyncResponseStream *VarioWebHandler::handleListFlights(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
@@ -79,7 +81,9 @@ AsyncResponseStream *VarioWebHandler::handleListFlights(AsyncWebServerRequest *r
     return response;
 }
 
+//************************************************************
 AsyncResponseStream *VarioWebHandler::handlePrintDirectory(AsyncWebServerRequest *request)
+//************************************************************
 {
     /***********************************/
 #ifdef WIFI_DEBUG
@@ -184,7 +188,6 @@ void VarioWebHandler::printDirectoryRecurse(AsyncResponseStream *response, Strin
         File entry;
         if (!(entry = dir.openNextFile(FILE_READ)))
         {
-            // TRACE();
             break;
         }
         String tmpName = entry.name();
@@ -250,7 +253,9 @@ void VarioWebHandler::printDirectoryRecurse(AsyncResponseStream *response, Strin
     }
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleParams(AsyncWebServerRequest *request)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleParams");
@@ -269,7 +274,9 @@ AsyncWebServerResponse *VarioWebHandler::handleParams(AsyncWebServerRequest *req
     return response;
 }
 
+//************************************************************
 void VarioWebHandler::handleSaveParams(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleSaveParams");
@@ -298,7 +305,9 @@ void VarioWebHandler::handleSaveParams(AsyncWebServerRequest *request, uint8_t *
     return;
 }
 
+//************************************************************
 void VarioWebHandler::handleOtaUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+//************************************************************
 {
 
     if (!index)
@@ -348,7 +357,9 @@ void VarioWebHandler::handleOtaUpdate(AsyncWebServerRequest *request, String fil
 }
 
 //telechargement d'un fichier dont le nom complet avec chemin se trouve en param
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleFileDownload(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncWebServerResponse *response;
     String path;
@@ -374,7 +385,9 @@ AsyncWebServerResponse *VarioWebHandler::handleFileDownload(AsyncWebServerReques
 }
 
 //suppression d'un fichier dont le nom complet avec chemin se trouve en param
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleFileDelete(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncWebServerResponse *response;
     String path;
@@ -402,7 +415,9 @@ AsyncWebServerResponse *VarioWebHandler::handleFileDelete(AsyncWebServerRequest 
 }
 
 // upload d'un fichier, le chemin de destination se trouve dans le nom du fichier posté
+//************************************************************
 void VarioWebHandler::handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+//************************************************************
 {
 
     if (!index)
@@ -441,7 +456,9 @@ void VarioWebHandler::handleFileUpload(AsyncWebServerRequest *request, String fi
     }
 }
 
+//************************************************************
 void VarioWebHandler::handleFileCreate(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
     String path;
 
@@ -481,7 +498,9 @@ void VarioWebHandler::handleFileCreate(AsyncWebServerRequest *request, uint8_t *
 }
 
 //récupération du contenu du fichier wifi
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleWifi(AsyncWebServerRequest *request)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleParams - handle Wifi");
@@ -493,7 +512,9 @@ AsyncWebServerResponse *VarioWebHandler::handleWifi(AsyncWebServerRequest *reque
 }
 
 // sauvegarde des parametres
+//************************************************************
 void VarioWebHandler::handleSaveWifi(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
 
 #ifdef WIFI_DEBUG
@@ -505,17 +526,17 @@ void VarioWebHandler::handleSaveWifi(AsyncWebServerRequest *request, uint8_t *da
 
     if (!index)
     {
-			
+
 #ifdef WIFI_DEBUG
-				SerialPort.println("handleSaveParams - Backup");
+        SerialPort.println("handleSaveParams - Backup");
 #endif
-			
+
         backupFile(path, pathBak);
         if (!(wifiParamFile = SDHAL_SD.open(path.c_str(), FILE_WRITE)))
         {
 
 #ifdef WIFI_DEBUG
-						SerialPort.println("Erreur impossible d'ouvrir wifi.cfg");
+            SerialPort.println("Erreur impossible d'ouvrir wifi.cfg");
 #endif
 
             request->send(500, "text/plain", "NO FILE");
@@ -524,7 +545,7 @@ void VarioWebHandler::handleSaveWifi(AsyncWebServerRequest *request, uint8_t *da
     }
 
 #ifdef WIFI_DEBUG
-	  SerialPort.println("Save config wifi");
+    SerialPort.println("Save config wifi");
 #endif
 
     wifiParamFile.write(data, len);
@@ -538,7 +559,9 @@ void VarioWebHandler::handleSaveWifi(AsyncWebServerRequest *request, uint8_t *da
     return;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleWebConfig(AsyncWebServerRequest *request)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleParams Web config");
@@ -558,7 +581,9 @@ AsyncWebServerResponse *VarioWebHandler::handleWebConfig(AsyncWebServerRequest *
 }
 
 // sauvegarde du contenu du fichier preference
+//************************************************************
 void VarioWebHandler::handleSaveWebConfig(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
 
 #ifdef WIFI_DEBUG
@@ -590,7 +615,9 @@ void VarioWebHandler::handleSaveWebConfig(AsyncWebServerRequest *request, uint8_
 }
 
 // parsage d'un fichier IGC
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleParseIgc(AsyncWebServerRequest *request)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleParseIgc");
@@ -691,10 +718,13 @@ AsyncWebServerResponse *VarioWebHandler::handleParseIgc(AsyncWebServerRequest *r
     return response;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleGetFlights(AsyncWebServerRequest *request)
+//************************************************************
 {
     int16_t offset;
     int16_t limit;
+    String parcel;
 
     if (request->hasParam("offset"))
     {
@@ -716,7 +746,24 @@ AsyncWebServerResponse *VarioWebHandler::handleGetFlights(AsyncWebServerRequest 
         limit = 0;
     }
 
-    varioSqlFlightHelper.init(limit, offset);
+    if (request->hasParam("parcel"))
+    {
+        AsyncWebParameter *p = request->getParam("parcel");
+        parcel = String(p->value());
+    }
+    else
+    {
+        parcel = "";
+    }
+
+    if (parcel == "")
+    {
+        varioSqlFlightHelper.init(limit, offset);
+    }
+    else
+    {
+        varioSqlFlightHelper.init(parcel);
+    }
 
     AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         //Write up to "maxLen" bytes into "buffer" and return the amount written.
@@ -729,7 +776,9 @@ AsyncWebServerResponse *VarioWebHandler::handleGetFlights(AsyncWebServerRequest 
     return response;
 }
 
+//************************************************************
 String VarioWebHandler::getFileSizeStringFromBytes(int bytes)
+//************************************************************
 {
     // conversion taille
     /***********************************/
@@ -774,7 +823,9 @@ void VarioWebHandler::backupFile(String pathOrig, String pathBack)
     }
 }
 
+//************************************************************
 void VarioWebHandler::handleSetFlight(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleSetFlight");
@@ -810,7 +861,9 @@ void VarioWebHandler::handleSetFlight(AsyncWebServerRequest *request, uint8_t *d
     return;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleDelFlight(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncWebServerResponse *response;
 
@@ -846,7 +899,9 @@ AsyncWebServerResponse *VarioWebHandler::handleDelFlight(AsyncWebServerRequest *
     return response;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleFirmwareVersion(AsyncWebServerRequest *request)
+//************************************************************
 {
     //recuperation des versions de firmware
 
@@ -871,7 +926,9 @@ AsyncWebServerResponse *VarioWebHandler::handleFirmwareVersion(AsyncWebServerReq
     return response;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleUpgradeWeb(AsyncWebServerRequest *request)
+//************************************************************
 {
 
     AsyncWebServerResponse *response;
@@ -906,7 +963,9 @@ AsyncWebServerResponse *VarioWebHandler::handleUpgradeWeb(AsyncWebServerRequest 
     }
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleGetSites(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     VarioSqlFlight varioSqlFlight;
@@ -916,7 +975,9 @@ AsyncWebServerResponse *VarioWebHandler::handleGetSites(AsyncWebServerRequest *r
     return response;
 }
 
+//************************************************************
 void VarioWebHandler::handleSetSite(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+//************************************************************
 {
 #ifdef WIFI_DEBUG
     SerialPort.println("handleSetSite");
@@ -933,11 +994,11 @@ void VarioWebHandler::handleSetSite(AsyncWebServerRequest *request, uint8_t *dat
 
 #ifdef WIFI_DEBUG
         SerialPort.println("Update Site");
-				SerialPort.print("ID : ");
+        SerialPort.print("ID : ");
         SerialPort.println(id);
-				SerialPort.print("CONTENT : ");
+        SerialPort.print("CONTENT : ");
         SerialPort.println(content);
-				
+
 #endif
         varioSqlFlight.updateSite(id, content);
     }
@@ -946,7 +1007,7 @@ void VarioWebHandler::handleSetSite(AsyncWebServerRequest *request, uint8_t *dat
 
 #ifdef WIFI_DEBUG
         SerialPort.println("Insert Site");
-				SerialPort.print("CONTENT : ");
+        SerialPort.print("CONTENT : ");
         SerialPort.println(content);
 #endif
 
@@ -963,7 +1024,9 @@ void VarioWebHandler::handleSetSite(AsyncWebServerRequest *request, uint8_t *dat
     return;
 }
 
+//************************************************************
 AsyncWebServerResponse *VarioWebHandler::handleDelSite(AsyncWebServerRequest *request)
+//************************************************************
 {
     AsyncWebServerResponse *response;
 
@@ -987,7 +1050,9 @@ AsyncWebServerResponse *VarioWebHandler::handleDelSite(AsyncWebServerRequest *re
     return response;
 }
 
+//************************************************************
 void VarioWebHandler::_doParseIgcAndInsert(void *parameter)
+//************************************************************
 {
     const String ParsedPath PROGMEM = "/vols/parsed";
     uint32_t dataToSend = 0;
@@ -1056,13 +1121,15 @@ void VarioWebHandler::_doParseIgcAndInsert(void *parameter)
     return;
 }
 
+//************************************************************
 igcdata VarioWebHandler::jsonToIgcdata(String data)
+//************************************************************
 {
     igcdata myIgcData;
 
-		GnuSettings.doc.clear();
+    GnuSettings.doc.clear();
 
-//    DynamicJsonDocument doc(1024);
+    //    DynamicJsonDocument doc(1024);
     DeserializationError err = deserializeJson(GnuSettings.doc, data);
     if (err)
     {
@@ -1144,4 +1211,58 @@ igcdata VarioWebHandler::jsonToIgcdata(String data)
     }
 
     return myIgcData;
+}
+
+//************************************************************
+AsyncWebServerResponse *VarioWebHandler::getFlightsShort(AsyncWebServerRequest *request)
+//************************************************************
+{
+
+    VarioSqlFlight varioSqlFlight;
+
+    String mode;
+    String parcel;
+    bool error = false;
+
+    if (request->hasParam("mode"))
+    {
+        AsyncWebParameter *p = request->getParam("mode");
+        mode = p->value().c_str();
+    }
+    else
+    {
+        error = true;
+    }
+
+    if (request->hasParam("parcel"))
+    {
+        AsyncWebParameter *p = request->getParam("parcel");
+        parcel = p->value().c_str();
+    }
+    else
+    {
+        if (mode == "Y")
+        {
+            parcel = "";
+        }
+        else
+        {
+            error = true;
+        }
+    }
+
+    if (error)
+    {
+        AsyncWebServerResponse *responseError;
+        responseError = request->beginResponse(500, "text/plain", "BAD ARGS");
+
+        return responseError;
+    }
+
+    AsyncResponseStream *response;
+    response = request->beginResponseStream("application/json");
+
+    response->print(varioSqlFlight.getFlightsShort(mode, parcel));
+
+    return response;
 }

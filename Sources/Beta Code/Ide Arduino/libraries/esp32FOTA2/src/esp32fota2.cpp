@@ -533,11 +533,11 @@ uint8_t esp32FOTA2::execHTTPcheck(bool betaVersion)
 
 #ifndef JSONDOCEXTERN
             StaticJsonDocument<1300> JSONDocument; //Memory pool
-						#define JSONDOC JSONDocument
+#define JSONDOC JSONDocument
 #else
-						#define JSONDOC GnuSettings.doc	
-						// Clearing Buffer
-						JSONDOC.clear();
+#define JSONDOC GnuSettings.doc
+            // Clearing Buffer
+            JSONDOC.clear();
 #endif
             DeserializationError err = deserializeJson(JSONDOC, JSONMessage);
 
@@ -759,11 +759,11 @@ uint8_t esp32FOTA2::execHTTPScheck(bool betaVersion)
 
 #ifndef JSONDOCEXTERN
             StaticJsonDocument<1300> JSONDocument; //Memory pool
-						#define JSONDOC JSONDocument
+#define JSONDOC JSONDocument
 #else
-						#define JSONDOC GnuSettings.doc	
-						// Clearing Buffer
-						JSONDOC.clear();
+#define JSONDOC GnuSettings.doc
+            // Clearing Buffer
+            JSONDOC.clear();
 #endif
 
             DeserializationError err = deserializeJson(JSONDOC, JSONMessage);
@@ -1187,30 +1187,22 @@ int8_t esp32FOTA2::UpdateWwwDirectoryFromGz()
 //************************************
 {
 #ifdef WIFI_DEBUG
-   SerialPort.println("[HTTP] Debut méthode UpdateWwwDirectoryFromGz");
+    SerialPort.println("[HTTP] Debut méthode UpdateWwwDirectoryFromGz");
 #endif
+    TarGzUnpacker *TARGZUnpacker = new TarGzUnpacker();
 
-   TRACE();
+    TARGZUnpacker->haltOnError(true);  // stop on fail (manual restart/reset required)
+    TARGZUnpacker->setTarVerify(true); // true = enables health checks but slows down the overall process
 
-  TarGzUnpacker *TARGZUnpacker = new TarGzUnpacker();
+    TARGZUnpacker->setTarStatusProgressCallback(BaseUnpacker::defaultTarStatusProgressCallback); // print the filenames as they're expanded
+                                                                                                 //  TARGZUnpacker->setupFSCallbacks( targzTotalBytesFn, targzFreeBytesFn ); // prevent the partition from exploding, recommended
+    TARGZUnpacker->setGzProgressCallback(BaseUnpacker::defaultProgressCallback);                 // targzNullProgressCallback or defaultProgressCallback
+    TARGZUnpacker->setLoggerCallback(BaseUnpacker::targzPrintLoggerCallback);                    // gz log verbosity
+    TARGZUnpacker->setTarProgressCallback(BaseUnpacker::defaultProgressCallback);                // prints the untarring progress for each individual file
+                                                                                                 //  TARGZUnpacker->setTarMessageCallback( myTarMessageCallback/*BaseUnpacker::targzPrintLoggerCallback*/ ); // tar log verbosity
 
-  TARGZUnpacker->haltOnError( true ); // stop on fail (manual restart/reset required)
-  #if defined ESP32
-    TARGZUnpacker->setTarVerify( true ); // true = enables health checks but slows down the overall process
-  #endif
-  #if defined ESP8266
-    TARGZUnpacker->setTarVerify( false ); // true = enables health checks but slows down the overall process
-    //TARGZUnpacker->setTarStatusProgressCallback( BaseUnpacker::targzNullLoggerCallback ); // print the filenames as they're expanded
-  #endif
-
-  TARGZUnpacker->setTarStatusProgressCallback( BaseUnpacker::defaultTarStatusProgressCallback ); // print the filenames as they're expanded
-//  TARGZUnpacker->setupFSCallbacks( targzTotalBytesFn, targzFreeBytesFn ); // prevent the partition from exploding, recommended
-  TARGZUnpacker->setGzProgressCallback( BaseUnpacker::defaultProgressCallback ); // targzNullProgressCallback or defaultProgressCallback
-  TARGZUnpacker->setLoggerCallback( BaseUnpacker::targzPrintLoggerCallback  );    // gz log verbosity
-  TARGZUnpacker->setTarProgressCallback( BaseUnpacker::defaultProgressCallback ); // prints the untarring progress for each individual file
-//  TARGZUnpacker->setTarMessageCallback( myTarMessageCallback/*BaseUnpacker::targzPrintLoggerCallback*/ ); // tar log verbosity
- 
     String myfilename = "/www.gz";
+    String origRep = "/www";
 
     if (!SDHAL_SD.exists(myfilename.c_str()))
     {
@@ -1236,31 +1228,29 @@ int8_t esp32FOTA2::UpdateWwwDirectoryFromGz()
         SdCardHAL::deleteRecursive(tmpPath);
     }
 
-    // rename "www" into "wwwold"
-    if (!SDHAL_SD.rename("/www", "/wwwold"))
+    if (SDHAL_SD.exists(origRep.c_str()))
     {
+        // rename "www" into "wwwold"
+        if (!SDHAL_SD.rename("/www", "/wwwold"))
+        {
 #ifdef WIFI_DEBUG
-        SerialPort.println("[HTTP] le dossier www ne peut être renommé en wwwold");
+            SerialPort.println("[HTTP] le dossier www ne peut être renommé en wwwold");
 #endif
-        return -1; //Pas de mise à jour
+            return -1; //Pas de mise à jour
+        }
     }
 
-
     //decompression de l'archive dans /www
-/*    gzExpander(SD, (char *)myfilename.c_str(), SD, "/www.tar");
-    tarExpander(SD, "/www.tar", SD, "/");*/
-
-  if( !TARGZUnpacker->tarGzExpander(SD, (char *)myfilename.c_str(), SD, "/" ) ) {
-    SerialPort.println( "Decompression dand /www");
-  } else {
-    return -1;
-  }
-
-    //suppression de l'archive
-    if (!SDHAL_SD.remove("/www.tar"))
+    if (TARGZUnpacker->tarGzExpander(SD, (char *)myfilename.c_str(), SD, "/"))
     {
 #ifdef WIFI_DEBUG
-        SerialPort.println("[HTTP] le fichier n'a pas pu être supprimé");
+        SerialPort.println("Decompression dand /www");
+#endif
+    }
+    else
+    {
+#ifdef WIFI_DEBUG
+        SerialPort.println("Echec decompression dand /www");
 #endif
         return -1;
     }

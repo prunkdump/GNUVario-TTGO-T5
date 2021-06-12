@@ -8,11 +8,14 @@
 class VarioSqlFlightHelper
 {
 public:
+    VarioSqlFlightHelper();
+    ~VarioSqlFlightHelper();
     void init(int16_t vlimit, int16_t voffset);
+    void init(String vParcel);
     uint16_t readData(uint8_t *buffer, size_t maxLength);
 
 private:
-    VarioSqlFlight varioSqlFlight;
+    VarioSqlFlight *varioSqlFlight;
     int16_t offset;
     int16_t limit;
     int16_t limitTemp;
@@ -21,6 +24,7 @@ private:
     RingBuf<char, 1024> myRingBuffer;
     boolean firstLine;
     boolean isQueryInit;
+    String parcel;
     void feedBuffer();
 };
 #endif

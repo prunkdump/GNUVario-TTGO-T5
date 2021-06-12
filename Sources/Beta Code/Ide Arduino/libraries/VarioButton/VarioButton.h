@@ -113,6 +113,7 @@ private:
 	void treatmentBtnC(bool Debounce);
 
 	void treatmentBtnB3S(bool Debounce);
+	void treatmentBtnA2S(bool Debounce);
 
 #ifdef HAVE_WIFI
 	void WifiServeur(void);

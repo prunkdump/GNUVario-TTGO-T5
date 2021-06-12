@@ -66,6 +66,8 @@
 /*    1.3.8  24/10/20   Ajout REF_VOLTAGE                                        */
 /*    1.3.9  26/10/20   Correction Aleksandr Stroganov <a.stroganov@me.com>      */
 /*    1.3.10 10/11/20   Ajout destructeur                                        */ 
+/*    1.3.9 12/04/21    Ajout MUTE_VARIOBEGIN                                    */
+/*                      Correction bug lecture BEEP_VARIOBEGIN                   */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -1150,7 +1152,7 @@ void VarioSettings::loadConfigurationVario(char *filename) {
   SerialPort.println(ALARM_FLYBEGIN);
 #endif
 
-  if (Systeme.containsKey("BEEP_FLYBEGIN")) {	
+  if (Systeme.containsKey("BEEP_VARIOBEGIN")) {	
 		   tmpValue = Systeme["BEEP_VARIOBEGIN"]; 
 #ifdef SDCARD_DEBUG
 		SerialPort.print("Json Recup - ");
@@ -1167,6 +1169,25 @@ void VarioSettings::loadConfigurationVario(char *filename) {
 #ifdef SDCARD_DEBUG
   SerialPort.print("BEEP_VARIOBEGIN : ");
   SerialPort.println(ALARM_VARIOBEGIN);
+#endif
+
+  if (Systeme.containsKey("MUTE_VARIOBEGIN")) {	
+		   tmpValue = Systeme["MUTE_VARIOBEGIN"]; 
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Json Recup - ");
+#endif
+	} else {
+		tmpValue = DEFAULT_MUTE_VARIOBEGIN;
+		MajFileParams = true;
+#ifdef SDCARD_DEBUG
+		SerialPort.print("Defaut Recup - ");
+#endif
+	}
+  if (tmpValue == 1) MUTE_VARIOBEGIN = true;
+  else               MUTE_VARIOBEGIN = false;
+#ifdef SDCARD_DEBUG
+  SerialPort.print("MUTE_VARIOBEGIN : ");
+  SerialPort.println(MUTE_VARIOBEGIN);
 #endif
 
   if (Systeme.containsKey("COMPENSATION_TEMP")) {	
@@ -1836,6 +1857,9 @@ void VarioSettings::saveConfigurationVario(char *filename) {
   if (ALARM_VARIOBEGIN) Systeme["BEEP_VARIOBEGIN"] = 1;
   else                  Systeme["BEEP_VARIOBEGIN"] = 0;
 
+  if (MUTE_VARIOBEGIN) Systeme["MUTE_VARIOBEGIN"] = 1;
+  else                  Systeme["MUTE_VARIOBEGIN"] = 0;
+
 	
 	Systeme["COMPENSATION_TEMP"] = COMPENSATION_TEMP;
 
@@ -2003,9 +2027,9 @@ String VarioSettings::getScreenModel(void) {
 #if (VARIOSCREEN_SIZE == 154)
 	return "154";
 #elif (VARIOSCREEN_SIZE == 290)
-	return "154";
+	return "290";
 #elif (VARIOSCREEN_SIZE == 213)
-	return "154";
+	return "213";
 #else 
 	return "";
 #endif
@@ -2118,6 +2142,7 @@ double Statistic::getGain(void) {
         "BEEP_GPSFIX": 1,
         "BEEP_FLYBEGIN": 1,
 				"BEEP_VARIOBEGIN": 0,
+				"MUTE_VARIOBEGIN": 0,
 				"COMPENSATION_TEMP": -6.1,
 				"COMPENSATION_GPSALTI": -70,
 				"SLEEP_TIMEOUT_MINUTES": 20,

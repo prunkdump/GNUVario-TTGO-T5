@@ -1,4 +1,4 @@
-/* varioscreenGxEPD_290 -- 
+/* varioscreenGxEPD_290b -- 
  *
  * Copyright 2019 Jean-philippe GOI / Pierre
  * 
@@ -64,11 +64,11 @@
  *    1.1.16 08/04/20   Modification affichage des titres                        *
  *    1.1.17 13/04/20   Titre en mode texte                                      *
  *    1.2.0  29/04/20   Modification font screedigit                             *
- *    1.2.1  17/05/20   Ajout setPositionTitle                                   *
+ *    1.2.1  15/05/20   Modification screentime                                  *
  *    1.2.2  17/05/20   Ajout setPositionTitle                                   *
  *    1.2.3  25/05/20   Modification screendigit.setvalue                        *
- *    1.2.4  10/02/20   Compatibilité écran 291 et 293                           *
- *                      Compatibilité écran 290 et 292                           *
+ *    1.2.4  31/05/21   Compatibilité écran 292 (GDEW029M06)                     *
+ *                                                                               *
  *                                                                               *
  *********************************************************************************/
 
@@ -111,6 +111,7 @@
 #include <gnuvarioe18pt7b.h>
 #include <gnuvarioe23pt7b.h>
 #include <NotoSans6pt7b.h> //Picopixel.h>
+#include <gnuvarioe12pt7b.h>
 
 /* minimum drift to update digit */
 #define VARIOSCREEN_DIGIT_DISPLAY_THRESHOLD 0.65

@@ -50,17 +50,27 @@ class NimBLEAdvertisementData {
 public:
     void setAppearance(uint16_t appearance);
     void setCompleteServices(const NimBLEUUID &uuid);
+    void setCompleteServices16(const std::vector<NimBLEUUID> &v_uuid);
+    void setCompleteServices32(const std::vector<NimBLEUUID> &v_uuid);
     void setFlags(uint8_t);
     void setManufacturerData(const std::string &data);
+    void setURI(const std::string &uri);
     void setName(const std::string &name);
     void setPartialServices(const NimBLEUUID &uuid);
+    void setPartialServices16(const std::vector<NimBLEUUID> &v_uuid);
+    void setPartialServices32(const std::vector<NimBLEUUID> &v_uuid);
     void setServiceData(const NimBLEUUID &uuid, const std::string &data);
     void setShortName(const std::string &name);
     void addData(const std::string &data);  // Add data to the payload.
+    void addData(char * data, size_t length);
+    void addTxPower();
+    void setPreferredParams(uint16_t min, uint16_t max);
     std::string getPayload();               // Retrieve the current advert payload.
 
 private:
     friend class NimBLEAdvertising;
+    void setServices(const bool complete, const uint8_t size,
+                     const std::vector<NimBLEUUID> &v_uuid);
     std::string m_payload;   // The payload of the advertisement.
 };   // NimBLEAdvertisementData
 
@@ -75,35 +85,51 @@ public:
     NimBLEAdvertising();
     void addServiceUUID(const NimBLEUUID &serviceUUID);
     void addServiceUUID(const char* serviceUUID);
-    void start();
+    void removeServiceUUID(const NimBLEUUID &serviceUUID);
+    bool start(uint32_t duration = 0, void (*advCompleteCB)(NimBLEAdvertising *pAdv) = nullptr);
     void stop();
     void setAppearance(uint16_t appearance);
+    void setName(const std::string &name);
+    void setManufacturerData(const std::string &data);
+    void setURI(const std::string &uri);
+    void setServiceData(const NimBLEUUID &uuid, const std::string &data);
     void setAdvertisementType(uint8_t adv_type);
     void setMaxInterval(uint16_t maxinterval);
     void setMinInterval(uint16_t mininterval);
     void setAdvertisementData(NimBLEAdvertisementData& advertisementData);
-    void setScanFilter(bool scanRequertWhitelistOnly, bool connectWhitelistOnly);
+    void setScanFilter(bool scanRequestWhitelistOnly, bool connectWhitelistOnly);
     void setScanResponseData(NimBLEAdvertisementData& advertisementData);
-    void setPrivateAddress(uint8_t type = BLE_ADDR_RANDOM);
-
+    void setScanResponse(bool);
     void setMinPreferred(uint16_t);
     void setMaxPreferred(uint16_t);
-    void setScanResponse(bool);
+    void addTxPower();
+    void reset();
+    void advCompleteCB();
+    bool isAdvertising();
 
 private:
     friend class NimBLEDevice;
 
-    void                 onHostReset();
+    void                    onHostSync();
+    static int              handleGapEvent(struct ble_gap_event *event, void *arg);
 
-    ble_hs_adv_fields    m_advData;
-    ble_hs_adv_fields    m_scanData;
-    ble_gap_adv_params   m_advParams;
+    ble_hs_adv_fields       m_advData;
+    ble_hs_adv_fields       m_scanData;
+    ble_gap_adv_params      m_advParams;
     std::vector<NimBLEUUID> m_serviceUUIDs;
-    bool                 m_customAdvData = false;  // Are we using custom advertising data?
-    bool                 m_customScanResponseData = false;  // Are we using custom scan response data?
-    bool                 m_scanResp = true;
-    bool                 m_advDataSet = false;
-
+    bool                    m_customAdvData;
+    bool                    m_customScanResponseData;
+    bool                    m_scanResp;
+    bool                    m_advDataSet;
+    void                    (*m_advCompCB)(NimBLEAdvertising *pAdv);
+    uint8_t                 m_slaveItvl[4];
+    uint32_t                m_duration;
+    std::vector<uint8_t>    m_svcData16;
+    std::vector<uint8_t>    m_svcData32;
+    std::vector<uint8_t>    m_svcData128;
+    std::vector<uint8_t>    m_name;
+    std::vector<uint8_t>    m_mfgData;
+    std::vector<uint8_t>    m_uri;
 };
 
 #endif // #if defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL)

@@ -25,6 +25,8 @@
 /*  version    Date       Description                                            */
 /*    1.0                                                                        */
 /*    1.0.1    04/09/19   Modification du nom de la bibliothèque              	 */
+/*    1.0.2    06/04/21   Ajout computeAltitude2                                 */
+/*    1.0.3    11/04/21   Modification gestion pression de la mer                */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -81,12 +83,14 @@ struct Ms5611Calibration {
 class Ms5611 {
 
  public:
+ 
 #ifndef MS5611_STATIC_ADDRESS
   Ms5611(uint16_t twAddress = ms5611DefaultAdress) : address(twAddress) { } //Address set with constructor
 #endif
   void init(void);
   void computeMeasures(uint8_t* d1Buff, uint8_t* d2Buff, double& temperature, double& pressure);
   static double computeAltitude(double pressure);
+  void SetBaseSeaPressure(double pressure);
   void readHardwareCalibration(uint16_t* cal);
 
  private:
@@ -101,6 +105,9 @@ class Ms5611 {
 #else
   Ms5611Calibration calibration;
 #endif
+
+	static double Ms5611_Base_Sea_Pressure;
+
 };
 
 

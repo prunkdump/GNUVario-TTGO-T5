@@ -27,12 +27,16 @@
  *    1.0    27/07/20                                                            *
  *    1.0.1  18/10/20   Renomage de la librairie                                 *
  *                      Ajout ScreenCharge()                                     *
+ *    1.0.2  14/12/20   Ajout VarioTension                                       *
  *                                                                               *
  *********************************************************************************
  */
 
 #ifndef VARIO_POWER_H
 #define VARIO_POWER_H
+
+#include "VarioPower_ADC.h"
+#include "VarioPower_Max17XX.h"
 
 class VarioPower
 {
@@ -53,8 +57,7 @@ public:
 		void ScreenCharge(void);
 		
 private:
-		uint16_t REF_VOLTAGE = 2280;
-
+		VarioTension varioTension;
 };
 
 #endif //VARIO_ALIM_H

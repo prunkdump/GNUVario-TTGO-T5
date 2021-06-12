@@ -103,7 +103,15 @@ void ToneHal::mute(bool newMuteState) {
   _toneMuted = newMuteState;
 }
 
+/***********************************/
+void ToneHal::Mute(bool newMuteState) {
+/***********************************/
+  mute(newMuteState);
+}
+
+/***********************************/
 bool ToneHal::isMute(void) { 
+/***********************************/
   return _toneMuted;
 }
 

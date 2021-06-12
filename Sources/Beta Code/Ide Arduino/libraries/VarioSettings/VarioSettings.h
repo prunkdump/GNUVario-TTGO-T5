@@ -62,6 +62,8 @@
 /*    1.3.7 09/06/20    Ajout VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE      */
 /*                      Modification VARIOMETER_SENT_LXNAV_SENTENCE              */
 /*    1.3.8 24/10/20    Ajout REF_VOLTAGE                                        */
+/*    1.3.9 12/04/21    Ajout MUTE_VARIOBEGIN                                    */
+/*                      Correction bug lecture BEEP_VARIOBEGIN                   */
 /*                                                                               */
 /*********************************************************************************/
 
@@ -79,7 +81,7 @@
 
 #include <ArduinoJson.h>
 
-#define PARAMS_VERSION "1.6"
+#define PARAMS_VERSION "1.7"
 
 /*----------------------------*/
 /*          DEFAULT           */
@@ -192,6 +194,8 @@
 #define DEFAULT_SETTINGS_VARIO_PERIOD_COUNT  							5
 
 #define DEFAULT_REF_VOLTAGE       							          2280
+
+#define DEFAULT_MUTE_VARIOBEGIN                           false
   
 /*----------------------------*/
 /*          SOFTWARE          */
@@ -199,7 +203,7 @@
 /*                            */
 /*----------------------------*/
 
-#define VARIOMETER_MODEL "GNUVario"
+#define VARIOMETER_MODEL "GNUVarioE"
 #define VARIOMETER_MODEL_NAME "GnuVario-E"
 
 /********************/
@@ -454,6 +458,8 @@ class VarioSettings {
 		uint8_t	 SETTINGS_VARIO_PERIOD_COUNT	 							= DEFAULT_SETTINGS_VARIO_PERIOD_COUNT;
 		
 		uint16_t REF_VOLTAGE																= DEFAULT_REF_VOLTAGE;
+		
+		boolean  MUTE_VARIOBEGIN														= DEFAULT_MUTE_VARIOBEGIN;
 	
 		StaticJsonDocument<1900> doc;	
  protected:

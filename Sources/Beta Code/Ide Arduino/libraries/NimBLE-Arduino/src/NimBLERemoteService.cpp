@@ -26,8 +26,8 @@ static const char* LOG_TAG = "NimBLERemoteService";
 
 /**
  * @brief Remote Service constructor.
- * @param [in] Reference to the client this belongs to.
- * @param [in] Refernce to the structure with the services' information.
+ * @param [in] pClient A pointer to the client this belongs to.
+ * @param [in] service A pointer to the structure with the service information.
  */
 NimBLERemoteService::NimBLERemoteService(NimBLEClient* pClient, const struct ble_gatt_svc* service) {
 
@@ -44,18 +44,16 @@ NimBLERemoteService::NimBLERemoteService(NimBLEClient* pClient, const struct ble
             m_uuid = NimBLEUUID(const_cast<ble_uuid128_t*>(&service->uuid.u128));
             break;
         default:
-            m_uuid = nullptr;
             break;
     }
     m_startHandle = service->start_handle;
     m_endHandle = service->end_handle;
-    NIMBLE_LOGD(LOG_TAG, "<< NimBLERemoteService()");
+    NIMBLE_LOGD(LOG_TAG, "<< NimBLERemoteService(): %s", m_uuid.toString().c_str());
 }
 
 
 /**
  * @brief When deleting the service make sure we delete all characteristics and descriptors.
- * Also release any semaphores they may be holding.
  */
 NimBLERemoteService::~NimBLERemoteService() {
     deleteCharacteristics();
@@ -83,7 +81,7 @@ std::vector<NimBLERemoteCharacteristic*>::iterator NimBLERemoteService::end() {
 /**
  * @brief Get the remote characteristic object for the characteristic UUID.
  * @param [in] uuid Remote characteristic uuid.
- * @return Reference to the remote characteristic object.
+ * @return A pointer to the remote characteristic object.
  */
 NimBLERemoteCharacteristic* NimBLERemoteService::getCharacteristic(const char* uuid) {
     return getCharacteristic(NimBLEUUID(uuid));
@@ -93,11 +91,14 @@ NimBLERemoteCharacteristic* NimBLERemoteService::getCharacteristic(const char* u
 /**
  * @brief Get the characteristic object for the UUID.
  * @param [in] uuid Characteristic uuid.
- * @return Reference to the characteristic object, or nullptr if not found.
+ * @return A pointer to the characteristic object, or nullptr if not found.
  */
 NimBLERemoteCharacteristic* NimBLERemoteService::getCharacteristic(const NimBLEUUID &uuid) {
+    NIMBLE_LOGD(LOG_TAG, ">> getCharacteristic: uuid: %s", uuid.toString().c_str());
+
     for(auto &it: m_characteristicVector) {
         if(it->getUUID() == uuid) {
+            NIMBLE_LOGD(LOG_TAG, "<< getCharacteristic: found the characteristic with uuid: %s", uuid.toString().c_str());
             return it;
         }
     }
@@ -107,22 +108,30 @@ NimBLERemoteCharacteristic* NimBLERemoteService::getCharacteristic(const NimBLEU
         if(m_characteristicVector.size() > prev_size) {
             return m_characteristicVector.back();
         }
+
+        // If the request was successful but 16/32 bit characteristic not found
+        // try again with the 128 bit uuid.
+        if(uuid.bitSize() == BLE_UUID_TYPE_16 ||
+           uuid.bitSize() == BLE_UUID_TYPE_32)
+        {
+            NimBLEUUID uuid128(uuid);
+            uuid128.to128();
+            return getCharacteristic(uuid128);
+        }
     }
 
+    NIMBLE_LOGD(LOG_TAG, "<< getCharacteristic: not found");
     return nullptr;
 } // getCharacteristic
 
 
 /**
- * @Get a pointer to the vector of found characteristics.
- * @param [in] bool value to indicate if the current vector should be cleared and
- * subsequently all characteristics for this service retrieved from the peripheral.
- * If false the vector will be returned with the currently stored characteristics,
- * If true it will retrieve all characteristics of this service from the peripheral 
- * and return the vector with all characteristics for this service.
- * @return a pointer to the vector of descriptors for this characteristic.
+ * @brief Get a pointer to the vector of found characteristics.
+ * @param [in] refresh If true the current characteristics vector will cleared and
+ * all characteristics for this service retrieved from the peripheral.
+ * If false the vector will be returned with the currently stored characteristics of this service.
+ * @return A pointer to the vector of descriptors for this characteristic.
  */
-
 std::vector<NimBLERemoteCharacteristic*>* NimBLERemoteService::getCharacteristics(bool refresh) {
     if(refresh) {
         deleteCharacteristics();
@@ -140,6 +149,7 @@ std::vector<NimBLERemoteCharacteristic*>* NimBLERemoteService::getCharacteristic
 
 /**
  * @brief Callback for Characterisic discovery.
+ * @return success == 0 or error code.
  */
 int NimBLERemoteService::characteristicDiscCB(uint16_t conn_handle,
                                 const struct ble_gatt_error *error,
@@ -182,7 +192,7 @@ int NimBLERemoteService::characteristicDiscCB(uint16_t conn_handle,
 /**
  * @brief Retrieve all the characteristics for this service.
  * This function will not return until we have all the characteristics.
- * @return N/A
+ * @return True if successful.
  */
 bool NimBLERemoteService::retrieveCharacteristics(const NimBLEUUID *uuid_filter) {
     NIMBLE_LOGD(LOG_TAG, ">> retrieveCharacteristics() for service: %s", getUUID().toString().c_str());
@@ -237,6 +247,23 @@ NimBLEClient* NimBLERemoteService::getClient() {
  */
 uint16_t NimBLERemoteService::getEndHandle() {
     return m_endHandle;
+} // getEndHandle
+
+/**
+ * @brief Get the end handle of specified NimBLERemoteCharacteristic.
+ */
+
+uint16_t NimBLERemoteService::getEndHandle(NimBLERemoteCharacteristic *pCharacteristic) {
+    uint16_t endHandle = m_endHandle;
+    
+    for(auto &it: m_characteristicVector) {
+        uint16_t defHandle = it->getDefHandle() - 1;
+        if(defHandle > pCharacteristic->getDefHandle() && endHandle > defHandle) {
+            endHandle = defHandle;
+        }
+    }
+
+    return endHandle;
 } // getEndHandle
 
 
@@ -299,10 +326,9 @@ bool NimBLERemoteService::setValue(const NimBLEUUID &characteristicUuid, const s
 
 /**
  * @brief Delete the characteristics in the characteristics vector.
- * We maintain a vector called m_characteristicsVector that contains pointers to BLERemoteCharacteristic
+ * @details We maintain a vector called m_characteristicsVector that contains pointers to BLERemoteCharacteristic
  * object references. Since we allocated these in this class, we are also responsible for deleting
  * them. This method does just that.
- * @return N/A.
  */
 void NimBLERemoteService::deleteCharacteristics() {
     NIMBLE_LOGD(LOG_TAG, ">> deleteCharacteristics");
@@ -316,7 +342,7 @@ void NimBLERemoteService::deleteCharacteristics() {
 
 /**
  * @brief Delete characteristic by UUID
- * @param [in] uuid The UUID of the characteristic to be cleared.
+ * @param [in] uuid The UUID of the characteristic to be removed from the local database.
  * @return Number of characteristics left.
  */
 size_t NimBLERemoteService::deleteCharacteristic(const NimBLEUUID &uuid) {

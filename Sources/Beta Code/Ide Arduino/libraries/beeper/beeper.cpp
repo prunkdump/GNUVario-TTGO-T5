@@ -29,6 +29,7 @@
 /*  1.3      13/09/20    Ajout VarioXBeeper                                                        */
 /*  1.3.1    17/09/20    Ajout duty / cycle variable et parametrable                               */
 /*  1.3.2    02/10/20    Calcul en milliseconde                                                    */
+/*  1.3.3    12/04/21    Ajout Mute et isMute                                                      */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -699,9 +700,9 @@ void Beeper::setFrequency(uint32_t fHz, uint8_t volume) {
 /***************************************************************************************************/
 void Beeper::generateTone(uint32_t fHz, int ms, uint8_t volume) {
 /***************************************************************************************************/
-    setFrequency(fHz, volume);
-    delay(ms);
-    setFrequency(0);
+	setFrequency(fHz, volume);
+	delay(ms);
+	setFrequency(0);
 }
 
 /***************************************************************************************************/
@@ -714,4 +715,19 @@ void Beeper::tone(uint32_t fHz, uint8_t volume) {
 void Beeper::noTone(void) {
 /***************************************************************************************************/
 	toneHAL.noTone();
+}
+
+/***********************************/
+void Beeper::mute(bool newMuteState) {
+/***********************************/
+  toneHAL.Mute(newMuteState);
+
+  /* save */
+  _toneMuted = newMuteState;
+}
+
+/***********************************/
+bool Beeper::isMute(void) { 
+/***********************************/
+  return _toneMuted;
 }

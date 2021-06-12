@@ -56,7 +56,8 @@
  *                      Modification position titre finesse                      *
  *    1.1.8  19/10/20   Ajout ScreenViewBattery(boolean clear)                   *
  *    1.1.10 19/12/20   Modification affichage des titres P. FRANCIA             *
- *    1.2.11 10/02/20   Compatibilité écran 291 et 293                           *
+ *    1.2.11 10/02/21   Compatibilité écran 291 et 294                           *
+ *    1.2.12 13/05/21   Compatibilité écran 293 (GDEW029M06)                     *
  *                                                                               *
  *********************************************************************************/
 
@@ -71,7 +72,7 @@
 #include <HardwareConfig.h>
 #include <DebugConfig.h>
 
-#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293))
+#if ((VARIOSCREEN_SIZE == 291) || (VARIOSCREEN_SIZE == 293) || (VARIOSCREEN_SIZE == 294))
 
 #include <varioscreenObjects_291b.h>
 
@@ -86,27 +87,27 @@
 #define MAX_CAR_TITRE_AGL 					8 
 #define MAX_CAR_TITRE_VARIO 				5
 #define MAX_CAR_TITRE_SPEED					7
-#define MAX_CAR_TITRE_FINESSE   		7
+#define MAX_CAR_TITRE_FINESSE   	    	7
 #define MAX_CAR_TITRE_TCHUTE				7 
-#define MAX_CAR_TITRE_CAP					  3
-#define MAX_CAR_TITRE_LAT					  3
+#define MAX_CAR_TITRE_CAP				    3
+#define MAX_CAR_TITRE_LAT				    3
 #define MAX_CAR_TITRE_LONG 					4
 #define MAX_CAR_TITRE_COMPAS 				6
-#define MAX_CAR_TITRE_STAT          12
+#define MAX_CAR_TITRE_STAT                  12
 #define MAX_CAR_TITRE_DATE 					4
 #define MAX_CAR_TITRE_HEURE					5
-#define MAX_CAR_TITRE_DUREE 			  11
-#define MAX_CAR_TITRE_VITESSE 			7
-#define MAX_CAR_TITRE_CONNECT   	  10
-#define MAX_CAR_TITRE_CONNECTA	  	13
-#define MAX_CAR_TITRE_DEMAR     		9
-#define MAX_CAR_TITRE_REDEMAR     	11
-#define MAX_CAR_TITRE_ENCOURS 			11				
-#define MAX_CAR_TITRE_CALIBR   			12
+#define MAX_CAR_TITRE_DUREE 			    11
+#define MAX_CAR_TITRE_VITESSE 			    7
+#define MAX_CAR_TITRE_CONNECT   	        10
+#define MAX_CAR_TITRE_CONNECTA	  	        13
+#define MAX_CAR_TITRE_DEMAR     		    9
+#define MAX_CAR_TITRE_REDEMAR     	        11
+#define MAX_CAR_TITRE_ENCOURS 			    11				
+#define MAX_CAR_TITRE_CALIBR   			    12
 #define MAX_CAR_TITRE_VEILLE				14			
 #define MAX_CAR_TITRE_CHARGE 				9
-#define MAX_CAR_TITRE_CHARGER 			7
-#define MAX_CAR_TITRE_BATTERIE 			8
+#define MAX_CAR_TITRE_CHARGER 			    7
+#define MAX_CAR_TITRE_BATTERIE 			    8
 
 /******************************/
 /* The screen zone multi      */ 
@@ -335,8 +336,10 @@ extern volatile uint8_t stateDisplay;
 
 #if (VARIOSCREEN_SIZE == 291)
 extern GxEPD2_BW<GxEPD2_290, GxEPD2_290::HEIGHT> display;
-#else
+#elif (VARIOSCREEN_SIZE == 294)
 extern GxEPD2_BW<GxEPD2_290_T94, GxEPD2_290_T94::HEIGHT> display;
+#else
+extern GxEPD2_BW<GxEPD2_290_M06, GxEPD2_290_M06::HEIGHT> display;
 #endif 
 
 #endif

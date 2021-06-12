@@ -26,6 +26,8 @@
  *  version    Date     Description                                              *
  *    1.0    22/03/20                                                            *
  *    1.0.1  25/03/20   Ajout haveMeasure(void)																	 *
+ *    1.0.2  25/12/20   Modif getCap                                             *
+ *    1.0.3  11/04/21   Mofig getAlti                                            *
  *                                                                               *
  *********************************************************************************
  */
@@ -51,6 +53,9 @@ Ms5611 TWScheduler::ms5611;
 Vertaccel TWScheduler::vertaccel;
 #endif //HAVE_ACCELEROMETER
 
+#include <math.h>
+
+#define R2D 57.2958
 
 //**********************************
 VarioImuTwoWire::VarioImuTwoWire()

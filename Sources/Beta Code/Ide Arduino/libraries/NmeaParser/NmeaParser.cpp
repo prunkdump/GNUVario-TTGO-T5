@@ -323,25 +323,69 @@ bool NmeaParser::isParsingGGA(void) {
   return parserState_isset(PARSE_GGA);
 }
 
-String NmeaParser::Bearing_to_Ordinal(float bearing) {
-  if (bearing >=    0.0  && bearing < 11.25  ) return "N";
-  if (bearing >=  11.25  && bearing < 33.75 )  return "NE"; //"NNE";
-  if (bearing >=  33.75  && bearing < 56.25 )  return "NE";
-  if (bearing >=  56.25  && bearing < 78.75 )  return "NE"; //"ENE";
-  if (bearing >=  78.75  && bearing < 101.25 ) return "E";
-  if (bearing >=  101.25 && bearing < 123.75 ) return "SE"; //"ESE";
-  if (bearing >=  123.75 && bearing < 146.25 ) return "SE";
-  if (bearing >=  146.25 && bearing < 168.75 ) return "SE"; //"SSE";
-  if (bearing >=  168.75 && bearing < 191.25 ) return "S";
-  if (bearing >=  191.25 && bearing < 213.75 ) return "SW"; //"SSW";  
-  if (bearing >=  213.75 && bearing < 236.25 ) return "SW";
-  if (bearing >=  236.25 && bearing < 258.25 ) return "SW"; //"WSW";
-  if (bearing >=  258.25 && bearing < 281.25 ) return "W";
-  if (bearing >=  281.25 && bearing < 303.75 ) return "NW"; //"WNW";
-  if (bearing >=  303.75 && bearing < 326.25 ) return "NW";
-  if (bearing >=  326.25 && bearing < 348.75 ) return "NW"; //"NNW";
-  if (bearing >=  348.75 && bearing < 360.00 ) return "N";
-  else return "N";
+String NmeaParser::Bearing_to_Ordinal2c(float bearing)
+{
+	if (bearing >= 0.0 && bearing < 22.5)
+		return "N";
+	if (bearing >= 22.5 && bearing < 67.5)
+		return "NE"; //"NNE";
+	if (bearing >= 67.5 && bearing < 112.5)
+		return "E";
+	if (bearing >= 112.5 && bearing < 157.5)
+		return "SE"; //"ENE";
+	if (bearing >= 157.5 && bearing < 202.5)
+		return "S";
+	if (bearing >= 202.5 && bearing < 247.5)
+		return "SW"; //"ESE";
+	if (bearing >= 247.5 && bearing < 292.5)
+		return "W";
+	if (bearing >= 292.5 && bearing < 337.5)
+		return "NW"; //"SSE";
+	if (bearing >= 337.5 && bearing < 360)
+		return "N";
+
+	else
+		return "N";
+}
+
+String NmeaParser::Bearing_to_Ordinal3c(float bearing)
+{
+	if (bearing >= 0.0 && bearing < 11.25)
+		return "N";
+	if (bearing >= 11.25 && bearing < 33.75)
+		return "NNE"; //"NNE";
+	if (bearing >= 33.75 && bearing < 56.25)
+		return "NE";
+	if (bearing >= 56.25 && bearing < 78.75)
+		return "ENE"; //"ENE";
+	if (bearing >= 78.75 && bearing < 101.25)
+		return "E";
+	if (bearing >= 101.25 && bearing < 123.75)
+		return "ESE"; //"ESE";
+	if (bearing >= 123.75 && bearing < 146.25)
+		return "SE";
+	if (bearing >= 146.25 && bearing < 168.75)
+		return "SSE"; //"SSE";
+	if (bearing >= 168.75 && bearing < 191.25)
+		return "S";
+	if (bearing >= 191.25 && bearing < 213.75)
+		return "SSW"; //"SSW";
+	if (bearing >= 213.75 && bearing < 236.25)
+		return "SW";
+	if (bearing >= 236.25 && bearing < 258.25)
+		return "WSW"; //"WSW";
+	if (bearing >= 258.25 && bearing < 281.25)
+		return "W";
+	if (bearing >= 281.25 && bearing < 303.75)
+		return "WNW"; //"WNW";
+	if (bearing >= 303.75 && bearing < 326.25)
+		return "NW";
+	if (bearing >= 326.25 && bearing < 348.75)
+		return "NNW"; //"NNW";
+	if (bearing >= 348.75 && bearing < 360.00)
+		return "N";
+	else
+		return "N";
 }
 /*
 N    348.75   11.25

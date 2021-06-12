@@ -35,12 +35,12 @@
  *    1.0.6  12/08/19   Ajout gestion écran de config GPS                        *
  *    1.0.7  15/08/19   Ajout gestion bouton dans screeninit                     *
  *    1.0.8  15/09/19   Ajout écran connection Wifi - ScreenViewWifi             *
- *    1.0.9  22/08/19   Ajout ScreenViewReboot																	 *
+ *    1.0.9  22/08/19   Ajout ScreenViewReboot									 *
  *    1.0.10 22/08/19   Ajout Page1                                              *
  *    1.0.11 23/08/19   Correction bug previousPage                              *
  *                      Ajout TUnit                                              *
  *    1.0.12 24/08/19   Ajout ScreenViewSound(int volume)                        *
- *		1.0.13 25/08/19		Gestion de l'écran de config du son											 *	
+ *	  1.0.13 25/08/19	Gestion de l'écran de config du son						 *	
  *    1.0.14 23/09/19   Modification page stat                                   *
  *                      Modification de l'affichage de la charge de la betterie  *
  *                      Ajout d'un deep-sleep en cas de batterie trop faible     *
@@ -54,7 +54,7 @@
  *                      Ajout affichage ou pas des titres                        *
  *    1.1.4  14/10/19   Modification affichage titre champs screendigit          *
  *    1.1.5  15/10/19   Modification affichage des satellites                    *
- *    1.1.6  03/11/19		Modification d'TUnit																		 *
+ *    1.1.6  03/11/19	Modification d'TUnit     			     				 *
  *    1.1.7  28/01/20   Correction leftAlign                                     *
  *                      Ajout ALIGNCENTER                                        *
  *                      Ajout Objet ScreenText                                   *

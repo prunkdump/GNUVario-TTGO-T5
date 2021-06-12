@@ -29,6 +29,7 @@
 /*  1.3      13/09/20    Ajout VarioXBeeper                                                        */
 /*  1.3.1    17/09/20    Ajout duty / cycle variable et parametrable                               */
 /*  1.3.2    02/10/20    Calcul en milliseconde                                                    */
+/*  1.3.3    12/04/21    Ajout Mute et isMute                                                      */
 /*                                                                                                 */
 /***************************************************************************************************/
 
@@ -162,7 +163,8 @@ class Beeper {
 	void tone(uint32_t freqHz);
 	void tone(uint32_t freqHz, uint8_t volume);
 	void noTone(void);
-
+  void mute(bool newMuteState);
+	bool isMute(void); 
 
  private:
  
@@ -185,6 +187,8 @@ class Beeper {
 	int CLIMBING_BEEP_HIGH_LENGTH;  // = 0.5;
 	int CLIMBING_BEEP_LOW_LENGTH; //  = 0.5;
   int CLIMBING_BEEP_LENGTH;
+
+	bool 		_toneMuted = false;
 
   void 		setBeepParameters(double velocity);
   void 		setBeepPaternPosition(double velocity);

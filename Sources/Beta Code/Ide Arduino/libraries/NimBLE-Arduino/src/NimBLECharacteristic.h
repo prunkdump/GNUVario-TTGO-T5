@@ -59,6 +59,17 @@ class NimBLECharacteristicCallbacks;
  */
 class NimBLECharacteristic {
 public:
+
+    uint16_t          getHandle();
+    NimBLEUUID        getUUID();
+    std::string       toString();
+
+    void              setCallbacks(NimBLECharacteristicCallbacks* pCallbacks);
+
+    void              indicate();
+    void              notify(bool is_notification = true);
+    size_t            getSubscribedCount();
+
     NimBLEDescriptor* createDescriptor(const char* uuid,
                                        uint32_t properties =
                                        NIMBLE_PROPERTY::READ |
@@ -72,22 +83,41 @@ public:
 
     NimBLEDescriptor* getDescriptorByUUID(const char* uuid);
     NimBLEDescriptor* getDescriptorByUUID(const NimBLEUUID &uuid);
-    NimBLEUUID        getUUID();
-    std::string       getValue();
+    NimBLEDescriptor* getDescriptorByHandle(uint16_t handle);
+
+    std::string       getValue(time_t *timestamp = nullptr);
     size_t            getDataLength();
-    void              indicate();
-    void              notify(bool is_notification = true);
-    void              setCallbacks(NimBLECharacteristicCallbacks* pCallbacks);
+    /**
+     * @brief A template to convert the characteristic data to <type\>.
+     * @tparam T The type to convert the data to.
+     * @param [in] timestamp A pointer to a time_t struct to store the time the value was read.
+     * @param [in] skipSizeCheck If true it will skip checking if the data size is less than <tt>sizeof(<type\>)</tt>.
+     * @return The data converted to <type\> or NULL if skipSizeCheck is false and the data is
+     * less than <tt>sizeof(<type\>)</tt>.
+     * @details <b>Use:</b> <tt>getValue<type>(&timestamp, skipSizeCheck);</tt>
+     */
+    template<typename T>
+    T                 getValue(time_t *timestamp = nullptr, bool skipSizeCheck = false) {
+        std::string value = getValue();
+        if(!skipSizeCheck && value.size() < sizeof(T)) return T();
+        const char *pData = value.data();
+        return *((T *)pData);
+    }
+
     void              setValue(const uint8_t* data, size_t size);
     void              setValue(const std::string &value);
-    void              setValue(uint8_t data8);
-    void              setValue(uint16_t& data16);
-    void              setValue(uint32_t& data32);
-    void              setValue(int& data32);
-    void              setValue(float& data32);
-    void              setValue(double& data64);
-    std::string       toString();
-    uint16_t          getHandle();
+    /**
+     * @brief Convenience template to set the characteristic value to <type\>val.
+     * @param [in] s The value to set.
+     */
+    template<typename T>
+    void              setValue(const T &s) {
+        setValue((uint8_t*)&s, sizeof(T));
+    }
+
+
+
+
 
 private:
 
@@ -122,6 +152,9 @@ private:
     std::vector<NimBLEDescriptor*> m_dscVec;
     ble_task_data_t                *m_pTaskData;
     portMUX_TYPE                   m_valMux;
+    time_t                         m_timestamp;
+
+    std::vector<std::pair<uint16_t, uint16_t>>  m_subscribedVec;
 }; // NimBLECharacteristic
 
 
@@ -134,6 +167,12 @@ private:
  */
 class NimBLECharacteristicCallbacks {
 public:
+
+/**
+ * @brief An enum to provide the callback the status of the
+ * notification/indication, implemented for backward compatibility.
+ * @deprecated To be removed in the future as the NimBLE stack return code is also provided.
+ */
     typedef enum {
         SUCCESS_INDICATE,
         SUCCESS_NOTIFY,
@@ -147,9 +186,12 @@ public:
 
     virtual ~NimBLECharacteristicCallbacks();
     virtual void onRead(NimBLECharacteristic* pCharacteristic);
+    virtual void onRead(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc);
     virtual void onWrite(NimBLECharacteristic* pCharacteristic);
+    virtual void onWrite(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc);
     virtual void onNotify(NimBLECharacteristic* pCharacteristic);
     virtual void onStatus(NimBLECharacteristic* pCharacteristic, Status s, int code);
+    virtual void onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc, uint16_t subValue);
 };
 
 #endif // #if defined(CONFIG_BT_NIMBLE_ROLE_PERIPHERAL)
