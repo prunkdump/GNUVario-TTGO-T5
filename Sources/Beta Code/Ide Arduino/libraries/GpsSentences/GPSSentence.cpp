@@ -84,7 +84,7 @@ void GPSSentence::writePosition(Kalmanvert kalmanvert)
   {
 #ifdef VARIOMETER_SDCARD_SEND_CALIBRATED_ALTITUDE
 #ifdef SDCARD_DEBUG
-    SerialPort.println("fileIGC : writePosition");
+    SerialPort.println("fileIGC : writePosition calibrated");
 #endif //SDCARD_DEBUG
 
     fileIgc.write(igc.begin(kalmanvert.getCalibratedPosition()));

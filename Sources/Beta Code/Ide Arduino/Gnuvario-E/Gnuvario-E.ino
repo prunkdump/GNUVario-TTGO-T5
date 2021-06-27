@@ -320,6 +320,7 @@
 *                22/05/21            Ajout écran 294 (DKEG0290BNS800F6 /QYEG0290BNS800F6C02) pour test*
 *                                    & Ajout écran 2.9" Good Display GDEW029M06                       *
 *                03/06/21            Correction bug maj web - ajout d'un reboot                       *
+*                19/06/21            Correction cap et stabilisation vario                            *
 *******************************************************************************************************
 *                                                                                                     *
 *                                   Developpement a venir                                             *

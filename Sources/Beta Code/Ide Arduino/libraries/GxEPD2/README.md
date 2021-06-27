@@ -62,13 +62,17 @@
 - GDEH0213B72    2.13" b/w, replacement for GDE0213B1
 - GDEH0213B73    2.13" b/w, new replacement for GDE0213B1, GDEH0213B72
 - GDEW0213I5F    2.13" b/w flexible
+- GDEW0213T5D    2.13" b/w
 - GDEW0213M21    2.13" b/w DES
 - GDEW0213Z16    2.13" b/w/r
+- GDEW0213Z19    2.13" b/w/r
 - GDEH029A1      2.9" b/w
 - GDEW029T5      2.9" b/w
+- GDEW029T5D     2.9" b/w
 - GDEM029T94     2.9" b/w
 - GDEW029M06     2.9" b/w DES
 - GDEW029Z10     2.9" b/w/r
+- GDEW029Z13     2.9" b/w/r
 - GDEM029C90     2.9" b/w/y
 - GDEW026T0      2.6" b/w
 - GDEW026M01     2.6" b/w DES
@@ -86,6 +90,7 @@
 - GDEW075Z09     7.5" b/w/r
 - GDEW075Z08     7.5" b/w/r 800x480
 - GDEH075Z90     7.5" b/w/r 880x528
+- GDEH116T91    11.6" b/w 960x640
 - GDEW1248T3    12.48 b/w 1304x984
 #### Supported SPI e-paper panels & boards from Waveshare: compare with Good Display, same panel
 #### other supported panels
@@ -96,7 +101,27 @@
 - promotion panels from suppliers are welcome, to add support to GxEPD2
 - donation panels from users are welcome, to add support to GxEPD2
 
-### Version 1.3.1
+### Version 1.3.4
+- added support for GDEH116T91 960x640 b/w e-paper panel
+- GDEH116T91 has only full screen refresh, no wavetable for differential refresh yet
+- added support for processor Arduino Nano RP2040 Connect to the examples
+- added general fast b/w refresh for capable 3-color displays GDEW0213Z19, GDEW029Z13
+- added example GxEPD2x_FastBlackWhiteOnColor.ino for GDEW0213Z19, GDEW029Z13
+- evaluation of other fast b/w capable 3-color panels may follow
+#### Version 1.3.3
+- added b/w differential refresh method to GDEW0213Z19
+- added b/w differential refresh method to GDEW029Z13
+- up to 100 b/w fast refreshes have been possible (resulting in slightly reddish background)
+- added experimental example GxEPD2x_MixedTest for proof of concept
+- GxEPD2x_MixedTest needs enough RAM for 2 GFXCanvas1 objects
+- general 3-color mixed refresh in GxEPD2 is in evaluation, for capable panels
+#### Version 1.3.2
+- added support for GDEW0213T5D 104x212 b/w e-paper panel
+- added support for GDEW029T5D  128x296 b/w e-paper panel
+- added support for GDEW0213Z19 104x212 b/w/r e-paper panel
+- added support for GDEW029Z13  128x296 b/w/r e-paper panel
+- both GDEW0213Z19 and GDEW029Z13 support only full screen refresh (controller issue)
+#### Version 1.3.1
 - added support for GDEM029C90 128x296 b/w/y e-paper panel
 - GDEM029C90 has a very long refresh time of about 27 seconds
 - GDEM029C90 has partial update (window addressing) of controller memory

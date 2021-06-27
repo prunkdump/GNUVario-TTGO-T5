@@ -351,7 +351,7 @@ void VARIOButtonScheduleur::treatmentBtnA(bool Debounce)
 			//			toneHAL.setVolume(tmpvol);
 			//			beeper.setVolume(tmpvol);
 			RegVolume = tmpvol;
-			beeper.generateTone(2000, 300, RegVolume);
+			beeper.generateTone(500, 300, RegVolume);
 			screen.SetViewSound(RegVolume); //toneHAL.getVolume());
 		}
 	}
@@ -375,7 +375,7 @@ void VARIOButtonScheduleur::treatmentBtnB(bool Debounce)
 		if (screen.schedulerScreen->getPage() == screen.schedulerScreen->getMaxPage() + 1)
 		{
 			StatePage = STATE_PAGE_CONFIG_SOUND;
-			RegVolume = toneHAL.getVolume();
+			RegVolume = beeper.getVolume(); //toneHAL.getVolume();
 			screen.SetViewSound(RegVolume);
 		}
 		else
@@ -393,7 +393,7 @@ void VARIOButtonScheduleur::treatmentBtnB(bool Debounce)
 	{
 		StatePage = STATE_PAGE_VARIO;
 		screen.SetViewSound(RegVolume);
-		toneHAL.setVolume(RegVolume);
+		beeper.setVolume(RegVolume); //toneHAL.setVolume(RegVolume);
 		GnuSettings.soundSettingWrite(RegVolume);
 		screen.volLevel->setVolume(RegVolume);
 		screen.volLevel->mute(toneHAL.isMute());
@@ -451,7 +451,7 @@ void VARIOButtonScheduleur::treatmentBtnC(bool Debounce)
 			//			toneHAL.setVolume(tmpvol);
 			//			beeper.setVolume(tmpvol);
 			RegVolume = tmpvol;
-			beeper.generateTone(2000, 300, RegVolume);
+			beeper.generateTone(500, 300, RegVolume);
 			screen.SetViewSound(RegVolume); //toneHAL.getVolume());
 		}
 	}

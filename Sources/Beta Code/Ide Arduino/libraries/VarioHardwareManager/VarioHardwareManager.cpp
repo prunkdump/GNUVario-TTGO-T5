@@ -236,17 +236,26 @@ bool VarioHardwareManager::updateGps(Kalmanvert kalmanvert)
     if (varioBT.lastSentence)
     {
       varioBT.lastSentence = false;
-#ifdef VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
+/*#ifdef VARIOMETER_BLUETOOTH_SEND_CALIBRATED_ALTITUDE
       if (GnuSettings.VARIOMETER_SENT_LXNAV_SENTENCE == LK8000_SENTENCE)
         varioBT.bluetoothNMEA_Lk.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
       else
         varioBT.bluetoothNMEA_Lx.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
-#else
-      if (GnuSettings.VARIOMETER_SENT_LXNAV_SENTENCE == LK8000_SENTENCE)
-        varioBT.bluetoothNMEA_Lk.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
-      else
-        varioBT.bluetoothNMEA_Lx.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
-#endif
+#else*/
+	
+			if (GnuSettings.BLUETOOTH_SEND_CALIBRATED_ALTITUDE)
+			{
+				if (GnuSettings.VARIOMETER_SENT_LXNAV_SENTENCE == LK8000_SENTENCE)
+					varioBT.bluetoothNMEA_Lk.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
+				else
+					varioBT.bluetoothNMEA_Lx.begin(kalmanvert.getCalibratedPosition(), kalmanvert.getVelocity());
+			} else {
+				if (GnuSettings.VARIOMETER_SENT_LXNAV_SENTENCE == LK8000_SENTENCE)
+					varioBT.bluetoothNMEA_Lk.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
+				else
+					varioBT.bluetoothNMEA_Lx.begin(kalmanvert.getPosition(), kalmanvert.getVelocity());
+			}
+//#endif
 
       serialNmea.lock(); //will be writed at next loop
     }

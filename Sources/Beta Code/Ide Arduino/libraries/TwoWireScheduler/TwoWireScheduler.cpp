@@ -544,28 +544,23 @@ void TWScheduler::getRawAccel(int16_t *rawAccel, int32_t *quat)
   /* check tap : use callback if needed */
   fastMPUCheckTap(tap);
 
-  /* change of basis */
-#if ((VARIOVERSION == 254) || (VARIOVERSION == 291) || (VARIOVERSION == 293) || (VARIOVERSION == 294))
-  //portrait
+  /* If the the sensor z axis pointing down         */
+  /* the heading algorithm don't work !             */
+  /* We need to change the basis by rotating around */
+  /* y axis                                         */
+  /* q_corr = q * (0 + (0, -1, 0))                  */
+#if ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
   rawAccel[0] = -rawAccel[0];
-  rawAccel[1] = -rawAccel[1];
-  quat[1] = -quat[1];
-  quat[2] = -quat[2];
-#elif ((VARIOVERSION == 290) || (VARIOVERSION == 292))
-  //paysage
-  int16_t tmpValAccel = rawAccel[0];
-  int32_t tmpValQuat = quat[1];
-  rawAccel[0] = rawAccel[1];
-  rawAccel[1] = -tmpValAccel;
-  quat[1] = quat[2];
-  quat[2] = -tmpValQuat;
-#elif ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
-  rawAccel[0] = -rawAccel[0];
-  rawAccel[1] = rawAccel[1];
   rawAccel[2] = -rawAccel[2];
-  quat[1] = -quat[1];
-  quat[2] = quat[2];
-  quat[3] = -quat[3];
+
+  int32_t tmpQuat;
+  tmpQuat = quat[0];
+  quat[0] = quat[2];
+  quat[2] = -tmpQuat;
+
+  tmpQuat = quat[1];
+  quat[1] = quat[3];
+  quat[3] = -tmpQuat;
 #endif
 }
 
@@ -793,20 +788,13 @@ void TWScheduler::getRawMag(int16_t *rawMag)
     }
   }
 
-/* change of basis */
-#if ((VARIOVERSION == 254) || (VARIOVERSION == 291) || (VARIOVERSION == 293) || (VARIOVERSION == 294))
-  //portrait
+  /* If the the sensor z axis pointing down         */
+  /* the heading algorithm don't work !             */ 
+  /* We need to change the basis by rotating around */
+  /* y axis                                         */  
+#if ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
   rawMag[0] = -rawMag[0];
-  rawMag[1] = -rawMag[1];
-#elif ((VARIOVERSION == 290) || (VARIOVERSION == 292))
-  //paysage
-  int16_t tmpValMag = rawMag[0];
-  rawMag[0] = rawMag[1];
-  rawMag[1] = -tmpValMag;
-#elif ((VARIOVERSION == 354) || (VARIOVERSION == 390) || (VARIOVERSION == 391) || (VARIOVERSION == 395) || (VARIOVERSION == 396))
-rawMag[0] = -rawMag[0];
-rawMag[1] = rawMag[1];
-rawMag[2] = -rawMag[2];
+  rawMag[2] = -rawMag[2];
 #endif
 }
 
@@ -819,6 +807,17 @@ void TWScheduler::getNorthVector(double *vertVector, double *northVector)
 
   /* compute north vector */
   vertaccel.computeNorthVector(vertVector, rawMag, northVector);
+
+  /* apply sensor orientation */
+#if ((VARIOVERSION == 254) || (VARIOVERSION == 291) || (VARIOVERSION == 293) || (VARIOVERSION == 294))
+  northVector[0] = -northVector[0];
+  northVector[1] = -northVector[1];
+#elif ((VARIOVERSION == 290) || (VARIOVERSION == 292))
+  double tmp;
+  tmp = northVector[0];
+  northVector[0] = northVector[1];
+  northVector[1] = -tmp;
+#endif
 }
 
 void TWScheduler::getNorthVector2(double *vertVector, double *gyroVector, double *northVector)

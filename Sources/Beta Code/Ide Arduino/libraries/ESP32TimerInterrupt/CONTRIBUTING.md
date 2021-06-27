@@ -14,9 +14,9 @@ If you don't find anything, please [open a new issue](https://github.com/khoih-p
 
 Please ensure to specify the following:
 
-* Arduino IDE version (e.g. 1.8.13) or Platform.io version
-* `ESP32` Core Version (e.g. ESP32 v1.0.4)
-* `ESP32` Board type (e.g. WEMOS LOLIN32, ESP32 Dev Module, etc.)
+* Arduino IDE version (e.g. 1.8.15) or Platform.io version
+* `ESP32` Core Version (e.g. ESP32 core v1.0.6)
+* `ESP32` Board type (e.g. ESP32_DEV Module, ESP32_S2_DEV, etc.)
 * Contextual information (e.g. what you were trying to achieve)
 * Simplest possible steps to reproduce
 * Anything that might be relevant in your opinion, such as:
@@ -27,14 +27,14 @@ Please ensure to specify the following:
 ### Example
 
 ```
-Arduino IDE version: 1.8.13
-ESP32 Core Version 1.0.4
-ESP32 Dev Module
+Arduino IDE version: 1.8.15
+ESP32 Core Version 1.0.6
+ESP32S2_DEV Module
 OS: Ubuntu 20.04 LTS
-Linux xy-Inspiron-3593 5.4.0-51-generic #56-Ubuntu SMP Mon Oct 5 14:28:49 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+Linux xy-Inspiron-3593 5.4.0-73-generic #82-Ubuntu SMP Wed Apr 14 17:39:42 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
 
 Context:
-I encountered a crash while using TimerInterrupt.
+I encountered a crash while using ESP32TimerInterrupt.
 
 Steps to reproduce:
 1. ...
@@ -42,6 +42,7 @@ Steps to reproduce:
 3. ...
 4. ...
 ```
+
 ### Sending Feature Requests
 
 Feel free to post feature requests. It's helpful if you can explain exactly why the feature would be useful.

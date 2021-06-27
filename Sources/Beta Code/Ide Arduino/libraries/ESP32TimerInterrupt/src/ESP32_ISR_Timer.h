@@ -24,8 +24,8 @@
   Based on BlynkTimer.h
   Author: Volodymyr Shymanskyy
 
-  Version: 1.2.0
-
+  Version: 1.4.0
+  
   Version Modified By   Date      Comments
   ------- -----------  ---------- -----------
   1.0.0   K Hoang      23/11/2019 Initial coding
@@ -35,6 +35,8 @@
   1.1.0   K.Hoang      27/10/2020 Restore cpp code besides Impl.h code to use if Multiple-Definition linker error.
   1.1.1   K.Hoang      06/12/2020 Add Version String and Change_Interval example to show how to change TimerInterval
   1.2.0   K.Hoang      08/01/2021 Add better debug feature. Optimize code and examples to reduce RAM usage
+  1.3.0   K.Hoang      06/05/2021 Add support to ESP32-S2
+  1.4.0   K.Hoang      01/06/2021 Add complex examples. Fix compiler errors due to conflict to some libraries.
 *****************************************************************************************************************************/
 
 #pragma once
@@ -46,8 +48,20 @@
   #error This code is designed to run on ESP32 platform, not Arduino nor ESP8266! Please check your Tools->Board setting.
 #endif
 
-#ifndef ESP32_TIMER_INTERRUPT_VERSION
-  #define ESP32_TIMER_INTERRUPT_VERSION       "ESP32TimerInterrupt v1.2.0"
+#ifndef ESP32
+  #error This code is designed to run on ESP32 platform, not Arduino nor ESP8266! Please check your Tools->Board setting.
+#elif ( ARDUINO_ESP32S2_DEV || ARDUINO_FEATHERS2 || ARDUINO_ESP32S2_THING_PLUS || ARDUINO_MICROS2 || \
+        ARDUINO_METRO_ESP32S2 || ARDUINO_MAGTAG29_ESP32S2 || ARDUINO_FUNHOUSE_ESP32S2 || \
+        ARDUINO_ADAFRUIT_FEATHER_ESP32S2_NOPSRAM )
+  #warning Using ESP32_S2_TimerInterrupt Library and very different examples. Please check.
+  #ifndef ESP32_S2_TIMER_INTERRUPT_VERSION
+    #define ESP32_S2_TIMER_INTERRUPT_VERSION    "ESP32_S2_TimerInterrupt v1.4.0"
+  #endif
+#else
+  #warning Using ESP32TimerInterrupt Library
+  #ifndef ESP32_TIMER_INTERRUPT_VERSION
+    #define ESP32_TIMER_INTERRUPT_VERSION       "ESP32TimerInterrupt v1.4.0"
+  #endif
 #endif
 
 #include "TimerInterrupt_Generic_Debug.h"
@@ -85,9 +99,9 @@ class ESP32_ISR_Timer
 
   public:
     // maximum number of timers
-#define MAX_TIMERS        16
-#define RUN_FOREVER       0
-#define RUN_ONCE          1
+#define MAX_NUMBER_TIMERS         16
+#define TIMER_RUN_FOREVER         0
+#define TIMER_RUN_ONCE            1
 
     // constructor
     ESP32_ISR_Timer();
@@ -160,14 +174,14 @@ class ESP32_ISR_Timer
     // returns the number of available timers
     unsigned getNumAvailableTimers() 
     {
-      return MAX_TIMERS - numTimers;
+      return MAX_NUMBER_TIMERS - numTimers;
     };
 
   private:
     // deferred call constants
-#define DEFCALL_DONTRUN   0       // don't call the callback function
-#define DEFCALL_RUNONLY   1       // call the callback function but don't delete the timer
-#define DEFCALL_RUNANDDEL 2       // call the callback function and delete the timer
+#define TIMER_DEFCALL_DONTRUN   0       // don't call the callback function
+#define TIMER_DEFCALL_RUNONLY   1       // call the callback function but don't delete the timer
+#define TIMER_DEFCALL_RUNANDDEL 2       // call the callback function and delete the timer
 
     // low level function to initialize and enable a new timer
     // returns the timer number (numTimer) on success or
@@ -190,7 +204,7 @@ class ESP32_ISR_Timer
       unsigned      toBeCalled;         // deferred function call (sort of) - N.B.: only used in run()
     } timer_t;
 
-    volatile timer_t timer[MAX_TIMERS];
+    volatile timer_t timer[MAX_NUMBER_TIMERS];
 
     // actual number of timers in use (-1 means uninitialized)
     volatile int numTimers;
